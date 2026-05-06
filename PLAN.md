@@ -76,6 +76,9 @@ Dependency policy:
 - YAML parsing must use `yaml.safe_load` only. `yaml.load`, custom object
   constructors, and arbitrary Python-object deserialization are forbidden
   because scanned repository YAML is untrusted input.
+- GitHub workflow YAML must be size-capped before parsing and rejected if alias
+  usage exceeds the v0.1 parser limit. Alias-heavy YAML must be rejected before
+  object expansion.
 - If Day 2 can implement workflow parsing safely without YAML parsing, remove
   `PyYAML` before release.
 

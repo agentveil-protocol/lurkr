@@ -114,6 +114,58 @@ Use the action from the same repository:
 The action requires Python 3.10 or newer on the runner. It writes the JSON
 report path to the `report` output and does not upload data to AgentVeil.
 
+## Pre-commit Hook
+
+Run AgentVeil Posture as a [pre-commit](https://pre-commit.com) hook to catch
+posture issues before they reach the remote.
+
+Add to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/agentveil-protocol/agentveil-posture
+    rev: v0.1.0
+    hooks:
+      - id: agentveil-posture
+```
+
+Then install:
+
+```bash
+pre-commit install
+```
+
+The hook generates `agentveil-posture-report.json` on every commit and always
+passes. v0.1 surfaces findings as review items, not auto-block. Read the
+report to triage findings.
+
+## Triaging Findings
+
+`agentveil-posture` flags **posture surfaces**: places where an AI agent or
+workflow has direct capability to do something risky. Most findings are
+**review items**, not incidents:
+
+- **`bypass.direct_github_token`** commonly appears on stale-bots,
+  release-bots, CI publish steps, and label-management workflows that
+  legitimately use the auto-injected `secrets.GITHUB_TOKEN`. The rule fires
+  by design: the workflow holds direct GitHub write capability and that is a
+  posture surface worth surfacing, even when expected.
+- **`workflow.deploy_without_approval`** may flag deploy paths that have
+  approval mechanisms the static scanner cannot see, such as manual job
+  dispatch, branch protection, or external reviewer chains. Verify against
+  your actual approval flow before treating as incident.
+- **`workflow.pull_request_target_secrets_risk`** flags risky combinations,
+  but some `pull_request_target` workflows are correctly scoped to label-only
+  or metadata-only operations. Re-check the actual job content.
+- **`tool.shell_without_approval`** flags inline shell capability
+  declarations. Tools referenced by name, such as `search_tool` in CrewAI,
+  are not detected; only literal `shell:` or `bash:` keys are.
+- **`identity.private_key_unencrypted`** is the most reliably actionable
+  finding: committed unencrypted private keys are usually real issues.
+
+Use posture-check to surface review items for human triage, not to auto-block
+CI or replace SAST/secret-scanning tools.
+
 ## Why This Exists
 
 AI agents increasingly touch production credentials, deploy workflows, and

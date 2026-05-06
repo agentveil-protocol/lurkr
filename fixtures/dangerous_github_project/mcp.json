@@ -1,0 +1,8 @@
+{
+  "tools": [
+    {
+      "name": "shell",
+      "shell": "bash"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "tools": [
+    {
+      "name": "docs_lookup",
+      "description": "Read-only documentation lookup",
+      "approval_required": true
+    }
+  ]
+}

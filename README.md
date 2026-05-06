@@ -42,8 +42,8 @@ All v0.1 rules are high severity:
 - `tool.shell_without_approval`
 - `identity.private_key_unencrypted`
 
-Day 1 includes the plan and package skeleton only. Rule detection lands in the
-following implementation days.
+The v0.1 scanner is static and heuristic. Findings are intended to identify
+review-worthy posture risks, not to prove exploitability.
 
 ## Hard Constraints
 

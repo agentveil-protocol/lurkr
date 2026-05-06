@@ -148,8 +148,10 @@ Reads:
 
 Matches:
 
-- deployment-like jobs or steps (`deploy`, `release`, `publish`, `kubectl`,
-  `terraform apply`, cloud deploy actions, production environment names);
+- deployment-like jobs or steps using the v0.1 marker regex:
+  `deploy`, `deployment`, `release`, `kubectl`, package-manager publish
+  (`npm|pnpm|yarn|pypi|twine|poetry publish`), `terraform apply`,
+  `cloudformation deploy`, or `serverless deploy`;
 - absence of an explicit approval gate such as protected GitHub environments,
   reviewer-required environment usage, or a clearly named manual approval job.
 
@@ -423,6 +425,11 @@ Hard-constraint tests:
   scan does not call them;
 - assert scanner source uses `yaml.safe_load` only and contains no
   `yaml.load(` calls before YAML workflow parsing is enabled;
+- assert workflow and YAML manifest files over the v0.1 byte cap are skipped
+  before YAML parsing;
+- assert alias-heavy workflow and YAML manifest files are rejected before
+  object expansion;
+- assert deeply nested YAML is rejected without traceback;
 - snapshot file hashes before and after scan and assert scanned files are not
   modified;
 - assert symlinks outside the scan root are not followed by default;

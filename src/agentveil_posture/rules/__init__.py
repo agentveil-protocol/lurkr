@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 from agentveil_posture.rules.identity import scan_identity_private_key_unencrypted
-from agentveil_posture.rules.workflow import (
-    scan_workflow_deploy_without_approval,
-    scan_workflow_pull_request_target_secrets_risk,
-)
+from agentveil_posture.rules.manifest import is_agent_manifest, scan_manifest_rules
+from agentveil_posture.rules.workflow import scan_workflow_rules
 
 RULES = (
     scan_identity_private_key_unencrypted,
-    scan_workflow_deploy_without_approval,
-    scan_workflow_pull_request_target_secrets_risk,
+    scan_workflow_rules,
+    scan_manifest_rules,
 )
 
 __all__ = [
     "RULES",
+    "is_agent_manifest",
     "scan_identity_private_key_unencrypted",
-    "scan_workflow_deploy_without_approval",
-    "scan_workflow_pull_request_target_secrets_risk",
+    "scan_manifest_rules",
+    "scan_workflow_rules",
 ]

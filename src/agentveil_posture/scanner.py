@@ -7,9 +7,10 @@ from pathlib import Path
 
 from agentveil_posture.report import Finding, PostureReport, build_report
 from agentveil_posture.rules import (
+    is_agent_manifest,
     scan_identity_private_key_unencrypted,
-    scan_workflow_deploy_without_approval,
-    scan_workflow_pull_request_target_secrets_risk,
+    scan_manifest_rules,
+    scan_workflow_rules,
 )
 
 
@@ -31,8 +32,9 @@ def scan_path(path: Path) -> PostureReport:
         if finding is not None:
             findings.append(finding)
         if _is_github_workflow(root, candidate):
-            findings.extend(scan_workflow_deploy_without_approval(root, candidate))
-            findings.extend(scan_workflow_pull_request_target_secrets_risk(root, candidate))
+            findings.extend(scan_workflow_rules(root, candidate))
+        if is_agent_manifest(root, candidate):
+            findings.extend(scan_manifest_rules(root, candidate))
 
     return build_report(str(root), findings)
 

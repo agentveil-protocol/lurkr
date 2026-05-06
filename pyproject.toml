@@ -13,7 +13,7 @@ authors = [
   { name = "AgentVeil Protocol contributors" }
 ]
 dependencies = [
-  "PyYAML>=6.0.1"
+  "PyYAML>=6.0.1,<7"
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",

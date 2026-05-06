@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from agentveil_posture.rules import parsing
 from agentveil_posture.rules import workflow
 from agentveil_posture.scanner import scan_path
 
@@ -135,6 +136,29 @@ def test_pull_request_target_without_risky_step_does_not_fire(tmp_path):
     assert report.findings == []
 
 
+def test_comment_only_pull_request_target_reference_does_not_fire(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "pr.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: pr",
+                "# pull_request_target:",
+                "on: pull_request",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - uses: actions/checkout@v4",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
 def test_crlf_workflow_parses_like_lf(tmp_path):
     workflow_path = _workflow_path(tmp_path, "pr.yml")
     workflow_path.write_bytes(
@@ -174,7 +198,7 @@ def test_large_workflow_is_skipped_before_yaml_parse(monkeypatch, tmp_path):
     def blocked_safe_load(text):
         raise AssertionError("safe_load should not run for oversized YAML")
 
-    monkeypatch.setattr(workflow.yaml, "safe_load", blocked_safe_load)
+    monkeypatch.setattr(parsing.yaml, "safe_load", blocked_safe_load)
     workflow_path = _workflow_path(tmp_path, "large.yml")
     workflow_path.write_text(
         "name: deploy\n"
@@ -192,7 +216,7 @@ def test_alias_heavy_workflow_is_rejected_before_safe_load(monkeypatch, tmp_path
     def blocked_safe_load(text):
         raise AssertionError("safe_load should not run for alias-heavy YAML")
 
-    monkeypatch.setattr(workflow.yaml, "safe_load", blocked_safe_load)
+    monkeypatch.setattr(parsing.yaml, "safe_load", blocked_safe_load)
     aliases = ", ".join("*base" for _ in range(workflow.MAX_YAML_ALIAS_TOKENS + 1))
     workflow_path = _workflow_path(tmp_path, "aliases.yml")
     workflow_path.write_text(
@@ -213,6 +237,98 @@ def test_alias_heavy_workflow_is_rejected_before_safe_load(monkeypatch, tmp_path
     report = scan_path(tmp_path)
 
     assert report.findings == []
+
+
+def test_anchor_without_alias_is_allowed(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "anchor.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: anchor",
+                "base: &base value",
+                "on:",
+                "  pull_request_target:",
+                "jobs:",
+                "  test:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - run: echo safe",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "workflow.pull_request_target_secrets_risk"
+    ]
+
+
+def test_empty_workflow_does_not_fire(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "empty.yml")
+    workflow_path.write_text("name: empty\n", encoding="utf-8")
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_workflow_outside_root_github_workflows_dir_is_ignored(tmp_path):
+    nested = tmp_path / "subproject" / ".github" / "workflows"
+    nested.mkdir(parents=True)
+    (nested / "deploy.yml").write_text(
+        "name: deploy\non: push\njobs:\n  deploy:\n    steps:\n      - run: terraform apply\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_utf8_bom_workflow_parses_without_crash(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "bom.yml")
+    workflow_path.write_text(
+        "\ufeffname: deploy\non: push\njobs:\n  deploy:\n    steps:\n      - run: terraform apply\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "workflow.deploy_without_approval"
+    ]
+
+
+def test_workflow_direct_github_token_fires_without_secret_value(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "token.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: token",
+                "on: push",
+                "jobs:",
+                "  check:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Use token",
+                "        env:",
+                "          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}",
+                "        run: echo masked",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "bypass.direct_github_token"
+    ]
+    report_json = report.to_json()
+    assert "secrets.GITHUB_TOKEN" not in report_json
+    assert "GITHUB_TOKEN:" not in report_json
 
 
 def test_deeply_nested_yaml_is_rejected_without_traceback(tmp_path):

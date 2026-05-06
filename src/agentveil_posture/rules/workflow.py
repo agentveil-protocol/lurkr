@@ -22,6 +22,13 @@ DEPLOY_MARKER_RE = re.compile(
     r"|\bserverless\s+deploy\b",
     re.IGNORECASE,
 )
+BUILD_CONFIG_EXCLUSIONS = re.compile(
+    r"--configuration\s+\w+"
+    r"|--framework\s+\w+"
+    r"|\brelease\s+notes\b"
+    r"|\brelease\s+candidate\b",
+    re.IGNORECASE,
+)
 APPROVAL_MARKERS = ("approval", "manual approval", "review", "protected environment")
 PULL_REQUEST_TARGET_RE = re.compile(r"(^|\s)pull_request_target\s*:", re.MULTILINE)
 PULL_REQUEST_TARGET_INLINE_RE = re.compile(
@@ -120,6 +127,8 @@ def load_workflow(path: Path) -> ParsedDocument | None:
 
 def _first_deploy_line(lines: list[str]) -> int | None:
     for line_number, line in enumerate(lines, start=1):
+        if BUILD_CONFIG_EXCLUSIONS.search(line):
+            continue
         if DEPLOY_MARKER_RE.search(line):
             return line_number
     return None

@@ -87,6 +87,76 @@ def test_deploy_markers_do_not_match_prod_or_produce_substrings(tmp_path):
     assert report.findings == []
 
 
+def test_dotnet_build_release_configuration_does_not_fire_deploy(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "build.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: build",
+                "on: push",
+                "jobs:",
+                "  build:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - run: dotnet restore",
+                "      - run: dotnet build --no-restore --configuration Release -bl",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_release_notes_phrase_does_not_fire_deploy(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "notes.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: release notes",
+                "on: push",
+                "jobs:",
+                "  docs:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - run: echo Generating Release Notes for changelog",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_build_config_skipped_then_real_deploy_step_fires(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "build-and-deploy.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: build-and-deploy",
+                "on: push",
+                "jobs:",
+                "  ship:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - run: dotnet build --configuration Release",
+                "      - name: Deploy production",
+                "        run: terraform apply",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    rule_ids = sorted(f.rule_id for f in report.findings)
+    assert "workflow.deploy_without_approval" in rule_ids
+
+
 def test_pull_request_target_risk_fires_with_checkout(tmp_path):
     workflow_path = _workflow_path(tmp_path, "pr.yml")
     workflow_path.write_text(

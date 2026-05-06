@@ -1,5 +1,5 @@
 name: AgentVeil Posture
-description: Static posture scan for risky agent capabilities
+description: Pre-deployment posture scan for risky AI agent capabilities
 
 inputs:
   path:

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentveil-posture"
 version = "0.1.0"
-description = "Static posture checks for risky agent capabilities."
+description = "Pre-deployment posture checks for risky AI agent capabilities."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

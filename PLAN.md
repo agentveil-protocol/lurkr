@@ -1,10 +1,11 @@
 # AgentVeil Posture v0.1 Plan
 
-Status: Day 1 plan/spec for Phase 1 Sprint 1.
+Status: v0.1 implementation spec for Phase 1 Sprint 1.
 
-Scope: plan and repo skeleton only. Rule detection, dangerous fixture content,
-`action.yml`, publishing, remote creation, and GitHub push are out of scope for
-Day 1.
+Scope: local scanner, GitHub Action, and fixtures for v0.1. Publishing, remote
+creation, GitHub push, tag creation, and release publication remain out of
+scope until the pre-public-push gate passes and the operator explicitly
+approves those actions.
 
 ## Product Boundary
 
@@ -64,7 +65,7 @@ Module responsibilities:
 - `scanner.py`: orchestrates static discovery, applies rule registry, enforces
   hard constraints, and returns a report model.
 - `rules/__init__.py`: owns the v0.1 rule registry. Individual rule modules may
-  be split out on Day 2 if clearer.
+  be split out when that keeps rule surfaces bounded and reviewable.
 - `report.py`: owns versioned dataclasses and JSON serialization. It must never
   include raw secret values or source snippets.
 
@@ -79,8 +80,8 @@ Dependency policy:
 - GitHub workflow YAML must be size-capped before parsing and rejected if alias
   usage exceeds the v0.1 parser limit. Alias-heavy YAML must be rejected before
   object expansion.
-- If Day 2 can implement workflow parsing safely without YAML parsing, remove
-  `PyYAML` before release.
+- `PyYAML` is pinned below 7 for v0.1 so parser/token semantics do not shift
+  unexpectedly before the first public release.
 
 ## Static Candidate Discovery
 
@@ -311,8 +312,7 @@ Arguments:
 - `agentveil posture scan`: only v0.1 command. No `check` alias.
 - `--path PATH`: scan root. Defaults to `.`.
 - `--output FILE`: JSON output path. Required by the public v0.1 signature for
-  examples and CI; Day 1 skeleton may default only for developer ergonomics if
-  tests require it.
+  examples and CI.
 
 Exit codes:
 
@@ -322,12 +322,12 @@ Exit codes:
 
 Future flags such as `--fail-on` are deferred.
 
-## GitHub Action Manifest Plan
+## GitHub Action Manifest
 
-Day 1 does not create `action.yml`; v0.1 will keep the action in this same repo
-and distribute it as `agentveil-protocol/agentveil-posture@v0.1.0`.
+v0.1 keeps the action in this same repo and distributes it as
+`agentveil-protocol/agentveil-posture@v0.1.0`.
 
-Planned `action.yml` shape:
+`action.yml` shape:
 
 ```yaml
 name: AgentVeil Posture
@@ -344,12 +344,16 @@ inputs:
 outputs:
   report:
     description: Path to the generated JSON report
+    value: ${{ steps.scan.outputs.report }}
 runs:
   using: composite
   steps:
-    - run: python -m pip install .
+    - name: Install agentveil-posture
+      run: python -m pip install .
       shell: bash
+      working-directory: ${{ github.action_path }}
     - id: scan
+      name: Run posture scan
       run: |
         agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}"
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
@@ -366,8 +370,6 @@ PR/check surfacing:
 
 ## Fixture Plan
 
-Day 1 creates empty placeholder directories only.
-
 `fixtures/clean_github_project/`:
 
 - minimal repository shape;
@@ -379,8 +381,11 @@ Day 1 creates empty placeholder directories only.
 
 `fixtures/dangerous_github_project/`:
 
-- Day 1 placeholder only;
-- Day 2-4 will add one compact fixture covering all five v0.1 rules.
+- compact synthetic fixture covering all five v0.1 rules;
+- contains only synthetic placeholders, never real credentials or private key
+  material;
+- intentionally includes a synthetic PEM-shaped file so
+  `identity.private_key_unencrypted` can be tested before release.
 
 Full fixture matrix and false-positive reference set are deferred to v0.2.
 
@@ -450,20 +455,31 @@ CLI error tests:
 
 Cross-platform parsing tests:
 
-- CRLF GitHub workflow YAML parses the same as LF when workflow parsing lands.
+- CRLF GitHub workflow YAML parses the same as LF.
+- UTF-8 BOM workflow YAML parses without crashing.
 
-Day 1 sanity tests:
+Local sanity tests:
 
 - `pip install -e .` succeeds in a fresh virtual environment;
 - `agentveil posture scan --help` prints the `posture scan` help;
 - `agentveil posture scan --path . --output /tmp/report.json` exits `0`;
 - `/tmp/report.json` parses as JSON and follows the empty v0.1 schema.
 
-## Out Of Scope For v0.1 Day 1
+## Known Limitations
 
-- actual rule detection logic;
-- dangerous fixture contents;
-- GitHub Action manifest file;
+- v0.1 is a best-effort heuristic scanner. It can produce false positives and
+  false negatives, especially for unusual deploy wording or project-specific
+  approval conventions.
+- YAML alias usage is capped before object expansion, but carefully crafted YAML
+  within the v0.1 alias limit can still consume non-zero parser memory.
+- Oversized, unreadable, undecodable, malformed, or parser-rejected files are
+  skipped without a per-file skip reason in v0.1 reports.
+- The dangerous fixture includes an intentional synthetic PEM-shaped file.
+  Public-repo secret scanners should allowlist that fixture path; it does not
+  contain a real key.
+
+## Out Of Scope For v0.1
+
 - `check` command alias;
 - `--fail-on`;
 - PyPI publication;

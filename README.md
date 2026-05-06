@@ -24,6 +24,20 @@ pip install git+https://github.com/agentveil-protocol/agentveil-posture@v0.1.0
 
 PyPI publishing is out of scope for v0.1.
 
+## GitHub Action
+
+Use the action from the same repository after `v0.1.0` is tagged:
+
+```yaml
+- uses: agentveil-protocol/agentveil-posture@v0.1.0
+  with:
+    path: "."
+    output: agentveil-posture-report.json
+```
+
+The action requires Python 3.10 or newer on the runner. It writes the JSON
+report path to the `report` output and does not upload data to AgentVeil.
+
 ## Usage
 
 ```bash
@@ -60,9 +74,18 @@ must not include raw private key bytes or secret values.
 
 ## Dependency Policy
 
-The package uses the Python standard library plus `PyYAML` for deterministic
-GitHub workflow parsing. Additional runtime dependencies require explicit
-justification.
+The package uses the Python standard library plus `PyYAML>=6.0.1,<7` for
+deterministic GitHub workflow and manifest parsing. Additional runtime
+dependencies require explicit justification.
+
+## Known Limitations
+
+- v0.1 is a best-effort heuristic scanner and may produce false positives or
+  false negatives.
+- Parser-rejected files are skipped without per-file skip reasons in the JSON
+  report.
+- The dangerous fixture includes an intentional synthetic PEM-shaped file for
+  rule testing. It does not contain a real key.
 
 ## License
 

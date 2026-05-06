@@ -1,0 +1,12 @@
+[allowlist]
+description = "Allow intentionally synthetic private-key fixture for posture rule tests."
+paths = [
+  '''fixtures/dangerous_github_project/keys/synthetic_unencrypted_private_key.pem''',
+  '''tests/test_hard_constraints.py''',
+  '''tests/test_identity_private_key_rule.py''',
+]
+regexes = [
+  '''SYNTHETIC_FIXTURE_NOT_A_REAL_PRIVATE_KEY''',
+  '''SECRET_KEY_BYTES''',
+  '''opaque''',
+]

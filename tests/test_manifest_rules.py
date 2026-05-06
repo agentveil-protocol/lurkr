@@ -111,6 +111,65 @@ def test_yaml_manifest_shell_without_approval_fires(tmp_path):
     assert report.findings[0].line == 3
 
 
+def test_crewai_agents_yaml_in_crews_config_path_is_scanned(tmp_path):
+    config_dir = tmp_path / "crews" / "researcher" / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "agents.yaml").write_text(
+        "researcher:\n"
+        "  role: Senior Researcher\n"
+        "  shell: bash\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert "tool.shell_without_approval" in [
+        finding.rule_id for finding in report.findings
+    ]
+
+
+def test_crewai_tasks_yaml_in_crews_config_path_is_scanned(tmp_path):
+    config_dir = tmp_path / "crews" / "writer" / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "tasks.yaml").write_text(
+        "task:\n  env:\n    GITHUB_TOKEN: synthetic\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert "bypass.direct_github_token" in [
+        finding.rule_id for finding in report.findings
+    ]
+
+
+def test_random_agents_yaml_not_in_crews_structure_is_ignored(tmp_path):
+    (tmp_path / "agents.yaml").write_text(
+        "shell: bash\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_crewai_yml_extension_recognized_in_crews_config(tmp_path):
+    config_dir = tmp_path / "crews" / "writer" / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "agents.yml").write_text(
+        "writer:\n"
+        "  shell: bash\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert "tool.shell_without_approval" in [
+        finding.rule_id for finding in report.findings
+    ]
+
+
 def test_non_candidate_manifest_name_is_ignored(tmp_path):
     manifest = tmp_path / "package.json"
     manifest.write_text(

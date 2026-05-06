@@ -27,6 +27,7 @@ MANIFEST_NAME_PATTERNS = (
     "langchain*.yaml",
     "langchain*.yml",
 )
+CREWAI_PATH_REGEX = re.compile(r"(^|/)crews/[^/]+/config/(agents|tasks)\.ya?ml$")
 DIRECT_GITHUB_TOKEN_RE = re.compile(
     r"\bsecrets\.(GITHUB_TOKEN|GH_TOKEN|GITHUB_PAT)\b"
     r"|^\s*[\"']?(GITHUB_TOKEN|GH_TOKEN|GITHUB_PAT|github-token)[\"']?\s*[:=]"
@@ -45,6 +46,8 @@ MAX_MANIFEST_SCAN_DEPTH = 100
 def is_agent_manifest(root: Path, path: Path) -> bool:
     relative = path.relative_to(root).as_posix()
     if relative in EXACT_MANIFEST_PATHS:
+        return True
+    if CREWAI_PATH_REGEX.search(relative):
         return True
     name = path.name.lower()
     return any(fnmatch.fnmatch(name, pattern) for pattern in MANIFEST_NAME_PATTERNS)

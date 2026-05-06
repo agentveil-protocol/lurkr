@@ -96,6 +96,10 @@ Shared candidate rules for v0.1:
   `.mcp.json`, `.cursor/mcp.json`, `mcp.json`, `mcp_config.json`,
   `crew*.yaml`, `crew*.yml`, `autogen*.json`, `autogen*.yaml`,
   `langchain*.json`, and `langchain*.yaml`.
+- Agent/tool manifest rules also recognize the canonical CrewAI path
+  convention `crews/<name>/config/agents.yaml` and
+  `crews/<name>/config/tasks.yaml` (and `.yml` variants), per real-world
+  CrewAI project structure.
 - Generic files such as `Makefile`, `package.json` scripts, `shell.nix`,
   Dockerfiles, arbitrary source code, and general CI commands are not v0.1
   agent-tool candidates unless a later approved rule explicitly adds them.

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
 from typing import Sequence
 
-from agentveil_posture.scanner import scan_path
+from agentveil_posture.scanner import ScanError, scan_path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -45,9 +46,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _handle_posture_scan(args: argparse.Namespace) -> int:
-    report = scan_path(Path(args.path))
-    Path(args.output).write_text(report.to_json(), encoding="utf-8")
-    return 0
+    try:
+        report = scan_path(Path(args.path))
+        Path(args.output).write_text(report.to_json(), encoding="utf-8")
+        return 0
+    except (OSError, ScanError) as exc:
+        print(f"agentveil posture scan: {exc}", file=sys.stderr)
+        return 1
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -61,4 +66,3 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

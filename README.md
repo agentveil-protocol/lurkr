@@ -4,6 +4,10 @@ AgentVeil Posture is a static, local scanner for risky agent capabilities.
 v0.1 focuses on GitHub-oriented posture checks and produces a redacted JSON
 report.
 
+v0.1 checks are best-effort static heuristics. They are intended to highlight
+review-worthy agent posture risks, not to replace code review, SAST, or secret
+scanning.
+
 ## Install
 
 Local development:
@@ -63,4 +67,3 @@ justification.
 ## License
 
 MIT. See `LICENSE`.
-

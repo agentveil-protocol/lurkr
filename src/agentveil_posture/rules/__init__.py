@@ -2,5 +2,8 @@
 
 from __future__ import annotations
 
-RULES: tuple[object, ...] = ()
+from agentveil_posture.rules.identity import scan_identity_private_key_unencrypted
 
+RULES = (scan_identity_private_key_unencrypted,)
+
+__all__ = ["RULES", "scan_identity_private_key_unencrypted"]

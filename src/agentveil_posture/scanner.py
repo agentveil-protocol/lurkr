@@ -2,12 +2,41 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-from agentveil_posture.report import PostureReport, empty_report
+from agentveil_posture.report import Finding, PostureReport, build_report
+from agentveil_posture.rules import scan_identity_private_key_unencrypted
+
+
+class ScanError(Exception):
+    """Raised when the requested scan path cannot be scanned safely."""
 
 
 def scan_path(path: Path) -> PostureReport:
-    """Return an empty v0.1 report until Day 2 rule detection is implemented."""
-    return empty_report(str(path.resolve()))
+    """Run a static, read-only scan for the currently implemented v0.1 rules."""
+    root = path.resolve()
+    if not root.exists():
+        raise ScanError(f"scan path does not exist: {path}")
+    if not root.is_dir():
+        raise ScanError(f"scan path is not a directory: {path}")
 
+    findings: list[Finding] = []
+    for candidate in _iter_regular_files(root):
+        finding = scan_identity_private_key_unencrypted(root, candidate)
+        if finding is not None:
+            findings.append(finding)
+
+    return build_report(str(root), findings)
+
+
+def _iter_regular_files(root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for dirpath, _dirnames, filenames in os.walk(str(root), followlinks=False):
+        for filename in filenames:
+            path = Path(dirpath) / filename
+            if path.is_symlink():
+                continue
+            if path.is_file():
+                paths.append(path)
+    return sorted(paths)

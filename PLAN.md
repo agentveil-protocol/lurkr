@@ -72,8 +72,35 @@ Dependency policy:
 
 - Standard library first.
 - `PyYAML` is the only planned runtime dependency, justified by deterministic
-  parsing of GitHub workflow YAML files. If Day 2 can implement workflow parsing
-  safely without YAML parsing, remove it before release.
+  parsing of GitHub workflow YAML files.
+- YAML parsing must use `yaml.safe_load` only. `yaml.load`, custom object
+  constructors, and arbitrary Python-object deserialization are forbidden
+  because scanned repository YAML is untrusted input.
+- If Day 2 can implement workflow parsing safely without YAML parsing, remove
+  `PyYAML` before release.
+
+## Static Candidate Discovery
+
+The scanner must use deterministic, bounded discovery. It must not execute
+package managers, shell scripts, hooks, Git commands, or project imports.
+
+Shared candidate rules for v0.1:
+
+- GitHub workflow rules inspect only `.github/workflows/*.yml` and
+  `.github/workflows/*.yaml`.
+- Agent/tool manifest rules inspect only pinned agent-manifest formats:
+  `.mcp.json`, `.cursor/mcp.json`, `mcp.json`, `mcp_config.json`,
+  `crew*.yaml`, `crew*.yml`, `autogen*.json`, `autogen*.yaml`,
+  `langchain*.json`, and `langchain*.yaml`.
+- Generic files such as `Makefile`, `package.json` scripts, `shell.nix`,
+  Dockerfiles, arbitrary source code, and general CI commands are not v0.1
+  agent-tool candidates unless a later approved rule explicitly adds them.
+- Identity rules may inspect any regular file through file metadata and a
+  bounded header prefix only.
+- Symlinks are skipped in v0.1, including symlinks that point inside the scan
+  root. Outside-root symlinks must never be followed.
+- Finding file paths are repository-relative POSIX paths under `scanned_path`,
+  never absolute paths.
 
 ## Rules v0.1
 
@@ -84,7 +111,8 @@ All v0.1 rules have severity `high`.
 Reads:
 
 - GitHub workflow YAML files under `.github/workflows/`;
-- common agent/tool configuration files once the scanner candidate list exists.
+- the pinned agent/tool manifest candidates listed in
+  `Static Candidate Discovery`.
 
 Matches:
 
@@ -163,8 +191,7 @@ Evidence policy:
 
 Reads:
 
-- common agent tool manifests and configuration files identified by static
-  candidate discovery;
+- pinned agent tool manifests identified by `Static Candidate Discovery`;
 - GitHub workflow steps that grant shell execution to agent-controlled inputs.
 
 Matches:
@@ -172,7 +199,8 @@ Matches:
 - shell tools enabled without an approval field, policy gate, allowlist, or
   restricted command set;
 - configuration keys such as `shell`, `bash`, `command`, `terminal`, or
-  `subprocess` paired with unconstrained execution flags.
+  `subprocess` paired with unconstrained execution flags in the pinned
+  agent-manifest formats only.
 
 Emits:
 
@@ -199,6 +227,11 @@ Matches:
   `BEGIN EC PRIVATE KEY`, or `BEGIN OPENSSH PRIVATE KEY`;
 - no encrypted-key marker in the bounded header prefix.
 
+Encrypted-key markers that must not fire:
+
+- `BEGIN ENCRYPTED PRIVATE KEY` for encrypted PKCS#8 PEM;
+- `Proc-Type: 4,ENCRYPTED` for legacy encrypted PKCS#1/SEC1 PEM.
+
 Emits:
 
 - file path;
@@ -220,6 +253,7 @@ Stable v0.1 shape:
 ```json
 {
   "report_version": "0.1",
+  "scanner_version": "agentveil-posture/0.1.0",
   "scanned_at": "2026-05-06T00:00:00Z",
   "scanned_path": "/absolute/or/input/path",
   "findings": [
@@ -248,9 +282,13 @@ Stable v0.1 shape:
 Schema rules:
 
 - `report_version` is a string and starts at `"0.1"`.
-- `scanned_at` is UTC ISO-8601 with `Z`.
+- `scanner_version` is a string in the form
+  `"agentveil-posture/<package-version>"`.
+- `scanned_at` is UTC ISO-8601 with `Z` and whole-second precision.
 - `scanned_path` is the CLI input resolved by the scanner.
 - `findings[]` is stable and redacted.
+- `findings[].file` is repository-relative to `scanned_path`, using POSIX `/`
+  separators.
 - `line` is `null` when no line is available.
 - `summary.by_severity` always includes all five severity keys.
 - `summary.total` equals `len(findings)`.
@@ -306,7 +344,10 @@ runs:
   steps:
     - run: python -m pip install .
       shell: bash
-    - run: agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}"
+    - id: scan
+      run: |
+        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}"
+        echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
       shell: bash
 ```
 
@@ -358,23 +399,48 @@ Fixture-driven E2E:
 Schema validation:
 
 - report JSON has exact v0.1 top-level keys;
+- report JSON includes `scanner_version`;
 - `summary.by_severity` includes all severity buckets;
 - `summary.total == len(findings)`;
-- `scanned_at` is UTC with `Z`;
+- `scanned_at` is UTC with `Z` and whole-second precision;
+- `Finding.severity` is one of the known severity enum values;
+- `Finding.rule_id` follows lowercase `category.rule_name` form;
+- `Finding.file` is repo-relative, never absolute;
 - `line` may be integer or null only.
 
 Hard-constraint tests:
 
 - monkeypatch `socket.socket` / common network entry points and assert scan does
   not call them;
+- monkeypatch `urllib.request.urlopen` and `http.client.HTTPConnection` and
+  assert scan does not call them;
+- if `requests` or `httpx` are ever added, monkeypatch their network clients in
+  the same hard-constraint suite;
 - monkeypatch `subprocess.run`, `subprocess.Popen`, and `os.system` and assert
   scan does not call them;
+- assert scanner source uses `yaml.safe_load` only and contains no
+  `yaml.load(` calls before YAML workflow parsing is enabled;
 - snapshot file hashes before and after scan and assert scanned files are not
   modified;
 - assert symlinks outside the scan root are not followed by default;
+- assert symlinks inside the scan root are skipped in v0.1;
+- assert symlinked directories are not traversed, including directories that
+  point outside the scan root;
 - assert large/binary files are skipped or bounded;
 - assert private-key detection reads only metadata plus a bounded header prefix;
+- assert encrypted PKCS#8 PEM and legacy `Proc-Type: 4,ENCRYPTED` PEM do not
+  trigger `identity.private_key_unencrypted`;
 - assert scanner logs and report output do not contain raw secret fixture values.
+
+CLI error tests:
+
+- `--path` to a non-existent directory exits `1` without a traceback;
+- `--path` to a file exits `1` without a traceback;
+- `--output` to a non-creatable path exits `1` without a traceback.
+
+Cross-platform parsing tests:
+
+- CRLF GitHub workflow YAML parses the same as LF when workflow parsing lands.
 
 Day 1 sanity tests:
 

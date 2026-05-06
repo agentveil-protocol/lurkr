@@ -21,3 +21,7 @@ htmlcov/
 .ruff_cache/
 
 .DS_Store
+
+report.json
+agentveil-posture-report.json
+*-posture-report.json

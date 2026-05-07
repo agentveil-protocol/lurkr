@@ -11,6 +11,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/agentveil-protocol/agentveil-posture?style=for-the-badge&logo=github&color=gold)](https://github.com/agentveil-protocol/agentveil-posture/stargazers)
 [![GitHub Action](https://img.shields.io/badge/GitHub-Action_ready-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)](#use-as-a-github-action)
 [![Posture: read-only](https://img.shields.io/badge/scanner-read--only-10b981?style=for-the-badge)](#hard-constraints)
+[![Demo](https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white)](https://asciinema.org/a/CBO9EuafgctnR1Q0)
 
 **Pre-deployment posture check for AI agents. Find risky capabilities before they become production incidents.**
 

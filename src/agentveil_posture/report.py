@@ -27,56 +27,63 @@ SEVERITY_TO_SECURITY_SEVERITY = {
     "low": "3.0",
     "info": "0.0",
 }
+RULE_DOC_BASE_URL = "https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules"
+
+
+def _rule_doc_url(rule_id: str) -> str:
+    return f"{RULE_DOC_BASE_URL}/{rule_id}.md"
+
+
 RULE_DESCRIPTORS = {
     "bypass.direct_github_token": {
         "short": "Direct GitHub token capability",
         "full": "Flags direct GitHub token references in workflows or agent manifests.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("bypass.direct_github_token"),
     },
     "workflow.deploy_without_approval": {
         "short": "Deployment without approval gate",
         "full": "Flags deploy, release, or publish workflow steps without an approval signal.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("workflow.deploy_without_approval"),
     },
     "workflow.pull_request_target_secrets_risk": {
         "short": "Privileged pull_request_target risk",
         "full": "Flags pull_request_target workflows that combine privileged context with checkout, run, or secrets.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("workflow.pull_request_target_secrets_risk"),
     },
     "tool.shell_without_approval": {
         "short": "Shell-capable tool without approval",
         "full": "Flags agent tool manifests that expose shell execution without an approval flag.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("tool.shell_without_approval"),
     },
     "identity.private_key_unencrypted": {
         "short": "Unencrypted private key file",
         "full": "Flags committed PEM private key files that appear to be unencrypted.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("identity.private_key_unencrypted"),
     },
     "agent.python_tool_without_approval": {
         "short": "Python agent tool without approval",
         "full": "Flags Python agent tool decorators or constructors without an approval marker.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("agent.python_tool_without_approval"),
     },
     "agent.python_subprocess_in_tool": {
         "short": "Python agent tool subprocess use",
         "full": "Flags subprocess or shell calls inside Python agent tool functions.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("agent.python_subprocess_in_tool"),
     },
     "agent.python_eval_exec_in_tool": {
         "short": "Python agent tool dynamic execution",
         "full": "Flags eval, exec, compile, or dynamic import calls inside Python agent tool functions.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("agent.python_eval_exec_in_tool"),
     },
     "agent.python_unrestricted_file_access": {
         "short": "Python agent tool file mutation",
         "full": "Flags file write or delete calls inside Python agent tool functions.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("agent.python_unrestricted_file_access"),
     },
     "agent.python_api_key_hardcoded": {
         "short": "Python hardcoded API key",
         "full": "Flags API-key-shaped string literals in Python source.",
-        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+        "help": _rule_doc_url("agent.python_api_key_hardcoded"),
     },
 }
 

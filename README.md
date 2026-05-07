@@ -70,16 +70,16 @@ All current rules are reported as `high` severity.
 
 | Rule | What it flags | Scope |
 |---|---|---|
-| `bypass.direct_github_token` | Direct GitHub PAT/token references in workflows or agent manifests | GitHub Actions, agent manifests |
-| `workflow.deploy_without_approval` | Deploy/release/publish steps without an approval gate | GitHub Actions |
-| `workflow.pull_request_target_secrets_risk` | `pull_request_target` workflows that combine privileged context with checkout, run, or secrets | GitHub Actions |
-| `tool.shell_without_approval` | Agent tool manifests that enable shell execution without an approval flag | MCP/CrewAI-style manifests |
-| `identity.private_key_unencrypted` | Unencrypted PEM private key files committed to the repo | Repository files |
-| `agent.python_tool_without_approval` | Python agent tool declarations without an approval marker | LangChain, LangGraph, CrewAI, MCP, OpenAI tool calling, Anthropic tool use |
-| `agent.python_subprocess_in_tool` | Subprocess or shell calls inside supported Python tool functions | Supported Python tool functions |
-| `agent.python_eval_exec_in_tool` | `eval`/`exec`-style dynamic execution inside Python tool functions | Supported Python tool functions |
-| `agent.python_unrestricted_file_access` | File write or delete calls inside Python tool functions | Supported Python tool functions |
-| `agent.python_api_key_hardcoded` | API-key-shaped string literals in Python source | Module-wide; Anthropic, OpenAI, GitHub PAT, HuggingFace |
+| [`bypass.direct_github_token`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/bypass.direct_github_token.md) | Direct GitHub PAT/token references in workflows or agent manifests | GitHub Actions, agent manifests |
+| [`workflow.deploy_without_approval`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/workflow.deploy_without_approval.md) | Deploy/release/publish steps without an approval gate | GitHub Actions |
+| [`workflow.pull_request_target_secrets_risk`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/workflow.pull_request_target_secrets_risk.md) | `pull_request_target` workflows that combine privileged context with checkout, run, or secrets | GitHub Actions |
+| [`tool.shell_without_approval`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/tool.shell_without_approval.md) | Agent tool manifests that enable shell execution without an approval flag | MCP/CrewAI-style manifests |
+| [`identity.private_key_unencrypted`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/identity.private_key_unencrypted.md) | Unencrypted PEM private key files committed to the repo | Repository files |
+| [`agent.python_tool_without_approval`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/agent.python_tool_without_approval.md) | Python agent tool declarations without an approval marker | LangChain, LangGraph, CrewAI, MCP, OpenAI tool calling, Anthropic tool use |
+| [`agent.python_subprocess_in_tool`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/agent.python_subprocess_in_tool.md) | Subprocess or shell calls inside supported Python tool functions | Supported Python tool functions |
+| [`agent.python_eval_exec_in_tool`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/agent.python_eval_exec_in_tool.md) | `eval`/`exec`-style dynamic execution inside Python tool functions | Supported Python tool functions |
+| [`agent.python_unrestricted_file_access`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/agent.python_unrestricted_file_access.md) | File write or delete calls inside Python tool functions | Supported Python tool functions |
+| [`agent.python_api_key_hardcoded`](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/agent.python_api_key_hardcoded.md) | API-key-shaped string literals in Python source | Module-wide; Anthropic, OpenAI, GitHub PAT, HuggingFace |
 
 Deployment checks include common CLI deploy, release, registry push, and
 infrastructure apply commands. Build, preview, plan, and package-only commands

@@ -6,7 +6,7 @@ import re
 
 import pytest
 
-from agentveil_posture.report import Finding, build_report, empty_report
+from agentveil_posture.report import Finding, RULE_DESCRIPTORS, build_report, empty_report
 from agentveil_posture.scanner import scan_path
 
 
@@ -127,6 +127,16 @@ def test_sarif_schema_version_and_rules_are_defined(tmp_path):
         security_severity = rule["properties"]["security-severity"]
         assert isinstance(security_severity, str)
         assert 7.0 <= float(security_severity) <= 8.9
+        assert rule["helpUri"].endswith(f"/docs/rules/{rule['id']}.md")
+
+
+def test_every_rule_has_a_documentation_page():
+    docs_root = Path(__file__).resolve().parents[1] / "docs" / "rules"
+
+    for rule_id, descriptor in RULE_DESCRIPTORS.items():
+        doc_path = docs_root / f"{rule_id}.md"
+        assert doc_path.exists(), rule_id
+        assert descriptor["help"].endswith(f"/docs/rules/{rule_id}.md")
 
 
 def test_sarif_result_has_code_scanning_fields_and_posix_artifact_uri(tmp_path):

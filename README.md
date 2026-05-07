@@ -111,6 +111,35 @@ The goal: find high-severity capabilities worth controlling before they become p
 | Generic secrets | Agent-relevant credentials and bypass paths |
 | Report only | Findings mapped to remove / restrict / redact controls |
 
+## Roadmap
+
+### Available now (v0.2.0)
+
+10 high-severity rules across:
+- GitHub workflows + agent manifests + identity files
+- Python agent code: LangChain / LangGraph, CrewAI, MCP (FastMCP and Server-style), OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini
+
+### v0.3.0 — broader framework coverage
+
+Candidates for broader framework coverage:
+- AutoGen / AG2 (re-validation against current Microsoft direction)
+- PydanticAI
+- Semantic Kernel
+
+### v0.4.0+ — quality and ergonomics
+
+Roadmap items being considered:
+- Auto-fix patches via SARIF `fixes` field
+- Per-finding contextual remediation
+- Suppression comments / inline `agentveil-posture: ignore`
+- Baseline mode (lock current findings, only fail on new)
+- Cross-file `Tool(func=external_module.helper)` resolution
+- More manifest formats (mcp.json variants)
+
+### Community input welcome
+
+Open an issue with framework or rule requests. Real-world examples accelerate prioritization.
+
 ## Install
 
 <details>

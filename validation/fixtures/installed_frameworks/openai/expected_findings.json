@@ -1,0 +1,9 @@
+{
+  "framework": "openai",
+  "framework_version_constraint": "openai>=1.0,<3.0",
+  "import_checks": ["openai"],
+  "expected_findings": [
+    {"rule_id": "agent.python_tool_without_approval", "file": "agent.py", "line": 27},
+    {"rule_id": "agent.python_subprocess_in_tool", "file": "agent.py", "line": 12}
+  ]
+}

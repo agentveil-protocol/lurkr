@@ -89,3 +89,28 @@ bash validation/phase10d_local_install.sh
 bash validation/phase10d_docker.sh
 bash validation/phase10d_precommit.sh
 ```
+
+## Phase 10e Installed-Framework Fixtures
+
+Verifies scanner handling for canonical patterns against isolated virtualenvs
+with the framework packages installed. The fixture agent files are scanned
+statically; they are not imported or executed.
+
+Run all fixtures (creates per-framework venvs, several minutes first run,
+cached after):
+
+```bash
+python validation/phase10e.py
+```
+
+Single framework:
+
+```bash
+python validation/phase10e.py --framework langchain
+```
+
+Force rebuild:
+
+```bash
+python validation/phase10e.py --no-cache
+```

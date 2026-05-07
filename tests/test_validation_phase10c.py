@@ -39,7 +39,7 @@ def test_phase10c_public_term_scanner_catches_forbidden_fixture(tmp_path):
     assert forbidden in result.failures[0]
 
 
-def test_phase10c_public_term_scanner_catches_gating_fixture(tmp_path):
+def test_phase10c_public_term_scanner_catches_copy_vocab_fixture(tmp_path):
     forbidden = "gat" + "ing"
     (tmp_path / "README.md").write_text(f"avoid {forbidden} claims\n", encoding="utf-8")
 

@@ -25,8 +25,9 @@ Hard constraints:
 - no secrets handling beyond metadata and bounded header sniffing;
 - no raw secret values in findings, reports, logs, or GitHub Action summaries.
 
-Phase 1-2 public wording must not claim production controlled execution is live.
-Production Gateway enforcement remains roadmap until separately shipped.
+Public wording must not claim runtime execution control. Posture is static
+analysis only — it finds risky capabilities, it does not block, gate, or
+enforce agent actions at runtime.
 
 ## Architecture
 

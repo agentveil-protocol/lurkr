@@ -34,7 +34,11 @@ agentveil = "agentveil_posture.cli:main"
 
 [project.optional-dependencies]
 test = [
+  "jsonschema>=4.0",
   "pytest>=8"
+]
+validation = [
+  "jsonschema>=4.0"
 ]
 
 [project.urls]

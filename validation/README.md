@@ -61,3 +61,21 @@ also requires positive expected coverage for every active rule.
 
 The harness exits non-zero when a threshold is breached, a forbidden rule fires,
 an active rule lacks positive label coverage, or scaffold labels are still empty.
+
+## Phase 10c Reviewer Checks
+
+Run all automated reviewer checks:
+
+```bash
+python validation/phase10c.py
+```
+
+## Phase 10d Local Validation
+
+Manual product checks runnable locally without PyPI/public state:
+
+```bash
+bash validation/phase10d_local_install.sh
+bash validation/phase10d_docker.sh
+bash validation/phase10d_precommit.sh
+```

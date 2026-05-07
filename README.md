@@ -24,7 +24,7 @@ rules; v0.2 adds bounded Python agent-source rules.
 
 [Quick Start](#quick-start) |
 [What a finding looks like](#what-a-finding-looks-like) |
-[Detection scope](#detection-scope-v01) |
+[Detection scope](#detection-scope-v02) |
 [GitHub Action](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
 

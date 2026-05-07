@@ -10,6 +10,9 @@ COPY src ./src
 
 RUN python -m pip install --no-cache-dir .
 
+RUN useradd --create-home --uid 1000 posture
+USER posture
+
 WORKDIR /workspace
 ENTRYPOINT ["agentveil", "posture", "scan", "--path", "/workspace"]
 CMD ["--output", "/workspace/agentveil-posture-report.json"]

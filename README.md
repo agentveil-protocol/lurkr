@@ -113,6 +113,13 @@ docker build -t agentveil-posture .
 docker run --rm -v "$PWD:/workspace" agentveil-posture --output /workspace/report.json
 ```
 
+The container runs as a non-root user (UID 1000). For host UID/GID matching to
+avoid permission issues with the generated report file:
+
+```bash
+docker run --rm -u $(id -u):$(id -g) -v "$PWD:/workspace" agentveil-posture --output /workspace/report.json
+```
+
 Add `--fail-on high` to make the container exit non-zero when high findings are
 present.
 

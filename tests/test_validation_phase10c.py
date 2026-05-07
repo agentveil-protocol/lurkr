@@ -39,6 +39,72 @@ def test_phase10c_public_term_scanner_catches_forbidden_fixture(tmp_path):
     assert forbidden in result.failures[0]
 
 
+def test_phase10c_public_term_scanner_catches_gating_fixture(tmp_path):
+    forbidden = "gat" + "ing"
+    (tmp_path / "README.md").write_text(f"avoid {forbidden} claims\n", encoding="utf-8")
+
+    result = phase10c.check_public_terms(tmp_path)
+
+    assert not result.passed
+    assert forbidden in result.failures[0]
+
+
+def test_phase10c_pre_launch_enables_external_link_checks():
+    args = phase10c._parse_args(["--pre-launch"])
+
+    assert phase10c.external_check_enabled(args)
+
+
+def test_phase10c_link_checker_ignores_fenced_code_blocks(tmp_path):
+    (tmp_path / "README.md").write_text(
+        "[scope](#real-heading)\n\n"
+        "```md\n"
+        "[missing](missing.md)\n"
+        "# Fake Heading\n"
+        "```\n\n"
+        "## Real Heading\n",
+        encoding="utf-8",
+    )
+
+    result = phase10c.check_markdown_links(tmp_path)
+
+    assert result.passed
+    assert "fake-heading" not in phase10c.markdown_anchors(tmp_path / "README.md")
+
+
+def test_phase10c_link_checker_validates_same_repo_github_links_locally(tmp_path):
+    docs = tmp_path / "docs" / "rules"
+    docs.mkdir(parents=True)
+    (docs / "example.md").write_text("# Example\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text(
+        "[rule](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/example.md)\n",
+        encoding="utf-8",
+    )
+
+    result = phase10c.check_markdown_links(tmp_path, check_external=True)
+
+    assert result.passed
+
+
+def test_phase10c_public_surface_includes_pyproject(tmp_path):
+    forbidden = "policy " + "block"
+    (tmp_path / "pyproject.toml").write_text(f'description = "{forbidden}"\n', encoding="utf-8")
+
+    result = phase10c.check_public_terms(tmp_path)
+
+    assert not result.passed
+    assert "pyproject.toml" in result.failures[0]
+
+
+def test_phase10d_docker_script_checks_default_user():
+    script = (Path(__file__).resolve().parents[1] / "validation" / "phase10d_docker.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "--entrypoint id" in script
+    assert "docker default user = UID 1000" in script
+
+
 def test_phase10c_rule_doc_check_catches_missing_anchor(tmp_path, monkeypatch):
     docs = tmp_path / "docs" / "rules"
     docs.mkdir(parents=True)

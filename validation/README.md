@@ -70,6 +70,16 @@ Run all automated reviewer checks:
 python validation/phase10c.py
 ```
 
+The pre-launch gate must run strict checks, including external link validation:
+
+```bash
+python validation/phase10c.py --pre-launch
+```
+
+Third-party HTTP(S) links are checked live. Same-repository GitHub blob and
+workflow links are resolved against the local checkout so private pre-public
+runs can still validate link targets before the repository is public.
+
 ## Phase 10d Local Validation
 
 Manual product checks runnable locally without PyPI/public state:

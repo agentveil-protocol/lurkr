@@ -29,6 +29,7 @@ REFERENCE_DEF_RE = re.compile(r"^\[([^\]]+)\]:\s+(\S+)", re.MULTILINE)
 REFERENCE_USE_RE = re.compile(r"(?<!!)\[[^\]]+\]\[([^\]]*)\]")
 HTML_HREF_RE = re.compile(r"<a\s+[^>]*href=[\"']([^\"']+)[\"']", re.IGNORECASE)
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$", re.MULTILINE)
+FENCED_CODE_BLOCK_RE = re.compile(r"```.*?```", re.DOTALL)
 
 
 @dataclass
@@ -41,13 +42,16 @@ class CheckResult:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    check_external = external_check_enabled(args)
     results = [
         check_sarif_schema(REPO_ROOT),
-        check_markdown_links(REPO_ROOT, check_external=args.check_external),
+        check_markdown_links(REPO_ROOT, check_external=check_external),
         check_public_terms(REPO_ROOT),
         check_rule_doc_links(REPO_ROOT),
     ]
     print("=== Phase 10c reviewer checks ===")
+    if args.pre_launch:
+        print("PRE-LAUNCH MODE: external link validation enabled")
     for index, result in enumerate(results, start=1):
         status = "PASS" if result.passed else "FAIL"
         print(f"[{index}/4] {result.name:<32} {status} {result.detail}".rstrip())
@@ -64,7 +68,16 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Check external HTTP(S) links with a 5 second timeout.",
     )
+    parser.add_argument(
+        "--pre-launch",
+        action="store_true",
+        help="Run strict pre-launch checks, including external HTTP(S) links.",
+    )
     return parser.parse_args(argv)
+
+
+def external_check_enabled(args: argparse.Namespace) -> bool:
+    return bool(args.check_external or args.pre_launch)
 
 
 def check_sarif_schema(repo_root: Path) -> CheckResult:
@@ -135,7 +148,7 @@ def markdown_files(repo_root: Path) -> list[Path]:
 
 
 def extract_markdown_links(path: Path) -> list[str]:
-    text = path.read_text(encoding="utf-8")
+    text = _strip_code_blocks(path.read_text(encoding="utf-8"))
     reference_defs = {key.lower(): url for key, url in REFERENCE_DEF_RE.findall(text)}
     links = [match.group(1) for match in INLINE_LINK_RE.finditer(text)]
     links.extend(match.group(1) for match in HTML_HREF_RE.finditer(text))
@@ -160,6 +173,10 @@ def validate_links(
     for link in links:
         parsed = urlparse(link)
         if parsed.scheme in {"http", "https"}:
+            same_repo_failures = _validate_same_repo_github_link(source, parsed, repo_root, link)
+            if same_repo_failures is not None:
+                failures.extend(same_repo_failures)
+                continue
             if check_external:
                 failures.extend(_check_external_link(source, link))
             continue
@@ -180,15 +197,91 @@ def validate_links(
     return failures
 
 
+def _validate_same_repo_github_link(
+    source: Path,
+    parsed,
+    repo_root: Path,
+    link: str,
+) -> list[str] | None:
+    path_parts = [part for part in parsed.path.split("/") if part]
+    if parsed.netloc == "raw.githubusercontent.com":
+        if path_parts[:3] != ["agentveil-protocol", "agentveil-posture", "main"]:
+            return None
+        return _validate_local_same_repo_path(source, repo_root, path_parts[3:], parsed.fragment, link)
+
+    if parsed.netloc != "github.com":
+        return None
+    if path_parts[:2] != ["agentveil-protocol", "agentveil-posture"]:
+        return None
+    repo_parts = path_parts[2:]
+    if repo_parts[:2] == ["blob", "main"]:
+        return _validate_local_same_repo_path(source, repo_root, repo_parts[2:], parsed.fragment, link)
+    if repo_parts[:2] == ["actions", "workflows"] and len(repo_parts) >= 3:
+        workflow_name = repo_parts[2]
+        return _validate_local_same_repo_path(
+            source,
+            repo_root,
+            [".github", "workflows", workflow_name],
+            "",
+            link,
+        )
+    if repo_parts in (["issues"], ["stargazers"]):
+        return []
+    return None
+
+
+def _validate_local_same_repo_path(
+    source: Path,
+    repo_root: Path,
+    path_parts: list[str],
+    anchor: str,
+    link: str,
+) -> list[str]:
+    target = repo_root.joinpath(*path_parts).resolve()
+    if not _is_within(repo_root, target):
+        return [f"{source.relative_to(repo_root)}: outside-repo link {link}"]
+    if not target.exists():
+        return [f"{source.relative_to(repo_root)}: missing link target {link}"]
+    if anchor and anchor not in markdown_anchors(target):
+        return [f"{source.relative_to(repo_root)}: missing anchor {link}"]
+    return []
+
+
 def _check_external_link(source: Path, link: str) -> list[str]:
     try:
-        request = Request(link, method="HEAD")
+        request = _external_request(link, method="HEAD")
+        with urlopen(request, timeout=5) as response:  # noqa: S310
+            if response.status >= 400:
+                return [f"{source.relative_to(REPO_ROOT)}: external link {link} returned {response.status}"]
+    except Exception as exc:  # noqa: BLE001
+        if _should_retry_external_get(exc):
+            return _check_external_link_with_get(source, link)
+        return [f"{source.relative_to(REPO_ROOT)}: external link {link} failed: {exc}"]
+    return []
+
+
+def _check_external_link_with_get(source: Path, link: str) -> list[str]:
+    try:
+        request = _external_request(link, method="GET")
         with urlopen(request, timeout=5) as response:  # noqa: S310
             if response.status >= 400:
                 return [f"{source.relative_to(REPO_ROOT)}: external link {link} returned {response.status}"]
     except Exception as exc:  # noqa: BLE001
         return [f"{source.relative_to(REPO_ROOT)}: external link {link} failed: {exc}"]
     return []
+
+
+def _external_request(link: str, *, method: str) -> Request:
+    return Request(
+        link,
+        headers={"User-Agent": "agentveil-posture-validation/0.2"},
+        method=method,
+    )
+
+
+def _should_retry_external_get(exc: Exception) -> bool:
+    status = getattr(exc, "code", None)
+    return status in {403, 405}
 
 
 def _is_within(root: Path, path: Path) -> bool:
@@ -200,8 +293,12 @@ def _is_within(root: Path, path: Path) -> bool:
 
 
 def markdown_anchors(path: Path) -> set[str]:
-    text = path.read_text(encoding="utf-8")
+    text = _strip_code_blocks(path.read_text(encoding="utf-8"))
     return {github_anchor(match.group(2)) for match in HEADING_RE.finditer(text)}
+
+
+def _strip_code_blocks(text: str) -> str:
+    return FENCED_CODE_BLOCK_RE.sub("", text)
 
 
 def github_anchor(heading: str) -> str:
@@ -242,9 +339,11 @@ def strategy_terms() -> list[str]:
         "deleg" + "ation",
         "runtime " + "control",
         "policy " + "enforcement",
+        "policy " + "block",
         "action " + "enforcement",
         "AVP " + "runtime",
         "execution " + "boundary",
+        "gat" + "ing",
         "attest" + "ation",
         "rece" + "ipt",
     ]
@@ -257,6 +356,8 @@ def public_surface_files(repo_root: Path) -> list[Path]:
         repo_root / "CHANGELOG.md",
         repo_root / "CONTRIBUTING.md",
         repo_root / "CODE_OF_CONDUCT.md",
+        repo_root / "pyproject.toml",
+        repo_root / ".pre-commit-hooks.yaml",
         repo_root / "action.yml",
         repo_root / "validation" / "README.md",
     ]

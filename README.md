@@ -13,7 +13,9 @@
 [![Posture: read-only](https://img.shields.io/badge/scanner-read--only-10b981?style=for-the-badge)](#hard-constraints)
 [![Demo](https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white)](https://asciinema.org/a/CBO9EuafgctnR1Q0)
 
-**Pre-deployment posture check for AI agents. Find risky capabilities before they become production incidents.**
+**Find what your agent can touch before you deploy it.**
+
+Static, local-only scanner for risky AI agent capabilities. No telemetry, no code execution, redacted output.
 
 `agentveil-posture` is a pre-deployment, static, local-only scanner that flags
 risky AI-agent and GitHub-workflow posture issues. No telemetry, no network
@@ -84,6 +86,30 @@ All current rules are reported as `high` severity.
 Deployment checks include common CLI deploy, release, registry push, and
 infrastructure apply commands. Build, preview, plan, and package-only commands
 are excluded unless the same step also contains a deploy marker.
+
+## How AgentVeil Posture is different
+
+Most AI-agent scanners focus on installed components, MCP servers, prompts, or skills.
+
+AgentVeil Posture focuses on **capability risk before deployment**.
+
+It scans the repo surfaces that turn an agent into an actor:
+- GitHub workflows that can deploy or expose secrets
+- Agent manifests that expose shell-capable tools
+- Python agent code that wires tools to subprocess, file writes, eval/exec, or direct tokens
+
+Static. Local-only. Offline. Redacted by default.
+
+The goal: find high-severity capabilities worth controlling before they become production incidents — not produce a giant list of theoretical issues.
+
+| Most scanners | AgentVeil Posture |
+|---|---|
+| MCP servers / installed components | Repo surfaces about to be deployed |
+| Prompt injection / vulnerabilities | Risky agent capabilities |
+| Long lists of potential issues | Conservative high-severity rules |
+| API tokens / cloud calls | Local, offline, no telemetry |
+| Generic secrets | Agent-relevant credentials and bypass paths |
+| Report only | Findings mapped to remove / restrict / redact controls |
 
 ## Install
 

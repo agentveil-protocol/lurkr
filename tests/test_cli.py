@@ -118,6 +118,84 @@ def test_cli_scan_writes_sarif_report(tmp_path):
     assert data["version"] == "2.1.0"
 
 
+def test_cli_without_fail_on_returns_0_for_high_findings(tmp_path):
+    output = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "posture",
+            "scan",
+            "--path",
+            str(FIXTURES / "dangerous_github_project"),
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 0
+    assert json.loads(output.read_text(encoding="utf-8"))["summary"]["by_severity"]["high"] == 5
+
+
+def test_cli_fail_on_high_returns_1_for_high_findings(tmp_path):
+    output = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "posture",
+            "scan",
+            "--path",
+            str(FIXTURES / "dangerous_github_project"),
+            "--output",
+            str(output),
+            "--fail-on",
+            "high",
+        ]
+    )
+
+    assert exit_code == 1
+    assert json.loads(output.read_text(encoding="utf-8"))["summary"]["by_severity"]["high"] == 5
+
+
+def test_cli_fail_on_high_returns_0_without_high_findings(tmp_path):
+    output = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "posture",
+            "scan",
+            "--path",
+            str(FIXTURES / "clean_github_project"),
+            "--output",
+            str(output),
+            "--fail-on",
+            "high",
+        ]
+    )
+
+    assert exit_code == 0
+    assert json.loads(output.read_text(encoding="utf-8"))["summary"]["total"] == 0
+
+
+def test_cli_fail_on_critical_returns_0_for_only_high_findings(tmp_path):
+    output = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "posture",
+            "scan",
+            "--path",
+            str(FIXTURES / "dangerous_github_project"),
+            "--output",
+            str(output),
+            "--fail-on",
+            "critical",
+        ]
+    )
+
+    assert exit_code == 0
+    assert json.loads(output.read_text(encoding="utf-8"))["summary"]["by_severity"]["high"] == 5
+
+
 def test_cli_missing_path_exits_1(tmp_path, capsys):
     output = tmp_path / "report.json"
 

@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 from typing import Sequence
 
+from agentveil_posture.report import SEVERITIES, Finding, PostureReport
 from agentveil_posture.scanner import ScanError, scan_path
 
 
@@ -47,9 +48,25 @@ def build_parser() -> argparse.ArgumentParser:
         default="json",
         help="Report format to write. Defaults to json.",
     )
+    scan_parser.add_argument(
+        "--fail-on",
+        choices=SEVERITIES,
+        default=None,
+        help="Exit 1 when findings at or above this severity are present.",
+    )
     scan_parser.set_defaults(handler=_handle_posture_scan)
 
     return parser
+
+
+def _finding_meets_threshold(finding: Finding, threshold: str) -> bool:
+    return SEVERITIES.index(finding.severity) <= SEVERITIES.index(threshold)
+
+
+def _report_meets_threshold(report: PostureReport, threshold: str | None) -> bool:
+    if threshold is None:
+        return False
+    return any(_finding_meets_threshold(finding, threshold) for finding in report.findings)
 
 
 def _handle_posture_scan(args: argparse.Namespace) -> int:
@@ -60,6 +77,8 @@ def _handle_posture_scan(args: argparse.Namespace) -> int:
         else:
             output = json.dumps(report.to_sarif(), indent=2, sort_keys=True) + "\n"
         Path(args.output).write_text(output, encoding="utf-8")
+        if _report_meets_threshold(report, args.fail_on):
+            return 1
         return 0
     except (OSError, ScanError) as exc:
         print(f"agentveil posture scan: {exc}", file=sys.stderr)

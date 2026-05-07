@@ -341,14 +341,15 @@ Arguments:
   examples and CI.
 - `--format json|sarif`: report format. Defaults to `json` for backward
   compatibility.
+- `--fail-on critical|high|medium|low|info`: optional threshold. When set,
+  report writing still completes, then the command exits `1` if any finding is
+  at or above the selected severity.
 
 Exit codes:
 
-- `0`: scan completed and report was written, regardless of findings for v0.1.
+- `0`: scan completed, report was written, and no configured threshold was met.
+- `1`: scanner/reporting error, or a configured `--fail-on` threshold was met.
 - `2`: invalid CLI arguments.
-- `1`: scanner/reporting error.
-
-Future flags such as `--fail-on` are deferred.
 
 ## GitHub Action Manifest
 
@@ -373,9 +374,13 @@ inputs:
     description: Report format to write (json or sarif)
     required: false
     default: json
+  fail-on:
+    description: Fail when findings at or above this severity are present
+    required: false
+    default: ""
 outputs:
   report:
-    description: Path to the generated JSON report
+    description: Path to the generated report
     value: ${{ steps.scan.outputs.report }}
 runs:
   using: composite
@@ -386,9 +391,15 @@ runs:
       working-directory: ${{ github.action_path }}
     - id: scan
       name: Run posture scan
+      env:
+        AGENTVEIL_POSTURE_FAIL_ON: ${{ inputs.fail-on }}
       run: |
-        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}"
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
+        fail_on_args=()
+        if [ -n "$AGENTVEIL_POSTURE_FAIL_ON" ]; then
+          fail_on_args=(--fail-on "$AGENTVEIL_POSTURE_FAIL_ON")
+        fi
+        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}"
       shell: bash
 ```
 
@@ -400,7 +411,8 @@ PR/check surfacing:
   generated file with `github/codeql-action/upload-sarif@v3`.
 - Any optional job summary must show counts and rule IDs only.
 - Raw evidence, source snippets, and secret-like values must not be printed.
-- Failing PRs by threshold is deferred unless explicitly approved for v0.1.
+- Callers may fail jobs by threshold with `fail-on: high` or another supported
+  severity.
 
 ## Fixture Plan
 
@@ -515,7 +527,6 @@ Local sanity tests:
 ## Out Of Scope For v0.1
 
 - `check` command alias;
-- `--fail-on`;
 - PyPI publication;
 - GitHub repository creation or remote push;
 - AVP backend/core code, deployment, credentials, logs, or production changes.

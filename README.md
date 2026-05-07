@@ -37,6 +37,12 @@ cat report.json
 That is the whole flow. The scanner is read-only: it does not modify your
 files, run your code, or send data over the network.
 
+To fail CI when findings meet a threshold, add `--fail-on`:
+
+```bash
+agentveil posture scan --path . --output report.json --fail-on high
+```
+
 ## What a Finding Looks Like
 
 ```json
@@ -104,10 +110,12 @@ Use the action from the same repository:
   with:
     path: "."
     output: agentveil-posture-report.json
+    fail-on: high
 ```
 
-The action requires Python 3.10 or newer on the runner. It writes the JSON
-report path to the `report` output and does not upload data to AgentVeil.
+The action requires Python 3.10 or newer on the runner. It writes the report
+path to the `report` output and does not upload data to AgentVeil. Omit
+`fail-on` to keep review-only behavior.
 
 For GitHub Code Scanning, write SARIF and upload it with CodeQL:
 
@@ -136,6 +144,7 @@ repos:
     rev: v0.1.0
     hooks:
       - id: agentveil-posture
+        args: ["--fail-on", "high"]
 ```
 
 Then install:
@@ -144,9 +153,9 @@ Then install:
 pre-commit install
 ```
 
-The hook generates `agentveil-posture-report.json` on every commit and always
-passes. v0.1 surfaces findings as review items, not auto-block. Read the
-report to triage findings.
+The hook generates `agentveil-posture-report.json` on every commit. Omit
+`args` for review-only behavior, or use `--fail-on` to block commits when
+findings meet the selected threshold.
 
 ## Triaging Findings
 

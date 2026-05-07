@@ -1,16 +1,11 @@
 # AgentVeil Posture
 
-```text
-  +----------+      +----------+      +----------+
-  |   FIND   |      |  DECIDE  |      |  PROVE   |
-  |  risky   | ---> |  what is | ---> |  what    |
-  |   caps   |      |  allowed |      | happened |
-  +----------+      +----------+      +----------+
-   you are here       roadmap          roadmap
-   v0.1 Posture
-```
+<p align="center">
+  <img src="docs/agentveil-posture-logo.png" alt="AgentVeil Posture logo" width="180">
+</p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![Self Test](https://github.com/agentveil-protocol/agentveil-posture/actions/workflows/posture-self-test.yml/badge.svg)](https://github.com/agentveil-protocol/agentveil-posture/actions/workflows/posture-self-test.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![GitHub stars](https://img.shields.io/github/stars/agentveil-protocol/agentveil-posture?style=for-the-badge&logo=github&color=gold)](https://github.com/agentveil-protocol/agentveil-posture/stargazers)
 [![GitHub Action](https://img.shields.io/badge/GitHub-Action_ready-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)](#use-as-a-github-action)
@@ -170,17 +165,25 @@ CI or replace SAST/secret-scanning tools.
 
 AI agents increasingly touch production credentials, deploy workflows, and
 developer infrastructure. AgentVeil Posture is the first step: find risky
-capabilities before runtime, before deployment, and before they become
-incidents.
+capabilities before deployment and before they become incidents.
+
+```text
+  +----------+      +----------+      +----------+
+  |   FIND   |      |  DECIDE  |      |  PROVE   |
+  |  risky   | ---> |  what is | ---> |  what    |
+  |   caps   |      |  allowed |      | happened |
+  +----------+      +----------+      +----------+
+   you are here       roadmap          roadmap
+   v0.1 Posture
+```
 
 | | Posture does | Posture does not |
 |---|---|---|
-| Scope | Static analysis and posture risk patterns | Runtime control or policy enforcement |
+| Scope | Static analysis and posture risk patterns | Approval, blocking, or execution of agent actions |
 | Effects | Read-only file inspection | Code execution, network calls, or file mutation |
 | Output | Redacted JSON findings | Secret values, command bodies, or key bytes |
 
-For runtime control of agent actions, see the broader
-[AgentVeil project](https://agentveil.dev).
+For the broader AgentVeil project, see [agentveil.dev](https://agentveil.dev).
 
 ## Hard Constraints
 

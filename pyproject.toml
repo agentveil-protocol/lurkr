@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "agentveil-posture"
 version = "0.1.0"
 description = "Pre-deployment posture checks for risky AI agent capabilities."
+keywords = ["security", "agent", "mcp", "posture", "github-actions", "ai-agents"]
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -35,6 +36,12 @@ agentveil = "agentveil_posture.cli:main"
 test = [
   "pytest>=8"
 ]
+
+[project.urls]
+Homepage = "https://agentveil.dev"
+Repository = "https://github.com/agentveil-protocol/agentveil-posture"
+Issues = "https://github.com/agentveil-protocol/agentveil-posture/issues"
+Documentation = "https://github.com/agentveil-protocol/agentveil-posture#readme"
 
 [tool.setuptools.packages.find]
 where = ["src"]

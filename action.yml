@@ -1,5 +1,8 @@
 name: AgentVeil Posture
 description: Pre-deployment posture scan for risky AI agent capabilities
+branding:
+  icon: shield
+  color: blue
 
 inputs:
   path:

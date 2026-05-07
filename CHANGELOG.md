@@ -19,6 +19,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   pattern in `tools=[...]` arguments).
 - Added static `.py` discovery using the Phase 6a bounded AST parser.
 - Added redacted SARIF/JSON coverage for Python agent findings.
+- Added per-rule remediation documentation under `docs/rules/<rule-id>.md`
+  with capability-aware code examples.
+- SARIF rule descriptors now point `helpUri` at per-rule docs pages.
 
 ## [0.1.1] - 2026-05-07
 

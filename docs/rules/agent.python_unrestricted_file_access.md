@@ -21,8 +21,8 @@ Good:
 
 ```python
 @tool(require_human_approval=True)
-def write_report(body: str):
-    Path("reports/output.md").write_text(body)
+def generate_report(body: str) -> str:
+    return f"Generated report:\n{body}"
 ```
 
 ## Framework Note

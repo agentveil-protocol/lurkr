@@ -12,13 +12,21 @@ Unencrypted key material should not be committed.
 Bad:
 
 ```text
-unencrypted PEM private key header
+keys/server.pem
+-----BEGIN PRIVATE KEY-----
+[unencrypted key body]
+-----END PRIVATE KEY-----
 ```
 
 Good:
 
-```text
-Store private keys in a secret manager, or use encrypted local key files.
+```bash
+# Encrypt at rest:
+openssl rsa -in server.pem -aes256 -out server.encrypted.pem
+
+# Or move to secret manager:
+aws ssm put-parameter --name /service/private-key --type SecureString --value "$(cat server.pem)"
+rm server.pem
 ```
 
 ## Framework Note

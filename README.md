@@ -74,6 +74,10 @@ All v0.1 rules are reported as `high` severity.
 | `tool.shell_without_approval` | Agent tool manifests that enable shell execution without an approval flag |
 | `identity.private_key_unencrypted` | Unencrypted PEM private key files committed to the repo |
 
+Deployment checks include common CLI deploy, release, registry push, and
+infrastructure apply commands. Build, preview, plan, and package-only commands
+are excluded unless the same step also contains a deploy marker.
+
 ## Install
 
 <details>
@@ -89,7 +93,7 @@ pip install agentveil-posture
 <summary><b>From GitHub release</b></summary>
 
 ```bash
-pip install git+https://github.com/agentveil-protocol/agentveil-posture@v0.1.0
+pip install git+https://github.com/agentveil-protocol/agentveil-posture@v0.1.1
 ```
 
 </details>
@@ -130,7 +134,7 @@ present.
 Use the action from the same repository:
 
 ```yaml
-- uses: agentveil-protocol/agentveil-posture@v0.1.0
+- uses: agentveil-protocol/agentveil-posture@v0.1.1
   with:
     path: "."
     output: agentveil-posture-report.json
@@ -144,7 +148,7 @@ path to the `report` output and does not upload data to AgentVeil. Omit
 For GitHub Code Scanning, write SARIF and upload it with CodeQL:
 
 ```yaml
-- uses: agentveil-protocol/agentveil-posture@v0.1.0
+- uses: agentveil-protocol/agentveil-posture@v0.1.1
   with:
     path: "."
     output: agentveil-posture.sarif
@@ -165,7 +169,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/agentveil-protocol/agentveil-posture
-    rev: v0.1.0
+    rev: v0.1.1
     hooks:
       - id: agentveil-posture
         args: ["--fail-on", "high"]

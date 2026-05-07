@@ -7,6 +7,9 @@ and PyPI package metadata for v0.1. Remote creation, GitHub push, tag creation,
 release publication, and PyPI upload remain gated until the pre-public-push
 gate passes and the operator explicitly approves those actions.
 
+Version note: `0.1.1` expands heuristic markers and fixes PyPI README logo
+rendering. PyPI publication of `0.1.1` remains a separate pre-launch gate.
+
 ## Product Boundary
 
 AgentVeil Posture v0.1 is a local, static scanner for GitHub-focused agent
@@ -153,10 +156,19 @@ Reads:
 
 Matches:
 
-- deployment-like jobs or steps using the v0.1 marker regex:
+- deployment-like `run:` commands using the v0.1 marker regex:
   `deploy`, `deployment`, `release`, `kubectl`, package-manager publish
   (`npm|pnpm|yarn|pypi|twine|poetry publish`), `terraform apply`,
-  `cloudformation deploy`, or `serverless deploy`;
+  `cloudformation deploy`, `serverless deploy`, `gh release create`,
+  `docker push`, `helm upgrade`, `pulumi up`, `sam deploy`,
+  `gcloud run deploy`, `firebase deploy`, `vercel deploy`, `netlify deploy`,
+  `fly deploy`, `wrangler deploy`, or `aws ecs update-service`;
+- deploy marker matching is limited to `run:` command values, line-based after
+  whitespace normalization and bash comment-only line stripping. Multi-line
+  `run:` blocks are handled by evaluating each captured line independently;
+- build, preview, plan, and package-only commands such as `docker build`,
+  `helm template`, `pulumi preview`, `terraform plan`, `vercel build`, and
+  `npm pack` are excluded unless the same line also contains a deploy marker;
 - absence of an explicit approval gate such as protected GitHub environments,
   reviewer-required environment usage, or a clearly named manual approval job.
 
@@ -183,7 +195,9 @@ Matches:
 
 - `on: pull_request_target`;
 - plus risky use of checkout, script execution, dependency install, or secret
-  access in jobs triggered by untrusted PR context.
+  access in jobs triggered by untrusted PR context;
+- parsed workflow `uses:` fields matching `actions/github-script@...` are
+  treated as script execution only in `pull_request_target` workflows.
 
 Emits:
 
@@ -210,7 +224,10 @@ Matches:
   restricted command set;
 - configuration keys such as `shell`, `bash`, `command`, `terminal`, or
   `subprocess` paired with unconstrained execution flags in the pinned
-  agent-manifest formats only.
+  agent-manifest formats only;
+- exact tool names `shell`, `bash`, `command`, `terminal`, or `subprocess` in
+  pinned agent-manifest tool lists or tool-name fields. Substrings and prose
+  such as `search_tool`, `shellfish`, or `use shell` are not matches.
 
 Emits:
 
@@ -263,7 +280,7 @@ Stable v0.1 shape:
 ```json
 {
   "report_version": "0.1",
-  "scanner_version": "agentveil-posture/0.1.0",
+  "scanner_version": "agentveil-posture/0.1.1",
   "scanned_at": "2026-05-06T00:00:00Z",
   "scanned_path": "/absolute/or/input/path",
   "findings": [
@@ -354,7 +371,7 @@ Exit codes:
 ## GitHub Action Manifest
 
 v0.1 keeps the action in this same repo and distributes it as
-`agentveil-protocol/agentveil-posture@v0.1.0`.
+`agentveil-protocol/agentveil-posture@v0.1.1`.
 
 `action.yml` shape:
 

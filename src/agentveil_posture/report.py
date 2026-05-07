@@ -9,7 +9,7 @@ import json
 
 
 REPORT_VERSION = "0.1"
-SCANNER_VERSION = "agentveil-posture/0.1.0"
+SCANNER_VERSION = "agentveil-posture/0.1.1"
 SEVERITIES = ("critical", "high", "medium", "low", "info")
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 SARIF_VERSION = "2.1.0"
@@ -121,7 +121,7 @@ class PostureReport:
                         "driver": {
                             "name": "AgentVeil Posture",
                             "informationUri": "https://github.com/agentveil-protocol/agentveil-posture",
-                            "semanticVersion": "0.1.0",
+                            "semanticVersion": "0.1.1",
                             "rules": [_sarif_rule(rule_id) for rule_id in rule_ids],
                         }
                     },

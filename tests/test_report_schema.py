@@ -25,7 +25,7 @@ def test_empty_report_schema_contains_scanner_version_and_whole_second_time(tmp_
         "findings",
         "summary",
     }
-    assert data["scanner_version"] == "agentveil-posture/0.1.0"
+    assert data["scanner_version"] == "agentveil-posture/0.1.1"
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", data["scanned_at"])
     assert data["summary"]["by_severity"] == {
         "critical": 0,

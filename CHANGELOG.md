@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-07
+
+### Changed
+
+- Expanded deployment workflow markers to cover common CLI deploy and publish
+  commands while preserving command-body redaction.
+- Tightened deployment false-positive exclusions for build, preview, plan, and
+  package-only commands.
+- Detect `actions/github-script` usage under `pull_request_target` via parsed
+  workflow `uses:` fields.
+- Detect exact shell-capable tool names in pinned agent manifests without
+  matching substrings such as `search_tool` or `shellfish`.
+- Updated the README logo URL so future PyPI releases render the logo from a
+  public raw GitHub URL.
+
 ## [0.1.0] - 2026-05-07
 
 ### Added

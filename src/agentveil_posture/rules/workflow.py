@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+from typing import Any
 
 from agentveil_posture.report import Finding
 from agentveil_posture.rules.parsing import (
@@ -14,14 +15,35 @@ from agentveil_posture.rules.parsing import (
 )
 
 
-DEPLOY_MARKER_RE = re.compile(
-    r"\b(deploy|deployment|release|kubectl)\b"
+STRONG_DEPLOY_RE = re.compile(
+    r"\b(deploy|kubectl)\b"
     r"|\b(npm|pnpm|yarn|pypi|twine|poetry)\s+publish\b"
     r"|\bterraform\s+apply\b"
     r"|\bcloudformation\s+deploy\b"
     r"|\bserverless\s+deploy\b",
     re.IGNORECASE,
 )
+DEPLOY_PHRASE_MARKERS = (
+    "gh release create",
+    "docker push",
+    "helm upgrade",
+    "pulumi up",
+    "sam deploy",
+    "gcloud run deploy",
+    "firebase deploy",
+    "vercel deploy",
+    "netlify deploy",
+    "fly deploy",
+    "wrangler deploy",
+    "aws ecs update-service",
+)
+DEPLOY_PHRASE_RE = re.compile(
+    r"(?<![\w-])("
+    + "|".join(re.escape(marker).replace(r"\ ", r"\s+") for marker in DEPLOY_PHRASE_MARKERS)
+    + r")(?![\w-])",
+    re.IGNORECASE,
+)
+LEGACY_DEPLOY_MARKER_RE = re.compile(r"\b(deployment|release)\b", re.IGNORECASE)
 BUILD_CONFIG_EXCLUSIONS = re.compile(
     r"--configuration\s+\w+"
     r"|--framework\s+\w+"
@@ -29,7 +51,29 @@ BUILD_CONFIG_EXCLUSIONS = re.compile(
     r"|\brelease\s+candidate\b",
     re.IGNORECASE,
 )
-APPROVAL_MARKERS = ("approval", "manual approval", "review", "protected environment")
+DEPLOY_EXCLUSION_RE = re.compile(
+    r"(?<![\w-])("
+    r"docker\s+build"
+    r"|helm\s+template"
+    r"|helm\s+lint"
+    r"|pulumi\s+preview"
+    r"|terraform\s+plan"
+    r"|vercel\s+pull"
+    r"|vercel\s+build"
+    r"|vercel\s+deployment"
+    r"|gh\s+release\s+list"
+    r"|sam\s+deployment\s+package"
+    r"|firebase\s+deployment\s+preview"
+    r"|netlify\s+deployment\s+summary"
+    r"|fly\s+deployment\s+notes"
+    r"|npm\s+pack"
+    r")(?![\w-])",
+    re.IGNORECASE,
+)
+APPROVAL_MARKER_RE = re.compile(
+    r"\b(manual\s+approval|protected\s+environment|approval|review)\b",
+    re.IGNORECASE,
+)
 PULL_REQUEST_TARGET_RE = re.compile(r"(^|\s)pull_request_target\s*:", re.MULTILINE)
 PULL_REQUEST_TARGET_INLINE_RE = re.compile(
     r"^\s*on\s*:\s*(\[.*pull_request_target.*\]|pull_request_target)\s*$",
@@ -101,7 +145,7 @@ def scan_workflow_pull_request_target_secrets_risk(
     root: Path, path: Path, document: ParsedDocument
 ) -> list[Finding]:
     trigger_line = _pull_request_target_line(document.lines)
-    if trigger_line is None or not _has_pull_request_target_risk(document.text):
+    if trigger_line is None or not _has_pull_request_target_risk(document.text, document.data):
         return []
     return [
         Finding(
@@ -126,10 +170,29 @@ def load_workflow(path: Path) -> ParsedDocument | None:
 
 
 def _first_deploy_line(lines: list[str]) -> int | None:
+    in_run_block = False
+    run_indent = 0
+
     for line_number, line in enumerate(lines, start=1):
-        if BUILD_CONFIG_EXCLUSIONS.search(line):
+        if in_run_block:
+            if line.strip() and _indent(line) <= run_indent:
+                in_run_block = False
+            else:
+                executable = _strip_inline_comment(line)
+                if executable and _has_deploy_marker(executable):
+                    return line_number
+                continue
+
+        run_value = _run_value(line)
+        if run_value is None:
             continue
-        if DEPLOY_MARKER_RE.search(line):
+        executable = _strip_inline_comment(run_value)
+        if _is_block_scalar(executable):
+            in_run_block = True
+            run_indent = _indent(line)
+            continue
+
+        if executable and _has_deploy_marker(executable):
             return line_number
     return None
 
@@ -142,10 +205,9 @@ def _first_matching_line(lines: list[str], pattern: re.Pattern[str]) -> int | No
 
 
 def _has_approval_signal(text: str) -> bool:
-    normalized = text.lower()
     if re.search(r"^\s*environment\s*:", text, flags=re.MULTILINE):
         return True
-    return any(marker in normalized for marker in APPROVAL_MARKERS)
+    return APPROVAL_MARKER_RE.search(text) is not None
 
 
 def _pull_request_target_line(lines: list[str]) -> int | None:
@@ -157,9 +219,11 @@ def _pull_request_target_line(lines: list[str]) -> int | None:
     return None
 
 
-def _has_pull_request_target_risk(text: str) -> bool:
+def _has_pull_request_target_risk(text: str, data: Any) -> bool:
     if not _has_pull_request_target_trigger(text):
         return False
+    if _contains_github_script_step(data):
+        return True
     normalized = text.lower()
     return (
         "actions/checkout" in normalized
@@ -180,3 +244,45 @@ def _has_pull_request_target_trigger(text: str) -> bool:
 
 def _without_comment_lines(text: str) -> str:
     return "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+
+
+def _strip_inline_comment(line: str) -> str:
+    stripped = line.strip()
+    if stripped.startswith("#"):
+        return ""
+    return stripped.split("#", 1)[0].strip()
+
+
+def _run_value(line: str) -> str | None:
+    match = re.match(r"^\s*(?:-\s*)?run\s*:\s*(.*)$", line)
+    if match is None:
+        return None
+    return match.group(1).strip()
+
+
+def _is_block_scalar(value: str) -> bool:
+    return value in {"|", "|-", "|+", ">", ">-", ">+"}
+
+
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _has_deploy_marker(line: str) -> bool:
+    normalized = " ".join(line.split())
+    if STRONG_DEPLOY_RE.search(normalized) or DEPLOY_PHRASE_RE.search(normalized):
+        return True
+    if BUILD_CONFIG_EXCLUSIONS.search(normalized) or DEPLOY_EXCLUSION_RE.search(normalized):
+        return False
+    return LEGACY_DEPLOY_MARKER_RE.search(normalized) is not None
+
+
+def _contains_github_script_step(value: Any) -> bool:
+    if isinstance(value, dict):
+        uses = value.get("uses")
+        if isinstance(uses, str) and re.match(r"^actions/github-script@.+$", uses, flags=re.I):
+            return True
+        return any(_contains_github_script_step(child) for child in value.values())
+    if isinstance(value, list):
+        return any(_contains_github_script_step(item) for item in value)
+    return False

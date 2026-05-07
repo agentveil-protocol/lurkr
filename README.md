@@ -105,6 +105,19 @@ pip install -e .
 
 </details>
 
+<details>
+<summary><b>Docker</b></summary>
+
+```bash
+docker build -t agentveil-posture .
+docker run --rm -v "$PWD:/workspace" agentveil-posture --output /workspace/report.json
+```
+
+Add `--fail-on high` to make the container exit non-zero when high findings are
+present.
+
+</details>
+
 ## Use as a GitHub Action
 
 Use the action from the same repository:

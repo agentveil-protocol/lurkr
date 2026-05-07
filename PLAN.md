@@ -2,10 +2,10 @@
 
 Status: v0.1 implementation spec for Phase 1 Sprint 1.
 
-Scope: local scanner, GitHub Action, and fixtures for v0.1. Publishing, remote
-creation, GitHub push, tag creation, and release publication remain out of
-scope until the pre-public-push gate passes and the operator explicitly
-approves those actions.
+Scope: local scanner, GitHub Action, fixtures, SARIF output, CI thresholding,
+and PyPI package metadata for v0.1. Remote creation, GitHub push, tag creation,
+release publication, and PyPI upload remain gated until the pre-public-push
+gate passes and the operator explicitly approves those actions.
 
 ## Product Boundary
 
@@ -527,6 +527,7 @@ Local sanity tests:
 ## Out Of Scope For v0.1
 
 - `check` command alias;
-- PyPI publication;
 - GitHub repository creation or remote push;
+- GitHub tag or release publication without explicit approval;
+- PyPI upload without explicit approval;
 - AVP backend/core code, deployment, credentials, logs, or production changes.

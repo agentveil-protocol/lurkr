@@ -14,11 +14,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Initial `agentveil posture scan` CLI for static, local-only AI agent posture checks.
 - GitHub Action wrapper for repository posture scans.
 - Pre-commit hook manifest for local posture review before commits.
+- PyPI package metadata for `agentveil-posture`.
 - Five high-severity v0.1 rules covering GitHub token exposure surfaces,
   deployment approval gaps, privileged pull request workflows, shell-capable
   tool manifests, and committed unencrypted private keys.
 - Redacted JSON report output with rule ID, severity, file path, line number
   when available, message, and remediation.
+- SARIF v2.1.0 report output for GitHub Code Scanning upload.
+- Optional `--fail-on` threshold for CI and pre-commit blocking.
 
 ### Security
 

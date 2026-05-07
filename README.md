@@ -1,10 +1,11 @@
 # AgentVeil Posture
 
 <p align="center">
-  <img src="docs/agentveil-posture-logo.png" alt="AgentVeil Posture logo" width="180">
+  <img src="https://raw.githubusercontent.com/agentveil-protocol/agentveil-posture/main/docs/agentveil-posture-logo.png" alt="AgentVeil Posture logo" width="180">
 </p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/agentveil-posture?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/agentveil-posture/)
 [![Self Test](https://github.com/agentveil-protocol/agentveil-posture/actions/workflows/posture-self-test.yml/badge.svg)](https://github.com/agentveil-protocol/agentveil-posture/actions/workflows/posture-self-test.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![GitHub stars](https://img.shields.io/github/stars/agentveil-protocol/agentveil-posture?style=for-the-badge&logo=github&color=gold)](https://github.com/agentveil-protocol/agentveil-posture/stargazers)
@@ -29,7 +30,7 @@ rules.
 ## Quick Start
 
 ```bash
-pip install git+https://github.com/agentveil-protocol/agentveil-posture@v0.1.0
+pip install agentveil-posture
 agentveil posture scan --path . --output report.json
 cat report.json
 ```
@@ -75,7 +76,16 @@ All v0.1 rules are reported as `high` severity.
 ## Install
 
 <details>
-<summary><b>From GitHub release (recommended)</b></summary>
+<summary><b>From PyPI (recommended)</b></summary>
+
+```bash
+pip install agentveil-posture
+```
+
+</details>
+
+<details>
+<summary><b>From GitHub release</b></summary>
 
 ```bash
 pip install git+https://github.com/agentveil-protocol/agentveil-posture@v0.1.0
@@ -91,13 +101,6 @@ git clone https://github.com/agentveil-protocol/agentveil-posture
 cd agentveil-posture
 pip install -e .
 ```
-
-</details>
-
-<details>
-<summary><b>PyPI</b></summary>
-
-PyPI publication is not available in v0.1.0. Use the GitHub install URL above.
 
 </details>
 

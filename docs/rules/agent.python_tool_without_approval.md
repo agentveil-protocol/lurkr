@@ -29,4 +29,5 @@ def deploy(target: str) -> str:
 ## Framework Note
 
 Supported v0.2 scope includes LangChain, LangGraph, CrewAI, MCP decorators,
-OpenAI tool-calling dictionaries, and Anthropic tool-use dictionaries.
+OpenAI tool-calling dictionaries, Anthropic tool-use dictionaries, LlamaIndex
+`FunctionTool`, and Gemini `function_declarations`.

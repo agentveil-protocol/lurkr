@@ -14,6 +14,9 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Added bounded Python AST agent rules for Python tool decorators,
   tool constructors, subprocess/shell calls, dynamic execution, file mutation,
   and API-key-shaped literals.
+- Extended Python agent detection to LlamaIndex (`FunctionTool`,
+  `FunctionTool.from_defaults`) and Gemini (`function_declarations` dict
+  pattern in `tools=[...]` arguments).
 - Added static `.py` discovery using the Phase 6a bounded AST parser.
 - Added redacted SARIF/JSON coverage for Python agent findings.
 

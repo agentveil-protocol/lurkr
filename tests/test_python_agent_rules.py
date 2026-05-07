@@ -135,6 +135,98 @@ def test_structured_tool_constructor_detection(tmp_path):
     assert _rule_ids(report) == ["agent.python_tool_without_approval"]
 
 
+def test_llamaindex_function_tool_constructor_detection(tmp_path):
+    path = tmp_path / "agent.py"
+    path.write_text(
+        "\n".join(
+            [
+                "from llama_index.core.tools import FunctionTool",
+                "import subprocess",
+                "",
+                "def deploy(name):",
+                "    return subprocess.run(['deploy', name])",
+                "",
+                "tool = FunctionTool(fn=deploy)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert _rule_ids(report) == [
+        "agent.python_subprocess_in_tool",
+        "agent.python_tool_without_approval",
+    ]
+
+
+def test_llamaindex_function_tool_constructor_with_approval_does_not_fire(tmp_path):
+    path = tmp_path / "agent.py"
+    path.write_text(
+        "\n".join(
+            [
+                "from llama_index.core.tools import FunctionTool",
+                "",
+                "def deploy(name):",
+                "    return name",
+                "",
+                "tool = FunctionTool(fn=deploy, requires_approval=True)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_llamaindex_function_tool_from_defaults_alias_detection(tmp_path):
+    path = tmp_path / "agent.py"
+    path.write_text(
+        "\n".join(
+            [
+                "from llama_index.core.tools import FunctionTool as LlamaFunctionTool",
+                "import os",
+                "",
+                "def cleanup(path):",
+                "    return os.system('rm -rf ' + path)",
+                "",
+                "tool = LlamaFunctionTool.from_defaults(fn=cleanup)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert _rule_ids(report) == [
+        "agent.python_subprocess_in_tool",
+        "agent.python_tool_without_approval",
+    ]
+
+
+def test_llamaindex_function_tool_from_defaults_with_approval_does_not_fire(tmp_path):
+    path = tmp_path / "agent.py"
+    path.write_text(
+        "\n".join(
+            [
+                "from llama_index.core.tools import FunctionTool",
+                "",
+                "def cleanup(path):",
+                "    return path",
+                "",
+                "tool = FunctionTool.from_defaults(fn=cleanup, approval_required=True)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
 def test_external_tool_func_reference_is_out_of_scope_for_body_rules(tmp_path):
     path = tmp_path / "agent.py"
     path.write_text(
@@ -408,6 +500,97 @@ def test_anthropic_tool_dict_without_input_schema_does_not_fire(tmp_path):
     assert report.findings == []
 
 
+def test_gemini_tool_dict_reference_scopes_body_rules(tmp_path):
+    path = tmp_path / "agent.py"
+    path.write_text(
+        "\n".join(
+            [
+                "import subprocess",
+                "",
+                "def deploy(target):",
+                "    return subprocess.run(['deploy', target])",
+                "",
+                "client.models.generate_content(",
+                "    contents='ship',",
+                "    config={",
+                "        'tools': [",
+                "            {'function_declarations': [{'name': 'deploy'}]}",
+                "        ]",
+                "    },",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert _rule_ids(report) == [
+        "agent.python_subprocess_in_tool",
+        "agent.python_tool_without_approval",
+    ]
+
+
+def test_gemini_tool_dict_without_declaration_list_does_not_fire(tmp_path):
+    path = tmp_path / "agent.py"
+    path.write_text(
+        "\n".join(
+            [
+                "def deploy(target):",
+                "    return target",
+                "",
+                "client.models.generate_content(",
+                "    contents='ship',",
+                "    config={'tools': [{'function_declarations': {'name': 'deploy'}}]},",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_gemini_tool_dict_multiple_functions_are_detected(tmp_path):
+    path = tmp_path / "agent.py"
+    path.write_text(
+        "\n".join(
+            [
+                "def first():",
+                "    return 'first'",
+                "",
+                "def second():",
+                "    return 'second'",
+                "",
+                "def third():",
+                "    return 'third'",
+                "",
+                "model = genai.GenerativeModel(",
+                "    'gemini-2.5-pro',",
+                "    tools=[",
+                "        {'function_declarations': [",
+                "            {'name': 'first'},",
+                "            {'name': 'second'},",
+                "            {'name': 'third'},",
+                "        ]}",
+                "    ],",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert _rule_ids(report) == [
+        "agent.python_tool_without_approval",
+        "agent.python_tool_without_approval",
+        "agent.python_tool_without_approval",
+    ]
+
+
 def test_openai_and_anthropic_tool_dicts_both_detected(tmp_path):
     path = tmp_path / "agent.py"
     path.write_text(
@@ -433,6 +616,48 @@ def test_openai_and_anthropic_tool_dicts_both_detected(tmp_path):
     report = scan_path(tmp_path)
 
     assert _rule_ids(report) == [
+        "agent.python_tool_without_approval",
+        "agent.python_tool_without_approval",
+    ]
+
+
+def test_openai_anthropic_and_gemini_tool_dicts_all_detected(tmp_path):
+    path = tmp_path / "agent.py"
+    path.write_text(
+        "\n".join(
+            [
+                "def openai_tool():",
+                "    return 'ok'",
+                "",
+                "def anthropic_tool():",
+                "    return 'ok'",
+                "",
+                "def gemini_tool():",
+                "    return 'ok'",
+                "",
+                "client.responses.create(",
+                "    tools=[{'type': 'function', 'function': {'name': 'openai_tool'}}]",
+                ")",
+                "client.messages.create(",
+                "    tools=[{'name': 'anthropic_tool', 'input_schema': {'type': 'object'}}]",
+                ")",
+                "client.models.generate_content(",
+                "    contents='ok',",
+                "    config={",
+                "        'tools': [",
+                "            {'function_declarations': [{'name': 'gemini_tool'}]}",
+                "        ]",
+                "    },",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert _rule_ids(report) == [
+        "agent.python_tool_without_approval",
         "agent.python_tool_without_approval",
         "agent.python_tool_without_approval",
     ]

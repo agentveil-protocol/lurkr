@@ -145,12 +145,15 @@ Phase 6b tool-scope definition:
   `@tool(...)`, or MCP-style `@server.call_tool(...)`, including
   import-aliased variants resolved by the AST helper.
 - A function is also considered an agent tool when it is referenced as a local
-  `func=` argument in a `Tool` or `StructuredTool` call in the same file.
-- Provider tool-calling dicts are in scope when a `.create(...)` call contains
-  `tools=[...]` with either OpenAI shape
-  `{"type": "function", "function": {"name": ...}}` or Anthropic shape
-  `{"name": ..., "input_schema": ...}` and the named function is local to the
-  same file.
+  `func=` argument in a `Tool` or `StructuredTool` call, or as a local `fn=`
+  argument in a LlamaIndex `FunctionTool` / `FunctionTool.from_defaults` call
+  in the same file.
+- Provider tool-calling dicts are in scope when `.create(...)`,
+  `.generate_content(...)`, or `GenerativeModel(...)` calls contain `tools=[...]`
+  with OpenAI shape `{"type": "function", "function": {"name": ...}}`,
+  Anthropic shape `{"name": ..., "input_schema": ...}`, or Gemini shape
+  `{"function_declarations": [{"name": ...}]}` and the named function is local
+  to the same file.
 - Cross-file references such as `Tool(func=external_module.helper)` are out of
   scope for Phase 6b.
 
@@ -339,12 +342,13 @@ Per-rule scope:
 
 Matches:
 
-- v0.2.0 Python agent scope is limited to six priorities:
+- v0.2.0 Python agent scope is limited to eight priorities:
   LangChain/LangGraph decorators and `Tool`/`StructuredTool` constructors,
   CrewAI `@tool` decorators, MCP `@server.call_tool()` decorators, OpenAI
   `tools=[{"type": "function", "function": {"name": ...}}]` tool calling,
   Anthropic `tools=[{"name": ..., "input_schema": ...}]` tool use, and
-  module-wide API-key-shaped string literals;
+  LlamaIndex `FunctionTool` / `FunctionTool.from_defaults`, Gemini
+  `function_declarations`, and module-wide API-key-shaped string literals;
 - subprocess/shell calls, dynamic execution calls, and file write/delete calls
   inside tool functions;
 - API-key-shaped Python string literals with common provider prefixes.

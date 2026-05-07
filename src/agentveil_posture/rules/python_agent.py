@@ -21,8 +21,17 @@ TOOL_DECORATOR_BASENAMES = {
     "call_tool",
 }
 TOOL_CONSTRUCTOR_BASENAMES = {
+    "FunctionTool",
     "Tool",
     "StructuredTool",
+}
+TOOL_CONSTRUCTOR_METHODS = {
+    ("FunctionTool", "from_defaults"),
+}
+PROVIDER_TOOL_CALL_BASENAMES = {
+    "create",
+    "generate_content",
+    "GenerativeModel",
 }
 APPROVAL_MARKER_KEYS = {
     "require_human_approval",
@@ -142,9 +151,10 @@ def _collect_tool_sites(
         name = resolve_name(node.func, document.imports)
         if name is None or not _is_tool_constructor_name(name.name):
             continue
+        constructor_name = name.name
         sites.append(
             _ToolSite(
-                function_name=_local_func_keyword(node),
+                function_name=_local_tool_function_keyword(node, constructor_name),
                 line=getattr(node, "lineno", name.lineno),
                 approved=_call_has_approval(node),
             )
@@ -274,7 +284,10 @@ def _is_tool_decorator_name(name: str) -> bool:
 
 
 def _is_tool_constructor_name(name: str) -> bool:
-    return name.rsplit(".", 1)[-1] in TOOL_CONSTRUCTOR_BASENAMES
+    parts = name.split(".")
+    if parts[-1] in TOOL_CONSTRUCTOR_BASENAMES:
+        return True
+    return len(parts) >= 2 and (parts[-2], parts[-1]) in TOOL_CONSTRUCTOR_METHODS
 
 
 def _collect_provider_tool_sites(
@@ -283,50 +296,73 @@ def _collect_provider_tool_sites(
 ) -> list[_ToolSite]:
     sites: list[_ToolSite] = []
     for node in iter_ast_nodes(document.tree):
-        if not isinstance(node, ast.Call) or not _is_create_call_with_tools(node):
+        if not isinstance(node, ast.Call) or not _is_provider_tool_call_with_tools(node):
             continue
-        tools = _tools_keyword_value(node)
-        if not isinstance(tools, ast.List):
-            continue
-        for item in tools.elts:
-            if not isinstance(item, ast.Dict):
+        for tools in _provider_tools_values(node):
+            if not isinstance(tools, ast.List):
                 continue
-            function_name = _extract_tool_name_from_dict(item)
-            if function_name is None or function_name not in functions:
-                continue
-            sites.append(
-                _ToolSite(
-                    function_name=function_name,
-                    line=getattr(item, "lineno", getattr(node, "lineno", 0)),
-                    approved=False,
-                )
-            )
+            for item in tools.elts:
+                if not isinstance(item, ast.Dict):
+                    continue
+                for function_name, line in _extract_tool_names_from_dict(item):
+                    if function_name not in functions:
+                        continue
+                    sites.append(
+                        _ToolSite(
+                            function_name=function_name,
+                            line=line,
+                            approved=False,
+                        )
+                    )
     return sites
 
 
-def _is_create_call_with_tools(call: ast.Call) -> bool:
-    return isinstance(call.func, ast.Attribute) and call.func.attr == "create" and _tools_keyword_value(call) is not None
+def _is_provider_tool_call_with_tools(call: ast.Call) -> bool:
+    raw_name = _raw_call_name(call)
+    if raw_name is None or raw_name.rsplit(".", 1)[-1] not in PROVIDER_TOOL_CALL_BASENAMES:
+        return False
+    return bool(_provider_tools_values(call))
 
 
-def _tools_keyword_value(call: ast.Call) -> ast.AST | None:
+def _provider_tools_values(call: ast.Call) -> list[ast.AST]:
+    values: list[ast.AST] = []
     for keyword in call.keywords:
         if keyword.arg == "tools":
-            return keyword.value
-    return None
+            values.append(keyword.value)
+        elif keyword.arg == "config" and isinstance(keyword.value, ast.Dict):
+            tools = _dict_values_by_string_key(keyword.value).get("tools")
+            if tools is not None:
+                values.append(tools)
+    return values
 
 
-def _extract_tool_name_from_dict(dict_node: ast.Dict) -> str | None:
+def _extract_tool_names_from_dict(dict_node: ast.Dict) -> list[tuple[str, int]]:
     values = _dict_values_by_string_key(dict_node)
+    names: list[tuple[str, int]] = []
+    fallback_line = getattr(dict_node, "lineno", 0)
 
     if _const_str(values.get("type")) == "function":
         function_dict = values.get("function")
         if isinstance(function_dict, ast.Dict):
-            return _extract_dict_value(function_dict, "name")
+            name = _extract_dict_value(function_dict, "name")
+            if name is not None:
+                names.append((name, getattr(function_dict, "lineno", fallback_line)))
 
     if "name" in values and "input_schema" in values:
-        return _const_str(values["name"])
+        name = _const_str(values["name"])
+        if name is not None:
+            names.append((name, fallback_line))
 
-    return None
+    declarations = values.get("function_declarations")
+    if isinstance(declarations, ast.List):
+        for declaration in declarations.elts:
+            if not isinstance(declaration, ast.Dict):
+                continue
+            name = _extract_dict_value(declaration, "name")
+            if name is not None:
+                names.append((name, getattr(declaration, "lineno", fallback_line)))
+
+    return names
 
 
 def _dict_values_by_string_key(dict_node: ast.Dict) -> dict[str, ast.AST]:
@@ -363,13 +399,21 @@ def _truthy_ast_value(value: ast.AST) -> bool:
     return True
 
 
-def _local_func_keyword(call: ast.Call) -> str | None:
+def _local_tool_function_keyword(call: ast.Call, constructor_name: str) -> str | None:
+    keyword_names = ("fn",) if _is_function_tool_constructor_name(constructor_name) else ("func",)
     for keyword in call.keywords:
-        if keyword.arg != "func":
+        if keyword.arg not in keyword_names:
             continue
         if isinstance(keyword.value, ast.Name):
             return keyword.value.id
     return None
+
+
+def _is_function_tool_constructor_name(name: str) -> bool:
+    parts = name.split(".")
+    return parts[-1] == "FunctionTool" or (
+        len(parts) >= 2 and (parts[-2], parts[-1]) in TOOL_CONSTRUCTOR_METHODS
+    )
 
 
 def _raw_call_name(call: ast.Call) -> str | None:

@@ -12,6 +12,8 @@ LANGGRAPH_ROOT=/tmp/posture-smoke-langgraph \
 CREWAI_EXAMPLES_ROOT=/tmp/posture-smoke-crewai-examples \
 MCP_SERVERS_ROOT=/tmp/posture-smoke-mcp-servers \
 ANTHROPIC_SDK_PYTHON_ROOT=/tmp/posture-smoke-anthropic-sdk-python \
+LLAMAINDEX_ROOT=/tmp/posture-smoke-llama-index \
+GEMINI_PYTHON_EXAMPLES_ROOT=/tmp/posture-smoke-python-genai \
 AGENTVEIL_MCP_DOGFOOD_ROOT=/path/to/avp-sdk-public \
 python validation/run.py
 ```

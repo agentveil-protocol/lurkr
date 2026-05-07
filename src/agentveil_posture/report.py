@@ -4,12 +4,56 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+import hashlib
 import json
 
 
 REPORT_VERSION = "0.1"
 SCANNER_VERSION = "agentveil-posture/0.1.0"
 SEVERITIES = ("critical", "high", "medium", "low", "info")
+SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
+SARIF_VERSION = "2.1.0"
+SEVERITY_TO_SARIF_LEVEL = {
+    "critical": "error",
+    "high": "error",
+    "medium": "warning",
+    "low": "note",
+    "info": "note",
+}
+SEVERITY_TO_SECURITY_SEVERITY = {
+    "critical": "9.5",
+    "high": "8.0",
+    "medium": "5.0",
+    "low": "3.0",
+    "info": "0.0",
+}
+RULE_DESCRIPTORS = {
+    "bypass.direct_github_token": {
+        "short": "Direct GitHub token capability",
+        "full": "Flags direct GitHub token references in workflows or agent manifests.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "workflow.deploy_without_approval": {
+        "short": "Deployment without approval gate",
+        "full": "Flags deploy, release, or publish workflow steps without an approval signal.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "workflow.pull_request_target_secrets_risk": {
+        "short": "Privileged pull_request_target risk",
+        "full": "Flags pull_request_target workflows that combine privileged context with checkout, run, or secrets.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "tool.shell_without_approval": {
+        "short": "Shell-capable tool without approval",
+        "full": "Flags agent tool manifests that expose shell execution without an approval flag.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "identity.private_key_unencrypted": {
+        "short": "Unencrypted private key file",
+        "full": "Flags committed PEM private key files that appear to be unencrypted.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+}
 
 
 def utc_now_iso() -> str:
@@ -65,6 +109,30 @@ class PostureReport:
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, sort_keys=True) + "\n"
 
+    def to_sarif(self) -> dict[str, object]:
+        rule_ids = sorted(RULE_DESCRIPTORS)
+        rule_index = {rule_id: index for index, rule_id in enumerate(rule_ids)}
+        return {
+            "$schema": SARIF_SCHEMA,
+            "version": SARIF_VERSION,
+            "runs": [
+                {
+                    "tool": {
+                        "driver": {
+                            "name": "AgentVeil Posture",
+                            "informationUri": "https://github.com/agentveil-protocol/agentveil-posture",
+                            "semanticVersion": "0.1.0",
+                            "rules": [_sarif_rule(rule_id) for rule_id in rule_ids],
+                        }
+                    },
+                    "results": [
+                        _sarif_result(finding, rule_index[finding.rule_id])
+                        for finding in self.findings
+                    ],
+                }
+            ],
+        }
+
 
 def empty_summary() -> Summary:
     return Summary(by_severity={severity: 0 for severity in SEVERITIES}, total=0)
@@ -86,3 +154,57 @@ def build_report(scanned_path: str, findings: list[Finding]) -> PostureReport:
         findings=findings,
         summary=Summary(by_severity=by_severity, total=len(findings)),
     )
+
+
+def _sarif_rule(rule_id: str) -> dict[str, object]:
+    descriptor = RULE_DESCRIPTORS[rule_id]
+    return {
+        "id": rule_id,
+        "shortDescription": {"text": descriptor["short"]},
+        "fullDescription": {"text": descriptor["full"]},
+        "helpUri": descriptor["help"],
+        "defaultConfiguration": {
+            "level": SEVERITY_TO_SARIF_LEVEL["high"],
+        },
+        "properties": {
+            "security-severity": SEVERITY_TO_SECURITY_SEVERITY["high"],
+        },
+    }
+
+
+def _sarif_result(finding: Finding, rule_index: int) -> dict[str, object]:
+    physical_location: dict[str, object] = {
+        "artifactLocation": {"uri": finding.file.replace("\\", "/")}
+    }
+    if finding.line is not None:
+        physical_location["region"] = {"startLine": finding.line}
+
+    return {
+        "ruleId": finding.rule_id,
+        "ruleIndex": rule_index,
+        "level": SEVERITY_TO_SARIF_LEVEL[finding.severity],
+        "message": {"text": finding.message},
+        "locations": [
+            {
+                "physicalLocation": physical_location,
+            }
+        ],
+        "partialFingerprints": {
+            "primaryLocationLineHash": _sarif_fingerprint(finding),
+        },
+        "properties": {
+            "severity": finding.severity,
+            "remediation": finding.remediation,
+        },
+    }
+
+
+def _sarif_fingerprint(finding: Finding) -> str:
+    source = "\0".join(
+        [
+            finding.rule_id,
+            finding.file.replace("\\", "/"),
+            "" if finding.line is None else str(finding.line),
+        ]
+    )
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()

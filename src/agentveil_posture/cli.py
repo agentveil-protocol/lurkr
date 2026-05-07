@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sys
 from typing import Sequence
@@ -28,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     scan_parser = posture_subparsers.add_parser(
         "scan",
-        help="Scan a project and write a JSON posture report.",
+        help="Scan a project and write a posture report.",
     )
     scan_parser.add_argument(
         "--path",
@@ -38,7 +39,13 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser.add_argument(
         "--output",
         required=True,
-        help="Path where the JSON report will be written.",
+        help="Path where the report will be written.",
+    )
+    scan_parser.add_argument(
+        "--format",
+        choices=("json", "sarif"),
+        default="json",
+        help="Report format to write. Defaults to json.",
     )
     scan_parser.set_defaults(handler=_handle_posture_scan)
 
@@ -48,7 +55,11 @@ def build_parser() -> argparse.ArgumentParser:
 def _handle_posture_scan(args: argparse.Namespace) -> int:
     try:
         report = scan_path(Path(args.path))
-        Path(args.output).write_text(report.to_json(), encoding="utf-8")
+        if args.format == "json":
+            output = report.to_json()
+        else:
+            output = json.dumps(report.to_sarif(), indent=2, sort_keys=True) + "\n"
+        Path(args.output).write_text(output, encoding="utf-8")
         return 0
     except (OSError, ScanError) as exc:
         print(f"agentveil posture scan: {exc}", file=sys.stderr)

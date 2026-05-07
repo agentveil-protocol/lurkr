@@ -303,20 +303,44 @@ Schema rules:
 - `summary.by_severity` always includes all five severity keys.
 - `summary.total` equals `len(findings)`.
 
+## SARIF Report Schema
+
+The scanner can also emit SARIF v2.1.0 for GitHub Code Scanning:
+
+```bash
+agentveil posture scan --path . --output agentveil-posture.sarif --format sarif
+```
+
+SARIF rules:
+
+- `$schema` is `https://json.schemastore.org/sarif-2.1.0.json`.
+- `version` is `"2.1.0"`.
+- `tool.driver.rules[]` defines all five v0.1 rule IDs.
+- v0.1 high-severity findings map to `result.level: "error"`.
+- v0.1 high-severity rules include
+  `properties.security-severity: "8.0"`.
+- every `result` includes `partialFingerprints.primaryLocationLineHash` to
+  reduce duplicate Code Scanning alerts across repeated scans.
+- `artifactLocation.uri` uses repository-relative POSIX paths only.
+- SARIF output follows the same redaction contract as JSON output: no raw
+  secrets, no source snippets, no command bodies, and no private key material.
+
 ## CLI Surface
 
 Command:
 
 ```bash
-agentveil posture scan --path . --output report.json
+agentveil posture scan --path . --output report.json --format json
 ```
 
 Arguments:
 
 - `agentveil posture scan`: only v0.1 command. No `check` alias.
 - `--path PATH`: scan root. Defaults to `.`.
-- `--output FILE`: JSON output path. Required by the public v0.1 signature for
+- `--output FILE`: report output path. Required by the public v0.1 signature for
   examples and CI.
+- `--format json|sarif`: report format. Defaults to `json` for backward
+  compatibility.
 
 Exit codes:
 
@@ -342,9 +366,13 @@ inputs:
     required: false
     default: "."
   output:
-    description: JSON report output path
+    description: Report output path
     required: false
     default: agentveil-posture-report.json
+  format:
+    description: Report format to write (json or sarif)
+    required: false
+    default: json
 outputs:
   report:
     description: Path to the generated JSON report
@@ -359,7 +387,7 @@ runs:
     - id: scan
       name: Run posture scan
       run: |
-        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}"
+        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}"
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
       shell: bash
 ```
@@ -368,6 +396,8 @@ PR/check surfacing:
 
 - v0.1 may upload the JSON file as a workflow artifact through caller workflow
   configuration, not by scanner network calls.
+- For Code Scanning, caller workflows may set `format: sarif` and upload the
+  generated file with `github/codeql-action/upload-sarif@v3`.
 - Any optional job summary must show counts and rule IDs only.
 - Raw evidence, source snippets, and secret-like values must not be printed.
 - Failing PRs by threshold is deferred unless explicitly approved for v0.1.

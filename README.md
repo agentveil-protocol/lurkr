@@ -109,6 +109,20 @@ Use the action from the same repository:
 The action requires Python 3.10 or newer on the runner. It writes the JSON
 report path to the `report` output and does not upload data to AgentVeil.
 
+For GitHub Code Scanning, write SARIF and upload it with CodeQL:
+
+```yaml
+- uses: agentveil-protocol/agentveil-posture@v0.1.0
+  with:
+    path: "."
+    output: agentveil-posture.sarif
+    format: sarif
+
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: agentveil-posture.sarif
+```
+
 ## Pre-commit Hook
 
 Run AgentVeil Posture as a [pre-commit](https://pre-commit.com) hook to catch

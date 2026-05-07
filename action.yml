@@ -10,9 +10,13 @@ inputs:
     required: false
     default: "."
   output:
-    description: JSON report output path
+    description: Report output path
     required: false
     default: agentveil-posture-report.json
+  format:
+    description: Report format to write (json or sarif)
+    required: false
+    default: json
 
 outputs:
   report:
@@ -29,6 +33,6 @@ runs:
     - id: scan
       name: Run posture scan
       run: |
-        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}"
+        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}"
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
       shell: bash

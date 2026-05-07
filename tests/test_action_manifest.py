@@ -27,3 +27,31 @@ def test_action_manifest_wires_report_output():
     assert scan_step["run"].index('echo "report=') < scan_step["run"].index(
         "agentveil posture scan"
     )
+
+
+def test_action_smoke_workflow_exercises_review_and_fail_on_modes():
+    workflow = yaml.safe_load(
+        Path(".github/workflows/action-smoke-test.yml").read_text(encoding="utf-8")
+    )
+    job = workflow["jobs"]["local-action-smoke"]
+    steps = job["steps"]
+
+    assert workflow["permissions"] == {"contents": "read"}
+    assert job["runs-on"] == "ubuntu-latest"
+
+    review = next(step for step in steps if step.get("id") == "review")
+    assert review["uses"] == "./"
+    assert review["with"]["path"] == "fixtures/dangerous_github_project"
+    assert review["with"]["output"] == "action-smoke-review.json"
+    assert "fail-on" not in review["with"]
+
+    fail_on = next(step for step in steps if step.get("id") == "fail_on")
+    assert fail_on["uses"] == "./"
+    assert fail_on["continue-on-error"] is True
+    assert fail_on["with"]["path"] == "fixtures/dangerous_github_project"
+    assert fail_on["with"]["output"] == "action-smoke-fail-on.json"
+    assert fail_on["with"]["fail-on"] == "high"
+
+    verify = next(step for step in steps if step["name"] == "Verify fail-on behavior")
+    assert 'steps.fail_on.outcome }}" = "failure"' in verify["run"]
+    assert "action-smoke-fail-on.json" in verify["run"]

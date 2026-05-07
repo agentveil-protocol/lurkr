@@ -1,0 +1,19 @@
+{
+  "repo": "langchain-ai/langgraph",
+  "commit": "e49c093f48c7371aaad6ea44d2f3a613729d3978",
+  "checkout_env": "LANGGRAPH_ROOT",
+  "scan_path": "examples",
+  "expected_findings": [],
+  "rules_that_should_not_fire_in_this_repo": [
+    "agent.python_api_key_hardcoded",
+    "agent.python_eval_exec_in_tool",
+    "agent.python_subprocess_in_tool",
+    "agent.python_tool_without_approval",
+    "agent.python_unrestricted_file_access",
+    "bypass.direct_github_token",
+    "identity.private_key_unencrypted",
+    "tool.shell_without_approval",
+    "workflow.deploy_without_approval",
+    "workflow.pull_request_target_secrets_risk"
+  ]
+}

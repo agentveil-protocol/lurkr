@@ -1,0 +1,40 @@
+{
+  "repo": "agentveil-protocol/agentveil-posture",
+  "commit": "WORKTREE",
+  "checkout_path": ".",
+  "scan_path": "validation/fixtures/python_agent_risk",
+  "expected_findings": [
+    {
+      "rule_id": "agent.python_api_key_hardcoded",
+      "file": "agent.py",
+      "line": 5
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "agent.py",
+      "line": 8
+    },
+    {
+      "rule_id": "agent.python_subprocess_in_tool",
+      "file": "agent.py",
+      "line": 10
+    },
+    {
+      "rule_id": "agent.python_eval_exec_in_tool",
+      "file": "agent.py",
+      "line": 11
+    },
+    {
+      "rule_id": "agent.python_unrestricted_file_access",
+      "file": "agent.py",
+      "line": 12
+    }
+  ],
+  "rules_that_should_not_fire_in_this_repo": [
+    "bypass.direct_github_token",
+    "identity.private_key_unencrypted",
+    "tool.shell_without_approval",
+    "workflow.deploy_without_approval",
+    "workflow.pull_request_target_secrets_risk"
+  ]
+}

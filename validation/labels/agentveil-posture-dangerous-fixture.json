@@ -1,0 +1,40 @@
+{
+  "repo": "agentveil-protocol/agentveil-posture",
+  "commit": "WORKTREE",
+  "checkout_path": ".",
+  "scan_path": "fixtures/dangerous_github_project",
+  "expected_findings": [
+    {
+      "rule_id": "bypass.direct_github_token",
+      "file": ".github/workflows/dangerous.yml",
+      "line": 11
+    },
+    {
+      "rule_id": "workflow.deploy_without_approval",
+      "file": ".github/workflows/dangerous.yml",
+      "line": 12
+    },
+    {
+      "rule_id": "workflow.pull_request_target_secrets_risk",
+      "file": ".github/workflows/dangerous.yml",
+      "line": 3
+    },
+    {
+      "rule_id": "identity.private_key_unencrypted",
+      "file": "keys/synthetic_unencrypted_private_key.pem",
+      "line": 1
+    },
+    {
+      "rule_id": "tool.shell_without_approval",
+      "file": "mcp.json",
+      "line": 5
+    }
+  ],
+  "rules_that_should_not_fire_in_this_repo": [
+    "agent.python_api_key_hardcoded",
+    "agent.python_eval_exec_in_tool",
+    "agent.python_subprocess_in_tool",
+    "agent.python_tool_without_approval",
+    "agent.python_unrestricted_file_access"
+  ]
+}

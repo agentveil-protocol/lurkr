@@ -1,0 +1,109 @@
+{
+  "repo": "modelcontextprotocol/servers",
+  "commit": "4503e2d12b799448cd05f789dd40f9643a8d1a6c",
+  "checkout_env": "MCP_SERVERS_ROOT",
+  "scan_path": "src",
+  "expected_findings": [
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "fetch/src/mcp_server_fetch/server.py",
+      "line": 223
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "fetch/src/mcp_server_fetch/server.py",
+      "line": 200
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 472
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 309
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 320
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 331
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 342
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 353
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 364
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 375
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 386
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 397
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 408
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 419
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "git/src/mcp_server_git/server.py",
+      "line": 430
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "time/src/mcp_server_time/server.py",
+      "line": 182
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "time/src/mcp_server_time/server.py",
+      "line": 132
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "time/src/mcp_server_time/server.py",
+      "line": 152
+    }
+  ],
+  "rules_that_should_not_fire_in_this_repo": [
+    "agent.python_api_key_hardcoded",
+    "agent.python_eval_exec_in_tool",
+    "agent.python_subprocess_in_tool",
+    "agent.python_unrestricted_file_access",
+    "bypass.direct_github_token",
+    "identity.private_key_unencrypted",
+    "tool.shell_without_approval",
+    "workflow.deploy_without_approval",
+    "workflow.pull_request_target_secrets_risk"
+  ]
+}

@@ -7,8 +7,8 @@ and PyPI package metadata for v0.1. Remote creation, GitHub push, tag creation,
 release publication, and PyPI upload remain gated until the pre-public-push
 gate passes and the operator explicitly approves those actions.
 
-Version note: `0.1.1` expands heuristic markers and fixes PyPI README logo
-rendering. PyPI publication of `0.1.1` remains a separate pre-launch gate.
+Version note: `0.2.0` adds bounded Python AST agent detection. PyPI
+publication of `0.2.0` remains a separate pre-launch gate.
 
 ## Product Boundary
 
@@ -58,7 +58,7 @@ agentveil posture scan
   -> rules registry evaluates GitHub workflow/tool/identity rules
   -> report.PostureReport is built with redacted findings only
   -> reporter writes stable JSON to --output
-  -> cli returns exit code according to v0.1 rules
+  -> cli returns exit code according to current rules
 ```
 
 Module responsibilities:
@@ -108,6 +108,8 @@ Shared candidate rules for v0.1:
   agent-tool candidates unless a later approved rule explicitly adds them.
 - Identity rules may inspect any regular file through file metadata and a
   bounded header prefix only.
+- Python agent rules inspect regular `.py` files under the scan root through
+  bounded AST parsing only. `.pyi` stub files are out of scope.
 - Symlinks are skipped in v0.1, including symlinks that point inside the scan
   root. Outside-root symlinks must never be followed.
 - Finding file paths are repository-relative POSIX paths under `scanned_path`,
@@ -137,9 +139,29 @@ Contracts:
 - The foundation remains static-only: it never executes scanned code and never
   calls `eval`, `exec`, dynamic import helpers, subprocesses, or network APIs.
 
+Phase 6b tool-scope definition:
+
+- A function is considered an agent tool when it is decorated with `@tool`,
+  `@tool(...)`, or MCP-style `@server.call_tool(...)`, including
+  import-aliased variants resolved by the AST helper.
+- A function is also considered an agent tool when it is referenced as a local
+  `func=` argument in a `Tool` or `StructuredTool` call in the same file.
+- Provider tool-calling dicts are in scope when a `.create(...)` call contains
+  `tools=[...]` with either OpenAI shape
+  `{"type": "function", "function": {"name": ...}}` or Anthropic shape
+  `{"name": ..., "input_schema": ...}` and the named function is local to the
+  same file.
+- Cross-file references such as `Tool(func=external_module.helper)` are out of
+  scope for Phase 6b.
+
+Approval markers are intentionally conservative. Only positive boolean or
+truthy non-false values on these keyword names count:
+`require_human_approval`, `requires_approval`, `human_in_the_loop`,
+`approval_required`, and `approval`.
+
 ## Rules v0.1
 
-All v0.1 rules have severity `high`.
+All current rules have severity `high`.
 
 ### `bypass.direct_github_token`
 
@@ -297,6 +319,42 @@ Evidence policy:
 - report only the header class and path;
 - never report key bytes beyond generic header classification.
 
+### Python agent rules
+
+Reads:
+
+- regular `.py` files under the scan root;
+- bounded Python AST only, never imports or executes scanned source.
+
+Per-rule scope:
+
+- `agent.python_tool_without_approval` fires at Python tool decorator or
+  constructor sites without an approval marker.
+- `agent.python_subprocess_in_tool`,
+  `agent.python_eval_exec_in_tool`, and
+  `agent.python_unrestricted_file_access` fire only inside same-file tool
+  functions as defined in the Python AST foundation section.
+- `agent.python_api_key_hardcoded` is module-wide because keys are often stored
+  in config blocks outside tool functions.
+
+Matches:
+
+- v0.2.0 Python agent scope is limited to six priorities:
+  LangChain/LangGraph decorators and `Tool`/`StructuredTool` constructors,
+  CrewAI `@tool` decorators, MCP `@server.call_tool()` decorators, OpenAI
+  `tools=[{"type": "function", "function": {"name": ...}}]` tool calling,
+  Anthropic `tools=[{"name": ..., "input_schema": ...}]` tool use, and
+  module-wide API-key-shaped string literals;
+- subprocess/shell calls, dynamic execution calls, and file write/delete calls
+  inside tool functions;
+- API-key-shaped Python string literals with common provider prefixes.
+
+Evidence policy:
+
+- report file and line only;
+- never report Python source snippets, command bodies, hardcoded key literals,
+  or file path string literals from the scanned source.
+
 ## JSON Report Schema
 
 Stable v0.1 shape:
@@ -304,7 +362,7 @@ Stable v0.1 shape:
 ```json
 {
   "report_version": "0.1",
-  "scanner_version": "agentveil-posture/0.1.1",
+  "scanner_version": "agentveil-posture/0.2.0",
   "scanned_at": "2026-05-06T00:00:00Z",
   "scanned_path": "/absolute/or/input/path",
   "findings": [
@@ -356,9 +414,9 @@ SARIF rules:
 
 - `$schema` is `https://json.schemastore.org/sarif-2.1.0.json`.
 - `version` is `"2.1.0"`.
-- `tool.driver.rules[]` defines all five v0.1 rule IDs.
-- v0.1 high-severity findings map to `result.level: "error"`.
-- v0.1 high-severity rules include
+- `tool.driver.rules[]` defines all current rule IDs.
+- high-severity findings map to `result.level: "error"`.
+- high-severity rules include
   `properties.security-severity: "8.0"`.
 - every `result` includes `partialFingerprints.primaryLocationLineHash` to
   reduce duplicate Code Scanning alerts across repeated scans.
@@ -395,7 +453,7 @@ Exit codes:
 ## GitHub Action Manifest
 
 v0.1 keeps the action in this same repo and distributes it as
-`agentveil-protocol/agentveil-posture@v0.1.1`.
+`agentveil-protocol/agentveil-posture@v0.2.0`.
 
 `action.yml` shape:
 
@@ -468,13 +526,15 @@ PR/check surfacing:
 
 `fixtures/dangerous_github_project/`:
 
-- compact synthetic fixture covering all five v0.1 rules;
+- compact synthetic fixture covering the original workflow, manifest, and
+  identity rules;
 - contains only synthetic placeholders, never real credentials or private key
   material;
 - intentionally includes a synthetic PEM-shaped file so
   `identity.private_key_unencrypted` can be tested before release.
 
-Full fixture matrix and false-positive reference set are deferred to v0.2.
+Full fixture matrix and false-positive reference set are deferred until
+real-world validation completes.
 
 ## Test Plan
 
@@ -489,8 +549,8 @@ Rule unit tests:
 Fixture-driven E2E:
 
 - `clean_github_project` emits zero findings;
-- `dangerous_github_project` emits exactly the five v0.1 rule IDs once fixture
-  content exists;
+- `dangerous_github_project` emits the original workflow, manifest, and
+  identity rule IDs once fixture content exists;
 - report summary totals match findings.
 
 Schema validation:

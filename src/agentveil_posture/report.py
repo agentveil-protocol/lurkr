@@ -9,7 +9,7 @@ import json
 
 
 REPORT_VERSION = "0.1"
-SCANNER_VERSION = "agentveil-posture/0.1.1"
+SCANNER_VERSION = "agentveil-posture/0.2.0"
 SEVERITIES = ("critical", "high", "medium", "low", "info")
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 SARIF_VERSION = "2.1.0"
@@ -51,6 +51,31 @@ RULE_DESCRIPTORS = {
     "identity.private_key_unencrypted": {
         "short": "Unencrypted private key file",
         "full": "Flags committed PEM private key files that appear to be unencrypted.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "agent.python_tool_without_approval": {
+        "short": "Python agent tool without approval",
+        "full": "Flags Python agent tool decorators or constructors without an approval marker.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "agent.python_subprocess_in_tool": {
+        "short": "Python agent tool subprocess use",
+        "full": "Flags subprocess or shell calls inside Python agent tool functions.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "agent.python_eval_exec_in_tool": {
+        "short": "Python agent tool dynamic execution",
+        "full": "Flags eval, exec, compile, or dynamic import calls inside Python agent tool functions.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "agent.python_unrestricted_file_access": {
+        "short": "Python agent tool file mutation",
+        "full": "Flags file write or delete calls inside Python agent tool functions.",
+        "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
+    },
+    "agent.python_api_key_hardcoded": {
+        "short": "Python hardcoded API key",
+        "full": "Flags API-key-shaped string literals in Python source.",
         "help": "https://github.com/agentveil-protocol/agentveil-posture#triaging-findings",
     },
 }
@@ -121,7 +146,7 @@ class PostureReport:
                         "driver": {
                             "name": "AgentVeil Posture",
                             "informationUri": "https://github.com/agentveil-protocol/agentveil-posture",
-                            "semanticVersion": "0.1.1",
+                            "semanticVersion": "0.2.0",
                             "rules": [_sarif_rule(rule_id) for rule_id in rule_ids],
                         }
                     },

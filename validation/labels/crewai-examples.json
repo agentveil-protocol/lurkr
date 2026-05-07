@@ -1,0 +1,48 @@
+{
+  "repo": "crewAIInc/crewAI-examples",
+  "commit": "da94a91e691e1cf5b3151416bb15b5b62729bea8",
+  "checkout_env": "CREWAI_EXAMPLES_ROOT",
+  "scan_path": "crews/landing_page_generator/src/landing_page_generator/tools",
+  "expected_findings": [
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "browser_tools.py",
+      "line": 12
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "file_tools.py",
+      "line": 9
+    },
+    {
+      "rule_id": "agent.python_unrestricted_file_access",
+      "file": "file_tools.py",
+      "line": 72
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "search_tools.py",
+      "line": 9
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "template_tools.py",
+      "line": 11
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "template_tools.py",
+      "line": 33
+    }
+  ],
+  "rules_that_should_not_fire_in_this_repo": [
+    "agent.python_api_key_hardcoded",
+    "agent.python_eval_exec_in_tool",
+    "agent.python_subprocess_in_tool",
+    "bypass.direct_github_token",
+    "identity.private_key_unencrypted",
+    "tool.shell_without_approval",
+    "workflow.deploy_without_approval",
+    "workflow.pull_request_target_secrets_risk"
+  ]
+}

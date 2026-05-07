@@ -18,7 +18,7 @@
 `agentveil-posture` is a pre-deployment, static, local-only scanner that flags
 risky AI-agent and GitHub-workflow posture issues. No telemetry, no network
 calls, no project code execution. v0.1 ships five high-severity GitHub-focused
-rules.
+rules; v0.2 adds bounded Python agent-source rules.
 
 [Quick Start](#quick-start) |
 [What a finding looks like](#what-a-finding-looks-like) |
@@ -38,6 +38,8 @@ cat report.json
 
 That is the whole flow. The scanner is read-only: it does not modify your
 files, run your code, or send data over the network.
+
+Python agent detection is enabled for bounded `.py` source analysis.
 
 To fail CI when findings meet a threshold, add `--fail-on`:
 
@@ -62,17 +64,22 @@ Every finding contains rule ID, severity, repository-relative file path, line
 number when available, redacted message, and remediation pointer. Raw secrets,
 command bodies, and key material never appear in the report.
 
-## Detection Scope (v0.1)
+## Detection Scope (v0.2)
 
-All v0.1 rules are reported as `high` severity.
+All current rules are reported as `high` severity.
 
-| Rule | What it flags |
-|---|---|
-| `bypass.direct_github_token` | Direct GitHub PAT/token references in workflows or agent manifests |
-| `workflow.deploy_without_approval` | Deploy/release/publish steps without an approval gate |
-| `workflow.pull_request_target_secrets_risk` | `pull_request_target` workflows that combine privileged context with checkout, run, or secrets |
-| `tool.shell_without_approval` | Agent tool manifests that enable shell execution without an approval flag |
-| `identity.private_key_unencrypted` | Unencrypted PEM private key files committed to the repo |
+| Rule | What it flags | Scope |
+|---|---|---|
+| `bypass.direct_github_token` | Direct GitHub PAT/token references in workflows or agent manifests | GitHub Actions, agent manifests |
+| `workflow.deploy_without_approval` | Deploy/release/publish steps without an approval gate | GitHub Actions |
+| `workflow.pull_request_target_secrets_risk` | `pull_request_target` workflows that combine privileged context with checkout, run, or secrets | GitHub Actions |
+| `tool.shell_without_approval` | Agent tool manifests that enable shell execution without an approval flag | MCP/CrewAI-style manifests |
+| `identity.private_key_unencrypted` | Unencrypted PEM private key files committed to the repo | Repository files |
+| `agent.python_tool_without_approval` | Python agent tool declarations without an approval marker | LangChain, LangGraph, CrewAI, MCP, OpenAI tool calling, Anthropic tool use |
+| `agent.python_subprocess_in_tool` | Subprocess or shell calls inside supported Python tool functions | Supported Python tool functions |
+| `agent.python_eval_exec_in_tool` | `eval`/`exec`-style dynamic execution inside Python tool functions | Supported Python tool functions |
+| `agent.python_unrestricted_file_access` | File write or delete calls inside Python tool functions | Supported Python tool functions |
+| `agent.python_api_key_hardcoded` | API-key-shaped string literals in Python source | Module-wide; Anthropic, OpenAI, GitHub PAT, HuggingFace |
 
 Deployment checks include common CLI deploy, release, registry push, and
 infrastructure apply commands. Build, preview, plan, and package-only commands
@@ -93,7 +100,7 @@ pip install agentveil-posture
 <summary><b>From GitHub release</b></summary>
 
 ```bash
-pip install git+https://github.com/agentveil-protocol/agentveil-posture@v0.1.1
+pip install git+https://github.com/agentveil-protocol/agentveil-posture@v0.2.0
 ```
 
 </details>
@@ -134,7 +141,7 @@ present.
 Use the action from the same repository:
 
 ```yaml
-- uses: agentveil-protocol/agentveil-posture@v0.1.1
+- uses: agentveil-protocol/agentveil-posture@v0.2.0
   with:
     path: "."
     output: agentveil-posture-report.json
@@ -148,7 +155,7 @@ path to the `report` output and does not upload data to AgentVeil. Omit
 For GitHub Code Scanning, write SARIF and upload it with CodeQL:
 
 ```yaml
-- uses: agentveil-protocol/agentveil-posture@v0.1.1
+- uses: agentveil-protocol/agentveil-posture@v0.2.0
   with:
     path: "."
     output: agentveil-posture.sarif
@@ -169,7 +176,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/agentveil-protocol/agentveil-posture
-    rev: v0.1.1
+    rev: v0.2.0
     hooks:
       - id: agentveil-posture
         args: ["--fail-on", "high"]
@@ -208,6 +215,15 @@ workflow has direct capability to do something risky. Most findings are
   are not detected; only literal `shell:` or `bash:` keys are.
 - **`identity.private_key_unencrypted`** is the most reliably actionable
   finding: committed unencrypted private keys are usually real issues.
+- **`agent.python_tool_without_approval`** flags supported Python tool
+  declarations where the scanner cannot see a conservative approval marker.
+- **`agent.python_subprocess_in_tool`** and
+  **`agent.python_eval_exec_in_tool`** are high-priority review items because
+  agent-callable Python functions can run commands or dynamic code.
+- **`agent.python_unrestricted_file_access`** flags file write/delete calls in
+  tool functions. Review whether the path is intentionally constrained.
+- **`agent.python_api_key_hardcoded`** is module-wide and should usually be
+  treated like a secret-handling issue: remove and rotate the key if real.
 
 Use posture-check to surface review items for human triage, not to auto-block
 CI or replace SAST/secret-scanning tools.
@@ -225,7 +241,7 @@ capabilities before deployment and before they become incidents.
   |   caps   |      |  allowed |      | happened |
   +----------+      +----------+      +----------+
    you are here       roadmap          roadmap
-   v0.1 Posture
+   v0.2 Posture
 ```
 
 | | Posture does | Posture does not |
@@ -260,14 +276,16 @@ Additional runtime dependencies require explicit justification in
 
 ## Known Limitations
 
-`agentveil-posture` v0.1 is a best-effort heuristic scanner, not an exhaustive
+`agentveil-posture` v0.2 is a best-effort heuristic scanner, not an exhaustive
 security audit.
 
 - Some rules may produce false positives or false negatives.
 - Oversized, unreadable, or malformed inputs may be skipped without per-file
   skip reasons.
-- YAML parsing is bounded, but carefully crafted YAML within the v0.1 alias
+- YAML parsing is bounded, but carefully crafted YAML within the current alias
   limit can still consume parser memory.
+- Python analysis is bounded to `.py` files. Stub files and cross-file Python
+  call resolution are out of scope for this release.
 - The repository includes an intentional synthetic PEM-shaped fixture for
   scanner tests. It is not a real private key.
 
@@ -277,7 +295,7 @@ security audit.
   if Posture helps your team.
 - [Open an issue](https://github.com/agentveil-protocol/agentveil-posture/issues)
   for bugs, false positives, or rule suggestions.
-- See [PLAN.md](PLAN.md) for the v0.1 spec, schema details, and v0.2 backlog.
+- See [PLAN.md](PLAN.md) for the current spec, schema details, and backlog.
 
 ## License
 

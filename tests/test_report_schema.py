@@ -25,7 +25,7 @@ def test_empty_report_schema_contains_scanner_version_and_whole_second_time(tmp_
         "findings",
         "summary",
     }
-    assert data["scanner_version"] == "agentveil-posture/0.1.1"
+    assert data["scanner_version"] == "agentveil-posture/0.2.0"
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", data["scanned_at"])
     assert data["summary"]["by_severity"] == {
         "critical": 0,
@@ -102,7 +102,7 @@ def test_finding_rejects_windows_absolute_file_path():
             )
 
 
-def test_sarif_schema_version_and_v0_1_rules_are_defined(tmp_path):
+def test_sarif_schema_version_and_rules_are_defined(tmp_path):
     sarif = empty_report(str(tmp_path)).to_sarif()
 
     assert sarif["$schema"] == "https://json.schemastore.org/sarif-2.1.0.json"
@@ -116,6 +116,11 @@ def test_sarif_schema_version_and_v0_1_rules_are_defined(tmp_path):
         "workflow.pull_request_target_secrets_risk",
         "tool.shell_without_approval",
         "identity.private_key_unencrypted",
+        "agent.python_tool_without_approval",
+        "agent.python_subprocess_in_tool",
+        "agent.python_eval_exec_in_tool",
+        "agent.python_unrestricted_file_access",
+        "agent.python_api_key_hardcoded",
     }
     for rule in rules:
         assert rule["defaultConfiguration"]["level"] == "error"

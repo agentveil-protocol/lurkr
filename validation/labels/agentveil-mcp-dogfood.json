@@ -1,0 +1,59 @@
+{
+  "repo": "agentveil-protocol/avp-sdk",
+  "commit": "7a43f366c1409e5413332beb15a768eb3be61fb4",
+  "checkout_env": "AGENTVEIL_MCP_DOGFOOD_ROOT",
+  "scan_path": "agentveil_mcp",
+  "expected_findings": [
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "server.py",
+      "line": 128
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "server.py",
+      "line": 160
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "server.py",
+      "line": 199
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "server.py",
+      "line": 234
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "server.py",
+      "line": 279
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "server.py",
+      "line": 309
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "server.py",
+      "line": 334
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "server.py",
+      "line": 360
+    }
+  ],
+  "rules_that_should_not_fire_in_this_repo": [
+    "agent.python_api_key_hardcoded",
+    "agent.python_eval_exec_in_tool",
+    "agent.python_subprocess_in_tool",
+    "agent.python_unrestricted_file_access",
+    "bypass.direct_github_token",
+    "identity.private_key_unencrypted",
+    "tool.shell_without_approval",
+    "workflow.deploy_without_approval",
+    "workflow.pull_request_target_secrets_risk"
+  ]
+}

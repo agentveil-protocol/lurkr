@@ -113,6 +113,30 @@ Shared candidate rules for v0.1:
 - Finding file paths are repository-relative POSIX paths under `scanned_path`,
   never absolute paths.
 
+## Python AST Foundation
+
+Phase 6a adds internal, bounded Python AST helpers. This foundation is not wired
+into scanner discovery until later Phase 6 rules are reviewed.
+
+Hard limits:
+
+- `MAX_SOURCE_BYTES = 1_000_000`, matching the shared text parser cap;
+- `MAX_NODES = 10_000`, enforced after `ast.parse` and before helper traversal;
+- `MAX_DEPTH = 50`, enforced iteratively before helper traversal.
+
+Contracts:
+
+- Python source is read with PEP 263 encoding support via `tokenize.open` after
+  the byte-size cap.
+- Parse failures return no document and must not serialize or log raw source
+  lines from exceptions.
+- Traversal helpers are iterative (`ast.iter_child_nodes` plus an explicit
+  stack), not recursive visitor dispatch.
+- Name helpers resolve import aliases without importing scanned modules and
+  return `(name, lineno, col_offset)` information for later rule findings.
+- The foundation remains static-only: it never executes scanned code and never
+  calls `eval`, `exec`, dynamic import helpers, subprocesses, or network APIs.
+
 ## Rules v0.1
 
 All v0.1 rules have severity `high`.

@@ -346,11 +346,9 @@ security audit.
 
 ## Community
 
-- [Star this repo](https://github.com/agentveil-protocol/agentveil-posture/stargazers)
-  if Posture helps your team.
-- [Open an issue](https://github.com/agentveil-protocol/agentveil-posture/issues)
-  for bugs, false positives, or rule suggestions.
-- See [PLAN.md](PLAN.md) for the current spec, schema details, and backlog.
+- [Star this repo](https://github.com/agentveil-protocol/agentveil-posture/stargazers) — helps others discover AgentVeil Posture
+- [Open an issue](https://github.com/agentveil-protocol/agentveil-posture/issues) — bugs, questions, and framework requests
+- [Integration guide](#install) — GitHub Action, pre-commit, Docker, and local CLI setup
 
 ## License
 

@@ -70,8 +70,10 @@ DEPLOY_EXCLUSION_RE = re.compile(
     r")(?![\w-])",
     re.IGNORECASE,
 )
-APPROVAL_MARKER_RE = re.compile(
-    r"\b(manual\s+approval|protected\s+environment|approval|review)\b",
+STEP_APPROVAL_IF_RE = re.compile(
+    r"\b(?:needs|steps)\.[\w-]+\.outputs\."
+    r"(?:approved|approval_required|manual_approval|review_approved|reviewed)\b"
+    r"|\bgithub\.event\.review\.",
     re.IGNORECASE,
 )
 PULL_REQUEST_TARGET_RE = re.compile(r"(^|\s)pull_request_target\s*:", re.MULTILINE)
@@ -124,7 +126,7 @@ def scan_workflow_deploy_without_approval(
     root: Path, path: Path, document: ParsedDocument
 ) -> list[Finding]:
     deploy_line = _first_deploy_line(document.lines)
-    if deploy_line is None or _has_approval_signal(document.text):
+    if deploy_line is None or _has_approval_signal(document.data):
         return []
     return [
         Finding(
@@ -204,10 +206,17 @@ def _first_matching_line(lines: list[str], pattern: re.Pattern[str]) -> int | No
     return None
 
 
-def _has_approval_signal(text: str) -> bool:
-    if re.search(r"^\s*environment\s*:", text, flags=re.MULTILINE):
-        return True
-    return APPROVAL_MARKER_RE.search(text) is not None
+def _has_approval_signal(data: Any) -> bool:
+    jobs = _workflow_jobs(data)
+    deploy_sites = _deploy_job_sites(jobs)
+    if not deploy_sites:
+        return False
+    return all(
+        _job_has_environment(job)
+        or _needs_environment_job(job_id, jobs, seen=set())
+        or _step_has_approval_if(step)
+        for job_id, job, step in deploy_sites
+    )
 
 
 def _pull_request_target_line(lines: list[str]) -> int | None:
@@ -275,6 +284,83 @@ def _has_deploy_marker(line: str) -> bool:
     if BUILD_CONFIG_EXCLUSIONS.search(normalized) or DEPLOY_EXCLUSION_RE.search(normalized):
         return False
     return LEGACY_DEPLOY_MARKER_RE.search(normalized) is not None
+
+
+def _workflow_jobs(data: Any) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        return {}
+    jobs = data.get("jobs")
+    return jobs if isinstance(jobs, dict) else {}
+
+
+def _deploy_job_sites(
+    jobs: dict[str, Any],
+) -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    sites: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
+    for job_id, job in jobs.items():
+        if not isinstance(job_id, str) or not isinstance(job, dict):
+            continue
+        steps = job.get("steps")
+        if not isinstance(steps, list):
+            continue
+        for step in steps:
+            if isinstance(step, dict) and _step_has_deploy_marker(step):
+                sites.append((job_id, job, step))
+    return sites
+
+
+def _step_has_deploy_marker(step: dict[str, Any]) -> bool:
+    run = step.get("run")
+    if not isinstance(run, str):
+        return False
+    for line in run.splitlines() or [run]:
+        executable = _strip_inline_comment(line)
+        if executable and _has_deploy_marker(executable):
+            return True
+    return False
+
+
+def _job_has_environment(job: dict[str, Any]) -> bool:
+    environment = job.get("environment")
+    if isinstance(environment, str):
+        return bool(environment.strip())
+    if isinstance(environment, dict):
+        name = environment.get("name")
+        return isinstance(name, str) and bool(name.strip())
+    return False
+
+
+def _needs_environment_job(
+    job_id: str, jobs: dict[str, Any], *, seen: set[str]
+) -> bool:
+    if job_id in seen:
+        return False
+    seen.add(job_id)
+    job = jobs.get(job_id)
+    if not isinstance(job, dict):
+        return False
+    for upstream_id in _needs_job_ids(job.get("needs")):
+        upstream = jobs.get(upstream_id)
+        if not isinstance(upstream, dict):
+            continue
+        if _job_has_environment(upstream) or _needs_environment_job(
+            upstream_id, jobs, seen=seen
+        ):
+            return True
+    return False
+
+
+def _needs_job_ids(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str)]
+    return []
+
+
+def _step_has_approval_if(step: dict[str, Any]) -> bool:
+    condition = step.get("if")
+    return isinstance(condition, str) and STEP_APPROVAL_IF_RE.search(condition) is not None
 
 
 def _contains_github_script_step(value: Any) -> bool:

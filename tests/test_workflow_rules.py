@@ -127,6 +127,169 @@ def test_deploy_with_environment_approval_signal_does_not_fire(tmp_path):
     assert report.findings == []
 
 
+def test_deploy_with_environment_dict_approval_signal_does_not_fire(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "deploy.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: deploy",
+                "on: push",
+                "jobs:",
+                "  deploy:",
+                "    environment:",
+                "      name: production",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Deploy production",
+                "        run: terraform apply",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_deploy_with_upstream_environment_job_does_not_fire(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "deploy.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: deploy",
+                "on: push",
+                "jobs:",
+                "  approve:",
+                "    environment: production",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - run: echo approved",
+                "  deploy:",
+                "    needs: approve",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Deploy production",
+                "        run: terraform apply",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_deploy_step_if_approval_output_does_not_fire(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "deploy.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: deploy",
+                "on: push",
+                "jobs:",
+                "  deploy:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Deploy production",
+                "        if: needs.review.outputs.approved == 'true'",
+                "        run: terraform apply",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_deploy_with_unrelated_review_step_still_fires(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "deploy.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: deploy",
+                "on: push",
+                "jobs:",
+                "  lint:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Review spelling",
+                "        run: echo safe",
+                "  deploy:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Deploy production",
+                "        run: terraform apply",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "workflow.deploy_without_approval"
+    ]
+
+
+def test_deploy_with_unrelated_approval_env_and_comment_still_fires(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "deploy.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: deploy",
+                "on: push",
+                "# manual approval happens in another system",
+                "jobs:",
+                "  deploy:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Deploy production",
+                "        if: env.APPROVAL_REQUIRED == 'true'",
+                "        env:",
+                "          APPROVAL_REQUIRED: 'true'",
+                "        run: terraform apply",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "workflow.deploy_without_approval"
+    ]
+
+
+def test_deploy_with_workflow_dispatch_trigger_still_fires(tmp_path):
+    workflow_path = _workflow_path(tmp_path, "deploy.yml")
+    workflow_path.write_text(
+        "\n".join(
+            [
+                "name: deploy",
+                "on:",
+                "  workflow_dispatch:",
+                "jobs:",
+                "  deploy:",
+                "    runs-on: ubuntu-latest",
+                "    steps:",
+                "      - name: Deploy production",
+                "        run: terraform apply",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "workflow.deploy_without_approval"
+    ]
+
+
 def test_deploy_markers_do_not_match_prod_or_produce_substrings(tmp_path):
     workflow_path = _workflow_path(tmp_path, "build.yml")
     workflow_path.write_text(

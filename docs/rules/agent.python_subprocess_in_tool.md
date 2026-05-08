@@ -22,7 +22,7 @@ Good:
 ```python
 @tool(require_human_approval=True)
 def status(service: str):
-    return subprocess.run(["status", service], check=True)
+    return f"status requested for {service}"
 ```
 
 ## Framework Note

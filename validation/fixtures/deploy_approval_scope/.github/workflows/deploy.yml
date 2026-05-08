@@ -1,0 +1,13 @@
+name: deploy
+on: push
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Review spelling
+        run: echo safe
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy production
+        run: terraform apply

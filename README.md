@@ -19,8 +19,9 @@ Static, local-only scanner for risky AI agent capabilities. No telemetry, no cod
 
 `agentveil-posture` is a pre-deployment, static, local-only scanner that flags
 risky AI-agent and GitHub-workflow posture issues. No telemetry, no network
-calls, no project code execution. v0.1 ships five high-severity GitHub-focused
-rules; v0.2 adds bounded Python agent-source rules.
+calls, no project code execution. v0.2 includes ten high-severity rules across
+GitHub workflows, agent manifests, identity files, and bounded Python
+agent-source analysis.
 
 [Quick Start](#quick-start) |
 [What a finding looks like](#what-a-finding-looks-like) |
@@ -341,8 +342,9 @@ security audit.
   limit can still consume parser memory.
 - Python analysis is bounded to `.py` files. Stub files and cross-file Python
   call resolution are out of scope for this release.
-- The repository includes an intentional synthetic PEM-shaped fixture for
-  scanner tests. It is not a real private key.
+- The repository includes intentional validation fixtures and release
+  automation review items used to exercise rules. Self-scans can report those
+  by design; they are not real credentials or production incidents.
 
 ## Community
 

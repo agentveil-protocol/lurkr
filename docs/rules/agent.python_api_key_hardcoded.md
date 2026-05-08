@@ -12,7 +12,10 @@ remove it and rotate it.
 Bad:
 
 ```python
-API_KEY = "provider-key-value"
+API_KEY = (
+    "sk-ant-"
+    "FAKEKEY12345"
+)
 ```
 
 Good:

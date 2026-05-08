@@ -22,8 +22,6 @@ Good:
 ```yaml
 permissions:
   contents: read
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Framework Note

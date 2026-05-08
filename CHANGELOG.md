@@ -23,6 +23,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   with capability-aware code examples.
 - SARIF rule descriptors now point `helpUri` at per-rule docs pages.
 
+### Fixed
+
+- Scoped deployment approval detection to the deploy job or deploy step so
+  unrelated review or approval text elsewhere in a workflow no longer suppresses
+  `workflow.deploy_without_approval`.
+
 ## [0.1.1] - 2026-05-07
 
 ### Changed

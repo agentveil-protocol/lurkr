@@ -10,13 +10,21 @@ inputs:
     required: false
     default: "."
   output:
-    description: JSON report output path
+    description: Report output path
     required: false
     default: agentveil-posture-report.json
+  format:
+    description: Report format to write (json or sarif)
+    required: false
+    default: json
+  fail-on:
+    description: Fail when findings at or above this severity are present
+    required: false
+    default: ""
 
 outputs:
   report:
-    description: Path to the generated JSON report
+    description: Path to the generated report
     value: ${{ steps.scan.outputs.report }}
 
 runs:
@@ -28,7 +36,13 @@ runs:
       working-directory: ${{ github.action_path }}
     - id: scan
       name: Run posture scan
+      env:
+        AGENTVEIL_POSTURE_FAIL_ON: ${{ inputs.fail-on }}
       run: |
-        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}"
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
+        fail_on_args=()
+        if [ -n "$AGENTVEIL_POSTURE_FAIL_ON" ]; then
+          fail_on_args=(--fail-on "$AGENTVEIL_POSTURE_FAIL_ON")
+        fi
+        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}"
       shell: bash

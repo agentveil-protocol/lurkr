@@ -10,6 +10,7 @@ from agentveil_posture.rules import (
     is_agent_manifest,
     scan_identity_private_key_unencrypted,
     scan_manifest_rules,
+    scan_python_agent_rules,
     scan_workflow_rules,
 )
 
@@ -19,7 +20,7 @@ class ScanError(Exception):
 
 
 def scan_path(path: Path) -> PostureReport:
-    """Run a static, read-only scan for the currently implemented v0.1 rules."""
+    """Run a static, read-only scan for the currently implemented rules."""
     root = path.resolve()
     if not root.exists():
         raise ScanError(f"scan path does not exist: {path}")
@@ -35,6 +36,8 @@ def scan_path(path: Path) -> PostureReport:
             findings.extend(scan_workflow_rules(root, candidate))
         if is_agent_manifest(root, candidate):
             findings.extend(scan_manifest_rules(root, candidate))
+        if _is_python_source(candidate):
+            findings.extend(scan_python_agent_rules(root, candidate))
 
     return build_report(str(root), findings)
 
@@ -59,3 +62,7 @@ def _is_github_workflow(root: Path, path: Path) -> bool:
         and relative.parts[1] == "workflows"
         and path.suffix.lower() in {".yml", ".yaml"}
     )
+
+
+def _is_python_source(path: Path) -> bool:
+    return path.suffix.lower() == ".py"

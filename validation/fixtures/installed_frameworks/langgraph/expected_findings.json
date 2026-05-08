@@ -1,0 +1,9 @@
+{
+  "framework": "langgraph",
+  "framework_version_constraint": "langgraph>=0.2,<2.0; langchain-core>=0.3,<2.0",
+  "import_checks": ["langgraph", "langchain_core.tools"],
+  "expected_findings": [
+    {"rule_id": "agent.python_tool_without_approval", "file": "agent.py", "line": 8},
+    {"rule_id": "agent.python_subprocess_in_tool", "file": "agent.py", "line": 11}
+  ]
+}

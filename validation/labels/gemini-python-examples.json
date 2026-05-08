@@ -1,0 +1,199 @@
+{
+  "repo": "googleapis/python-genai",
+  "commit": "580e192ff8f13ceb3e82c948ec2fdc73afd17053",
+  "checkout_env": "GEMINI_PYTHON_EXAMPLES_ROOT",
+  "scan_path": "google/genai/tests/models",
+  "expected_findings": [
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content.py",
+      "line": 226
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content.py",
+      "line": 255
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content.py",
+      "line": 278
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content.py",
+      "line": 295
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content.py",
+      "line": 312
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content.py",
+      "line": 327
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content.py",
+      "line": 344
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content.py",
+      "line": 2323
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 53
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 81
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 119
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 127
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 185
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 193
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 220
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 249
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 257
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 284
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 314
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_mcp.py",
+      "line": 322
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 201
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 222
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 244
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 271
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 302
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 325
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 349
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 373
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 424
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 622
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 682
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 710
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 1710
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 1857
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 1880
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "test_generate_content_tools.py",
+      "line": 1901
+    }
+  ],
+  "rules_that_should_not_fire_in_this_repo": [
+    "agent.python_api_key_hardcoded",
+    "agent.python_eval_exec_in_tool",
+    "agent.python_subprocess_in_tool",
+    "agent.python_unrestricted_file_access",
+    "bypass.direct_github_token",
+    "identity.private_key_unencrypted",
+    "tool.shell_without_approval",
+    "workflow.deploy_without_approval",
+    "workflow.pull_request_target_secrets_risk"
+  ]
+}

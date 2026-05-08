@@ -1,0 +1,9 @@
+{
+  "framework": "crewai",
+  "framework_version_constraint": "crewai>=0.5,<2.0",
+  "import_checks": ["crewai.tools"],
+  "expected_findings": [
+    {"rule_id": "agent.python_tool_without_approval", "file": "agent.py", "line": 8},
+    {"rule_id": "agent.python_subprocess_in_tool", "file": "agent.py", "line": 11}
+  ]
+}

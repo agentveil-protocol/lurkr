@@ -1,0 +1,34 @@
+{
+  "repo": "langchain-ai/langchain",
+  "commit": "1519ed5afbc3bfcc7170b12baa07f1ae7e98edd0",
+  "checkout_env": "LANGCHAIN_ROOT",
+  "scan_path": "libs/core/langchain_core/tools",
+  "expected_findings": [
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "convert.py",
+      "line": 325
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "convert.py",
+      "line": 446
+    },
+    {
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "retriever.py",
+      "line": 87
+    }
+  ],
+  "rules_that_should_not_fire_in_this_repo": [
+    "agent.python_api_key_hardcoded",
+    "agent.python_eval_exec_in_tool",
+    "agent.python_subprocess_in_tool",
+    "agent.python_unrestricted_file_access",
+    "bypass.direct_github_token",
+    "identity.private_key_unencrypted",
+    "tool.shell_without_approval",
+    "workflow.deploy_without_approval",
+    "workflow.pull_request_target_secrets_risk"
+  ]
+}

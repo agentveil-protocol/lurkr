@@ -1,0 +1,71 @@
+name: action-smoke-test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-action-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run local action in review-only mode
+        id: review
+        uses: ./
+        with:
+          path: fixtures/dangerous_github_project
+          output: action-smoke-review.json
+
+      - name: Verify review-only report
+        run: |
+          test "${{ steps.review.outputs.report }}" = "action-smoke-review.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("action-smoke-review.json").read_text())
+          assert report["summary"]["total"] == 5
+          assert report["summary"]["by_severity"]["high"] == 5
+          PY
+
+      - name: Run local action with fail-on high
+        id: fail_on
+        uses: ./
+        continue-on-error: true
+        with:
+          path: fixtures/dangerous_github_project
+          output: action-smoke-fail-on.json
+          fail-on: high
+
+      - name: Verify fail-on behavior
+        run: |
+          test "${{ steps.fail_on.outcome }}" = "failure"
+          test "${{ steps.fail_on.outputs.report }}" = "action-smoke-fail-on.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("action-smoke-fail-on.json").read_text())
+          assert report["summary"]["total"] == 5
+          assert report["summary"]["by_severity"]["high"] == 5
+          PY
+
+      - name: Upload smoke reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: action-smoke-reports
+          path: |
+            action-smoke-review.json
+            action-smoke-fail-on.json

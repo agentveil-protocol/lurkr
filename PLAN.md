@@ -2,10 +2,13 @@
 
 Status: v0.1 implementation spec for Phase 1 Sprint 1.
 
-Scope: local scanner, GitHub Action, and fixtures for v0.1. Publishing, remote
-creation, GitHub push, tag creation, and release publication remain out of
-scope until the pre-public-push gate passes and the operator explicitly
-approves those actions.
+Scope: local scanner, GitHub Action, fixtures, SARIF output, CI thresholding,
+and PyPI package metadata for v0.1. Remote creation, GitHub push, tag creation,
+release publication, and PyPI upload remain gated until the pre-public-push
+gate passes and the operator explicitly approves those actions.
+
+Version note: `0.2.0` adds bounded Python AST agent detection. PyPI
+publication of `0.2.0` remains a separate pre-launch gate.
 
 ## Product Boundary
 
@@ -22,8 +25,9 @@ Hard constraints:
 - no secrets handling beyond metadata and bounded header sniffing;
 - no raw secret values in findings, reports, logs, or GitHub Action summaries.
 
-Phase 1-2 public wording must not claim production controlled execution is live.
-Production Gateway enforcement remains roadmap until separately shipped.
+Public wording must not claim runtime execution control. Posture is static
+analysis only — it finds risky capabilities, it does not block, gate, or
+enforce agent actions at runtime.
 
 ## Architecture
 
@@ -55,7 +59,7 @@ agentveil posture scan
   -> rules registry evaluates GitHub workflow/tool/identity rules
   -> report.PostureReport is built with redacted findings only
   -> reporter writes stable JSON to --output
-  -> cli returns exit code according to v0.1 rules
+  -> cli returns exit code according to current rules
 ```
 
 Module responsibilities:
@@ -105,14 +109,63 @@ Shared candidate rules for v0.1:
   agent-tool candidates unless a later approved rule explicitly adds them.
 - Identity rules may inspect any regular file through file metadata and a
   bounded header prefix only.
+- Python agent rules inspect regular `.py` files under the scan root through
+  bounded AST parsing only. `.pyi` stub files are out of scope.
 - Symlinks are skipped in v0.1, including symlinks that point inside the scan
   root. Outside-root symlinks must never be followed.
 - Finding file paths are repository-relative POSIX paths under `scanned_path`,
   never absolute paths.
 
+## Python AST Foundation
+
+Phase 6a adds internal, bounded Python AST helpers. This foundation is not wired
+into scanner discovery until later Phase 6 rules are reviewed.
+
+Hard limits:
+
+- `MAX_SOURCE_BYTES = 1_000_000`, matching the shared text parser cap;
+- `MAX_NODES = 10_000`, enforced after `ast.parse` and before helper traversal;
+- `MAX_DEPTH = 50`, enforced iteratively before helper traversal.
+
+Contracts:
+
+- Python source is read with PEP 263 encoding support via `tokenize.open` after
+  the byte-size cap.
+- Parse failures return no document and must not serialize or log raw source
+  lines from exceptions.
+- Traversal helpers are iterative (`ast.iter_child_nodes` plus an explicit
+  stack), not recursive visitor dispatch.
+- Name helpers resolve import aliases without importing scanned modules and
+  return `(name, lineno, col_offset)` information for later rule findings.
+- The foundation remains static-only: it never executes scanned code and never
+  calls `eval`, `exec`, dynamic import helpers, subprocesses, or network APIs.
+
+Phase 6b tool-scope definition:
+
+- A function is considered an agent tool when it is decorated with `@tool`,
+  `@tool(...)`, or MCP-style `@server.call_tool(...)`, including
+  import-aliased variants resolved by the AST helper.
+- A function is also considered an agent tool when it is referenced as a local
+  `func=` argument in a `Tool` or `StructuredTool` call, or as a local `fn=`
+  argument in a LlamaIndex `FunctionTool` / `FunctionTool.from_defaults` call
+  in the same file.
+- Provider tool-calling dicts are in scope when `.create(...)`,
+  `.generate_content(...)`, or `GenerativeModel(...)` calls contain `tools=[...]`
+  with OpenAI shape `{"type": "function", "function": {"name": ...}}`,
+  Anthropic shape `{"name": ..., "input_schema": ...}`, or Gemini shape
+  `{"function_declarations": [{"name": ...}]}` and the named function is local
+  to the same file.
+- Cross-file references such as `Tool(func=external_module.helper)` are out of
+  scope for Phase 6b.
+
+Approval markers are intentionally conservative. Only positive boolean or
+truthy non-false values on these keyword names count:
+`require_human_approval`, `requires_approval`, `human_in_the_loop`,
+`approval_required`, and `approval`.
+
 ## Rules v0.1
 
-All v0.1 rules have severity `high`.
+All current rules have severity `high`.
 
 ### `bypass.direct_github_token`
 
@@ -153,10 +206,19 @@ Reads:
 
 Matches:
 
-- deployment-like jobs or steps using the v0.1 marker regex:
+- deployment-like `run:` commands using the v0.1 marker regex:
   `deploy`, `deployment`, `release`, `kubectl`, package-manager publish
   (`npm|pnpm|yarn|pypi|twine|poetry publish`), `terraform apply`,
-  `cloudformation deploy`, or `serverless deploy`;
+  `cloudformation deploy`, `serverless deploy`, `gh release create`,
+  `docker push`, `helm upgrade`, `pulumi up`, `sam deploy`,
+  `gcloud run deploy`, `firebase deploy`, `vercel deploy`, `netlify deploy`,
+  `fly deploy`, `wrangler deploy`, or `aws ecs update-service`;
+- deploy marker matching is limited to `run:` command values, line-based after
+  whitespace normalization and bash comment-only line stripping. Multi-line
+  `run:` blocks are handled by evaluating each captured line independently;
+- build, preview, plan, and package-only commands such as `docker build`,
+  `helm template`, `pulumi preview`, `terraform plan`, `vercel build`, and
+  `npm pack` are excluded unless the same line also contains a deploy marker;
 - absence of an explicit approval gate such as protected GitHub environments,
   reviewer-required environment usage, or a clearly named manual approval job.
 
@@ -183,7 +245,9 @@ Matches:
 
 - `on: pull_request_target`;
 - plus risky use of checkout, script execution, dependency install, or secret
-  access in jobs triggered by untrusted PR context.
+  access in jobs triggered by untrusted PR context;
+- parsed workflow `uses:` fields matching `actions/github-script@...` are
+  treated as script execution only in `pull_request_target` workflows.
 
 Emits:
 
@@ -210,7 +274,10 @@ Matches:
   restricted command set;
 - configuration keys such as `shell`, `bash`, `command`, `terminal`, or
   `subprocess` paired with unconstrained execution flags in the pinned
-  agent-manifest formats only.
+  agent-manifest formats only;
+- exact tool names `shell`, `bash`, `command`, `terminal`, or `subprocess` in
+  pinned agent-manifest tool lists or tool-name fields. Substrings and prose
+  such as `search_tool`, `shellfish`, or `use shell` are not matches.
 
 Emits:
 
@@ -256,6 +323,43 @@ Evidence policy:
 - report only the header class and path;
 - never report key bytes beyond generic header classification.
 
+### Python agent rules
+
+Reads:
+
+- regular `.py` files under the scan root;
+- bounded Python AST only, never imports or executes scanned source.
+
+Per-rule scope:
+
+- `agent.python_tool_without_approval` fires at Python tool decorator or
+  constructor sites without an approval marker.
+- `agent.python_subprocess_in_tool`,
+  `agent.python_eval_exec_in_tool`, and
+  `agent.python_unrestricted_file_access` fire only inside same-file tool
+  functions as defined in the Python AST foundation section.
+- `agent.python_api_key_hardcoded` is module-wide because keys are often stored
+  in config blocks outside tool functions.
+
+Matches:
+
+- v0.2.0 Python agent scope is limited to eight priorities:
+  LangChain/LangGraph decorators and `Tool`/`StructuredTool` constructors,
+  CrewAI `@tool` decorators, MCP `@server.call_tool()` decorators, OpenAI
+  `tools=[{"type": "function", "function": {"name": ...}}]` tool calling,
+  Anthropic `tools=[{"name": ..., "input_schema": ...}]` tool use, and
+  LlamaIndex `FunctionTool` / `FunctionTool.from_defaults`, Gemini
+  `function_declarations`, and module-wide API-key-shaped string literals;
+- subprocess/shell calls, dynamic execution calls, and file write/delete calls
+  inside tool functions;
+- API-key-shaped Python string literals with common provider prefixes.
+
+Evidence policy:
+
+- report file and line only;
+- never report Python source snippets, command bodies, hardcoded key literals,
+  or file path string literals from the scanned source.
+
 ## JSON Report Schema
 
 Stable v0.1 shape:
@@ -263,7 +367,7 @@ Stable v0.1 shape:
 ```json
 {
   "report_version": "0.1",
-  "scanner_version": "agentveil-posture/0.1.0",
+  "scanner_version": "agentveil-posture/0.2.0",
   "scanned_at": "2026-05-06T00:00:00Z",
   "scanned_path": "/absolute/or/input/path",
   "findings": [
@@ -303,33 +407,58 @@ Schema rules:
 - `summary.by_severity` always includes all five severity keys.
 - `summary.total` equals `len(findings)`.
 
+## SARIF Report Schema
+
+The scanner can also emit SARIF v2.1.0 for GitHub Code Scanning:
+
+```bash
+agentveil posture scan --path . --output agentveil-posture.sarif --format sarif
+```
+
+SARIF rules:
+
+- `$schema` is `https://json.schemastore.org/sarif-2.1.0.json`.
+- `version` is `"2.1.0"`.
+- `tool.driver.rules[]` defines all current rule IDs.
+- high-severity findings map to `result.level: "error"`.
+- high-severity rules include
+  `properties.security-severity: "8.0"`.
+- every `result` includes `partialFingerprints.primaryLocationLineHash` to
+  reduce duplicate Code Scanning alerts across repeated scans.
+- `artifactLocation.uri` uses repository-relative POSIX paths only.
+- SARIF output follows the same redaction contract as JSON output: no raw
+  secrets, no source snippets, no command bodies, and no private key material.
+
 ## CLI Surface
 
 Command:
 
 ```bash
-agentveil posture scan --path . --output report.json
+agentveil posture scan --path . --output report.json --format json
 ```
 
 Arguments:
 
 - `agentveil posture scan`: only v0.1 command. No `check` alias.
 - `--path PATH`: scan root. Defaults to `.`.
-- `--output FILE`: JSON output path. Required by the public v0.1 signature for
+- `--output FILE`: report output path. Required by the public v0.1 signature for
   examples and CI.
+- `--format json|sarif`: report format. Defaults to `json` for backward
+  compatibility.
+- `--fail-on critical|high|medium|low|info`: optional threshold. When set,
+  report writing still completes, then the command exits `1` if any finding is
+  at or above the selected severity.
 
 Exit codes:
 
-- `0`: scan completed and report was written, regardless of findings for v0.1.
+- `0`: scan completed, report was written, and no configured threshold was met.
+- `1`: scanner/reporting error, or a configured `--fail-on` threshold was met.
 - `2`: invalid CLI arguments.
-- `1`: scanner/reporting error.
-
-Future flags such as `--fail-on` are deferred.
 
 ## GitHub Action Manifest
 
 v0.1 keeps the action in this same repo and distributes it as
-`agentveil-protocol/agentveil-posture@v0.1.0`.
+`agentveil-protocol/agentveil-posture@v0.2.0`.
 
 `action.yml` shape:
 
@@ -342,12 +471,20 @@ inputs:
     required: false
     default: "."
   output:
-    description: JSON report output path
+    description: Report output path
     required: false
     default: agentveil-posture-report.json
+  format:
+    description: Report format to write (json or sarif)
+    required: false
+    default: json
+  fail-on:
+    description: Fail when findings at or above this severity are present
+    required: false
+    default: ""
 outputs:
   report:
-    description: Path to the generated JSON report
+    description: Path to the generated report
     value: ${{ steps.scan.outputs.report }}
 runs:
   using: composite
@@ -358,9 +495,15 @@ runs:
       working-directory: ${{ github.action_path }}
     - id: scan
       name: Run posture scan
+      env:
+        AGENTVEIL_POSTURE_FAIL_ON: ${{ inputs.fail-on }}
       run: |
-        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}"
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
+        fail_on_args=()
+        if [ -n "$AGENTVEIL_POSTURE_FAIL_ON" ]; then
+          fail_on_args=(--fail-on "$AGENTVEIL_POSTURE_FAIL_ON")
+        fi
+        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}"
       shell: bash
 ```
 
@@ -368,9 +511,12 @@ PR/check surfacing:
 
 - v0.1 may upload the JSON file as a workflow artifact through caller workflow
   configuration, not by scanner network calls.
+- For Code Scanning, caller workflows may set `format: sarif` and upload the
+  generated file with `github/codeql-action/upload-sarif@v3`.
 - Any optional job summary must show counts and rule IDs only.
 - Raw evidence, source snippets, and secret-like values must not be printed.
-- Failing PRs by threshold is deferred unless explicitly approved for v0.1.
+- Callers may fail jobs by threshold with `fail-on: high` or another supported
+  severity.
 
 ## Fixture Plan
 
@@ -385,13 +531,15 @@ PR/check surfacing:
 
 `fixtures/dangerous_github_project/`:
 
-- compact synthetic fixture covering all five v0.1 rules;
+- compact synthetic fixture covering the original workflow, manifest, and
+  identity rules;
 - contains only synthetic placeholders, never real credentials or private key
   material;
 - intentionally includes a synthetic PEM-shaped file so
   `identity.private_key_unencrypted` can be tested before release.
 
-Full fixture matrix and false-positive reference set are deferred to v0.2.
+Full fixture matrix and false-positive reference set are deferred until
+real-world validation completes.
 
 ## Test Plan
 
@@ -406,8 +554,8 @@ Rule unit tests:
 Fixture-driven E2E:
 
 - `clean_github_project` emits zero findings;
-- `dangerous_github_project` emits exactly the five v0.1 rule IDs once fixture
-  content exists;
+- `dangerous_github_project` emits the original workflow, manifest, and
+  identity rule IDs once fixture content exists;
 - report summary totals match findings.
 
 Schema validation:
@@ -485,7 +633,7 @@ Local sanity tests:
 ## Out Of Scope For v0.1
 
 - `check` command alias;
-- `--fail-on`;
-- PyPI publication;
 - GitHub repository creation or remote push;
+- GitHub tag or release publication without explicit approval;
+- PyPI upload without explicit approval;
 - AVP backend/core code, deployment, credentials, logs, or production changes.

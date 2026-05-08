@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from agentveil_posture.rules import parsing
 from agentveil_posture.scanner import scan_path
 
@@ -109,6 +111,81 @@ def test_yaml_manifest_shell_without_approval_fires(tmp_path):
         "tool.shell_without_approval"
     ]
     assert report.findings[0].line == 3
+
+
+@pytest.mark.parametrize("tool_name", ("shell", "bash", "terminal", "subprocess", "command"))
+def test_manifest_exact_shell_tool_name_in_json_list_fires(tmp_path, tool_name):
+    manifest = tmp_path / "mcp.json"
+    manifest.write_text(json.dumps({"tools": [tool_name]}), encoding="utf-8")
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "tool.shell_without_approval"
+    ]
+
+
+@pytest.mark.parametrize("tool_name", ("shell", "bash", "terminal", "subprocess", "command"))
+def test_manifest_exact_shell_tool_name_in_yaml_list_fires(tmp_path, tool_name):
+    manifest = tmp_path / "crew-tools.yaml"
+    manifest.write_text(f"tools:\n  - {tool_name}\n", encoding="utf-8")
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "tool.shell_without_approval"
+    ]
+
+
+@pytest.mark.parametrize("tool_name", ("shell", "bash", "terminal", "subprocess", "command"))
+def test_manifest_exact_shell_tool_name_field_fires(tmp_path, tool_name):
+    manifest = tmp_path / "mcp.json"
+    manifest.write_text(json.dumps({"tools": [{"name": tool_name}]}), encoding="utf-8")
+
+    report = scan_path(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "tool.shell_without_approval"
+    ]
+
+
+@pytest.mark.parametrize(
+    "manifest_data",
+    (
+        {"tools": ["search_tool"]},
+        {"tools": ["shellfish"]},
+        {"tools": ["my_shell_helper"]},
+        {"description": "use shell for local debugging"},
+        {"tool_name": "shell utility"},
+    ),
+)
+def test_manifest_shell_tool_exact_matching_avoids_substrings_and_prose(
+    tmp_path, manifest_data
+):
+    manifest = tmp_path / "mcp.json"
+    manifest.write_text(json.dumps(manifest_data), encoding="utf-8")
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_manifest_exact_shell_tool_redacts_raw_manifest_values(tmp_path):
+    manifest = tmp_path / "mcp.json"
+    manifest.write_text(
+        json.dumps({"tools": ["shell"], "command": "echo ${{ secrets.PROD_TOKEN }}"}),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+    report_json = report.to_json()
+    report_sarif = json.dumps(report.to_sarif(), sort_keys=True)
+
+    assert "tool.shell_without_approval" in report_json
+    assert "PROD_TOKEN" not in report_json
+    assert "echo" not in report_json
+    assert "PROD_TOKEN" not in report_sarif
+    assert "echo" not in report_sarif
 
 
 def test_crewai_agents_yaml_in_crews_config_path_is_scanned(tmp_path):

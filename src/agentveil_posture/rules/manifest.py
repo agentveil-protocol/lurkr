@@ -39,6 +39,8 @@ SHELL_LINE_RE = re.compile(
     r"(^|[\s,{])[\"']?(shell|bash|command|terminal|subprocess)[\"']?\s*[:=]",
     re.I,
 )
+SHELL_TOOL_NAMES = {"shell", "bash", "terminal", "subprocess", "command"}
+TOOL_NAME_KEYS = {"name", "tool", "tool_name", "type"}
 APPROVAL_KEY_RE = re.compile(r"(approval|approve|human)", re.I)
 MAX_MANIFEST_SCAN_DEPTH = 100
 
@@ -122,12 +124,17 @@ def _has_shell_capability(value: Any, depth: int = 0) -> bool:
         return False
     if isinstance(value, dict):
         for key, child in value.items():
+            if _is_tool_name_key(key) and _is_exact_shell_tool_name(child):
+                return True
             if SHELL_KEY_RE.search(str(key)) and _value_enabled(child):
                 return True
             if _has_shell_capability(child, depth + 1):
                 return True
     if isinstance(value, list):
-        return any(_has_shell_capability(item, depth + 1) for item in value)
+        return any(
+            _is_exact_shell_tool_name(item) or _has_shell_capability(item, depth + 1)
+            for item in value
+        )
     return False
 
 
@@ -153,6 +160,14 @@ def _value_enabled(value: Any) -> bool:
     if isinstance(value, (list, dict)):
         return bool(value)
     return True
+
+
+def _is_tool_name_key(key: Any) -> bool:
+    return str(key).strip().lower() in TOOL_NAME_KEYS
+
+
+def _is_exact_shell_tool_name(value: Any) -> bool:
+    return isinstance(value, str) and value.strip().lower() in SHELL_TOOL_NAMES
 
 
 def _first_shell_line(lines: list[str]) -> int | None:

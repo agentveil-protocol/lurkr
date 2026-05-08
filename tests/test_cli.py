@@ -41,68 +41,86 @@ def test_cli_default_and_format_json_match_existing_json_output(tmp_path, monkey
         ]
     )
 
-    expected_json = f"""{{
-  "findings": [
-    {{
-      "file": ".github/workflows/dangerous.yml",
-      "line": 11,
-      "message": "Workflow appears to expose direct GitHub token access.",
-      "remediation": "Restrict GitHub token permissions, avoid passing direct write tokens to agent-controlled steps, and require approval for GitHub write or deploy paths.",
-      "rule_id": "bypass.direct_github_token",
-      "severity": "high"
-    }},
-    {{
-      "file": ".github/workflows/dangerous.yml",
-      "line": 12,
-      "message": "Deployment workflow appears to run without an approval gate.",
-      "remediation": "Add a protected GitHub environment or explicit manual approval before production deploy, release, or publish steps.",
-      "rule_id": "workflow.deploy_without_approval",
-      "severity": "high"
-    }},
-    {{
-      "file": ".github/workflows/dangerous.yml",
-      "line": 3,
-      "message": "pull_request_target workflow appears to combine privileged PR context with checkout, shell execution, or secrets access.",
-      "remediation": "Use pull_request for untrusted checks, avoid checking out fork code in privileged workflows, and isolate any secret-bearing jobs.",
-      "rule_id": "workflow.pull_request_target_secrets_risk",
-      "severity": "high"
-    }},
-    {{
-      "file": "keys/synthetic_unencrypted_private_key.pem",
-      "line": 1,
-      "message": "Unencrypted private key file appears present.",
-      "remediation": "Remove the key from the repository, rotate it if exposed, store it in a secret manager, and use encrypted private key material when local keys are unavoidable.",
-      "rule_id": "identity.private_key_unencrypted",
-      "severity": "high"
-    }},
-    {{
-      "file": "mcp.json",
-      "line": 5,
-      "message": "Agent/tool manifest appears to enable shell execution without approval.",
-      "remediation": "Require explicit approval or a narrow allowlist before enabling shell, terminal, command, bash, or subprocess tools.",
-      "rule_id": "tool.shell_without_approval",
-      "severity": "high"
-    }}
-  ],
-  "report_version": "0.1",
-  "scanned_at": "2026-05-07T00:00:00Z",
-  "scanned_path": "{scan_root.resolve()}",
-  "scanner_version": "agentveil-posture/0.2.0",
-  "summary": {{
-    "by_severity": {{
-      "critical": 0,
-      "high": 5,
-      "info": 0,
-      "low": 0,
-      "medium": 0
-    }},
-    "total": 5
-  }}
-}}
-"""
+    expected = {
+        "findings": [
+            {
+                "file": ".github/workflows/dangerous.yml",
+                "line": 11,
+                "message": "Workflow appears to expose direct GitHub token access.",
+                "remediation": (
+                    "Restrict GitHub token permissions, avoid passing direct write tokens to "
+                    "agent-controlled steps, and require approval for GitHub write or deploy paths."
+                ),
+                "rule_id": "bypass.direct_github_token",
+                "severity": "high",
+            },
+            {
+                "file": ".github/workflows/dangerous.yml",
+                "line": 12,
+                "message": "Deployment workflow appears to run without an approval gate.",
+                "remediation": (
+                    "Add a protected GitHub environment or explicit manual approval before "
+                    "production deploy, release, or publish steps."
+                ),
+                "rule_id": "workflow.deploy_without_approval",
+                "severity": "high",
+            },
+            {
+                "file": ".github/workflows/dangerous.yml",
+                "line": 3,
+                "message": (
+                    "pull_request_target workflow appears to combine privileged PR context with "
+                    "checkout, shell execution, or secrets access."
+                ),
+                "remediation": (
+                    "Use pull_request for untrusted checks, avoid checking out fork code in "
+                    "privileged workflows, and isolate any secret-bearing jobs."
+                ),
+                "rule_id": "workflow.pull_request_target_secrets_risk",
+                "severity": "high",
+            },
+            {
+                "file": "keys/synthetic_unencrypted_private_key.pem",
+                "line": 1,
+                "message": "Unencrypted private key file appears present.",
+                "remediation": (
+                    "Remove the key from the repository, rotate it if exposed, store it in a "
+                    "secret manager, and use encrypted private key material when local keys are "
+                    "unavoidable."
+                ),
+                "rule_id": "identity.private_key_unencrypted",
+                "severity": "high",
+            },
+            {
+                "file": "mcp.json",
+                "line": 5,
+                "message": "Agent/tool manifest appears to enable shell execution without approval.",
+                "remediation": (
+                    "Require explicit approval or a narrow allowlist before enabling shell, "
+                    "terminal, command, bash, or subprocess tools."
+                ),
+                "rule_id": "tool.shell_without_approval",
+                "severity": "high",
+            },
+        ],
+        "report_version": "0.1",
+        "scanned_at": "2026-05-07T00:00:00Z",
+        "scanned_path": str(scan_root.resolve()),
+        "scanner_version": "agentveil-posture/0.2.0",
+        "summary": {
+            "by_severity": {
+                "critical": 0,
+                "high": 5,
+                "info": 0,
+                "low": 0,
+                "medium": 0,
+            },
+            "total": 5,
+        },
+    }
     assert default_exit == explicit_exit == 0
-    assert default_output.read_text(encoding="utf-8") == expected_json
-    assert explicit_output.read_text(encoding="utf-8") == expected_json
+    assert json.loads(default_output.read_text(encoding="utf-8")) == expected
+    assert json.loads(explicit_output.read_text(encoding="utf-8")) == expected
 
 
 def test_cli_scan_writes_sarif_report(tmp_path):

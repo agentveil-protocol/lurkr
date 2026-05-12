@@ -115,6 +115,7 @@ The goal: find high-severity capabilities worth controlling before they become p
 | API tokens / cloud calls | Local, offline, no telemetry |
 | Generic secrets | Agent-relevant credentials and bypass paths |
 | Report only | Findings mapped to remove / restrict / redact controls |
+| Ad-hoc detection logic | Rules grounded in Saltzer-Schroeder principles (1975), Schneier attack trees (1999), OWASP LLM Top 10, MITRE ATLAS |
 
 ## Roadmap
 

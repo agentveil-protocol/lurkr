@@ -1,0 +1,4403 @@
+{
+  "aggregate": {
+    "baseline": {
+      "gitleaks_available": false,
+      "note": "gitleaks executable was not available on this runner."
+    },
+    "public_references": {
+      "average_findings_per_repo": 33.25,
+      "percent_with_findings": 75.0,
+      "repo_count": 20,
+      "repos_with_findings": 15,
+      "repos_without_findings": 5,
+      "rule_repo_counts": {
+        "agent.credential_to_llm_context": 2,
+        "agent.dynamic_prompt_from_user_input": 9,
+        "agent.python_api_key_hardcoded": 1,
+        "agent.python_tool_without_approval": 10,
+        "agent.python_unrestricted_file_access": 2,
+        "bypass.direct_github_token": 5,
+        "workflow.deploy_without_approval": 5,
+        "workflow.pull_request_target_secrets_risk": 2
+      },
+      "rule_totals": {
+        "agent.credential_to_llm_context": 3,
+        "agent.dynamic_prompt_from_user_input": 71,
+        "agent.python_api_key_hardcoded": 67,
+        "agent.python_tool_without_approval": 487,
+        "agent.python_unrestricted_file_access": 6,
+        "bypass.direct_github_token": 21,
+        "workflow.deploy_without_approval": 8,
+        "workflow.pull_request_target_secrets_risk": 2
+      },
+      "total_findings": 665
+    },
+    "synthetic": {
+      "adversarial_count": 10,
+      "clean_control_count": 5,
+      "clean_control_fp_rate": 0.0,
+      "clean_controls_with_findings": 0,
+      "entry_count": 15,
+      "per_rule": {
+        "agent.credential_to_llm_context": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "agent.declared_vs_imported_delta": {
+          "expected": 3,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 3,
+          "tp_rate": 100.0,
+          "true_positive": 3
+        },
+        "agent.dynamic_prompt_from_user_input": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "agent.python_api_key_hardcoded": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "agent.python_eval_exec_in_tool": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "agent.python_subprocess_in_tool": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "agent.python_tool_without_approval": {
+          "expected": 3,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 3,
+          "tp_rate": 100.0,
+          "true_positive": 3
+        },
+        "agent.python_unrestricted_file_access": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "agent.unverified_mcp_endpoint": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "bypass.direct_github_token": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "identity.private_key_unencrypted": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "tool.shell_without_approval": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "workflow.deploy_without_approval": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        },
+        "workflow.pull_request_target_secrets_risk": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "tp_rate": 100.0,
+          "true_positive": 1
+        }
+      }
+    }
+  },
+  "clone_root": "/tmp/lurkr-benchmark-clones",
+  "corpus_snapshot_date": "2026-05-12",
+  "environment": {
+    "gitleaks_available": false,
+    "gitleaks_version": null
+  },
+  "public_references": [
+    {
+      "category": "langgraph",
+      "commit_sha": "9f06f66af4da5ed9b9def2e0e4456210b211a360",
+      "description": "LangGraph template for a simple ReAct agent.",
+      "finding_count": 0,
+      "findings": [],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "langchain_react_agent",
+      "license": "MIT",
+      "repo": "langchain-ai/react-agent",
+      "rule_counts": {},
+      "scan_path": ".",
+      "stars_at_curation": 730,
+      "tier": "public_reference"
+    },
+    {
+      "category": "langgraph",
+      "commit_sha": "d3c39132ef23021fa437ac6292f528127297d65e",
+      "description": "LangGraph retrieval agent template.",
+      "finding_count": 0,
+      "findings": [],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "langchain_retrieval_agent_template",
+      "license": "MIT",
+      "repo": "langchain-ai/retrieval-agent-template",
+      "rule_counts": {},
+      "scan_path": ".",
+      "stars_at_curation": 161,
+      "tier": "public_reference"
+    },
+    {
+      "category": "langgraph",
+      "commit_sha": "bb6eeb2d384bf803e0594f8e5a9efb116a114beb",
+      "description": "LangGraph Studio template for web research and structured data enrichment.",
+      "finding_count": 0,
+      "findings": [],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "langchain_data_enrichment",
+      "license": "MIT",
+      "repo": "langchain-ai/data-enrichment",
+      "rule_counts": {},
+      "scan_path": ".",
+      "stars_at_curation": 230,
+      "tier": "public_reference"
+    },
+    {
+      "category": "langgraph",
+      "commit_sha": "0dd30bd47ed6ed3ac4d2b678997662830f227a14",
+      "description": "Open deep research agent reference implementation.",
+      "finding_count": 18,
+      "findings": [
+        {
+          "file": "src/legacy/graph.py",
+          "line": 89,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/legacy/graph.py",
+          "line": 107,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/legacy/graph.py",
+          "line": 224,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/legacy/graph.py",
+          "line": 318,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/legacy/graph.py",
+          "line": 379,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/legacy/multi_agent.py",
+          "line": 365,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/legacy/utils.py",
+          "line": 1281,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/open_deep_research/deep_researcher.py",
+          "line": 97,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/open_deep_research/deep_researcher.py",
+          "line": 150,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/open_deep_research/deep_researcher.py",
+          "line": 157,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/open_deep_research/deep_researcher.py",
+          "line": 400,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/open_deep_research/deep_researcher.py",
+          "line": 642,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/open_deep_research/utils.py",
+          "line": 187,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/legacy/utils.py",
+          "line": 1247,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/legacy/utils.py",
+          "line": 1363,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/legacy/utils.py",
+          "line": 1456,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/open_deep_research/utils.py",
+          "line": 43,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/open_deep_research/utils.py",
+          "line": 219,
+          "rule_id": "agent.python_tool_without_approval"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "langchain_open_deep_research",
+      "license": "MIT",
+      "repo": "langchain-ai/open_deep_research",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 13,
+        "agent.python_tool_without_approval": 5
+      },
+      "scan_path": ".",
+      "stars_at_curation": 11375,
+      "tier": "public_reference"
+    },
+    {
+      "category": "langgraph",
+      "commit_sha": "e1721099870bb6169a8b30d11a43e1dd7a7853ab",
+      "description": "Fully local web research and report-writing assistant.",
+      "finding_count": 3,
+      "findings": [
+        {
+          "file": "src/ollama_deep_researcher/graph.py",
+          "line": 154,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/ollama_deep_researcher/graph.py",
+          "line": 348,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": ".github/workflows/docker-image.yml",
+          "line": 45,
+          "rule_id": "bypass.direct_github_token"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "langchain_local_deep_researcher",
+      "license": "MIT",
+      "repo": "langchain-ai/local-deep-researcher",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 2,
+        "bypass.direct_github_token": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 9143,
+      "tier": "public_reference"
+    },
+    {
+      "category": "langgraph",
+      "commit_sha": "5d341ac33475c1199a1ce2c9226338f063016a5e",
+      "description": "LangGraph supervisor reference package for multi-agent workflows.",
+      "finding_count": 6,
+      "findings": [
+        {
+          "file": "langgraph_supervisor/handoff.py",
+          "line": 88,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "langgraph_supervisor/handoff.py",
+          "line": 174,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_supervisor.py",
+          "line": 172,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_supervisor.py",
+          "line": 177,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_supervisor.py",
+          "line": 431,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": ".github/workflows/release.yml",
+          "line": 148,
+          "rule_id": "bypass.direct_github_token"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "langchain_langgraph_supervisor_py",
+      "license": "MIT",
+      "repo": "langchain-ai/langgraph-supervisor-py",
+      "rule_counts": {
+        "agent.python_tool_without_approval": 5,
+        "bypass.direct_github_token": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 1574,
+      "tier": "public_reference"
+    },
+    {
+      "category": "gemini",
+      "commit_sha": "e34e569de465340e42f36cd3cab4fac0c3ce7036",
+      "description": "Full-stack Gemini and LangGraph agent quickstart.",
+      "finding_count": 4,
+      "findings": [
+        {
+          "file": "backend/src/agent/graph.py",
+          "line": 74,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "backend/src/agent/graph.py",
+          "line": 109,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "backend/src/agent/graph.py",
+          "line": 160,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "backend/src/agent/graph.py",
+          "line": 238,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "google_gemini_fullstack_langgraph_quickstart",
+      "license": "Apache-2.0",
+      "repo": "google-gemini/gemini-fullstack-langgraph-quickstart",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 4
+      },
+      "scan_path": ".",
+      "stars_at_curation": 18160,
+      "tier": "public_reference"
+    },
+    {
+      "category": "langgraph",
+      "commit_sha": "200383d0e7e07e785cded5041ec1cff68b5242d9",
+      "description": "Agentic company research tool powered by LangGraph and Tavily.",
+      "finding_count": 1,
+      "findings": [
+        {
+          "file": "backend/nodes/briefing.py",
+          "line": 114,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "guy_hartstein_company_research_agent",
+      "license": "Apache-2.0",
+      "repo": "guy-hartstein/company-research-agent",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 1887,
+      "tier": "public_reference"
+    },
+    {
+      "category": "langgraph",
+      "commit_sha": "d97f375a07f140a640838b3bd52d9c3a6ba7b462",
+      "description": "FastAPI template for LangGraph AI agent services.",
+      "finding_count": 2,
+      "findings": [
+        {
+          "file": "app/core/langgraph/tools/ask_human.py",
+          "line": 11,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": ".github/workflows/deploy.yaml",
+          "line": 43,
+          "rule_id": "workflow.deploy_without_approval"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "wassim249_fastapi_langgraph_template",
+      "license": "MIT",
+      "repo": "wassim249/fastapi-langgraph-agent-production-ready-template",
+      "rule_counts": {
+        "agent.python_tool_without_approval": 1,
+        "workflow.deploy_without_approval": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 2255,
+      "tier": "public_reference"
+    },
+    {
+      "category": "mixed",
+      "commit_sha": "85a0ceb62e0047268ce0a1bfcfac61772079d29f",
+      "description": "Full-stack FastAPI and Next.js AI agent template with RAG and integrations.",
+      "finding_count": 1,
+      "findings": [
+        {
+          "file": ".github/workflows/docs.yml",
+          "line": 35,
+          "rule_id": "workflow.deploy_without_approval"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "vstorm_full_stack_ai_agent_template",
+      "license": "MIT",
+      "repo": "vstorm-co/full-stack-ai-agent-template",
+      "rule_counts": {
+        "workflow.deploy_without_approval": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 1255,
+      "tier": "public_reference"
+    },
+    {
+      "category": "langgraph",
+      "commit_sha": "815db9ec5b8d003a0588c4251e0935589740e156",
+      "description": "Next.js LangGraph agent template with MCP integration and human approval.",
+      "finding_count": 0,
+      "findings": [],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "agentailor_fullstack_langgraph_nextjs_agent",
+      "license": "MIT",
+      "repo": "agentailor/fullstack-langgraph-nextjs-agent",
+      "rule_counts": {},
+      "scan_path": ".",
+      "stars_at_curation": 105,
+      "tier": "public_reference"
+    },
+    {
+      "category": "mixed",
+      "commit_sha": "2bd004a51e5d741e8eaf5bb01716b6a673684a53",
+      "description": "FastAPI, MCP, and LangGraph template for agentic orchestration.",
+      "finding_count": 1,
+      "findings": [
+        {
+          "file": "backend/shared_mcp/tools.py",
+          "line": 11,
+          "rule_id": "agent.python_tool_without_approval"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "nicholasgoh_fastapi_mcp_langgraph_template",
+      "license": "MIT",
+      "repo": "NicholasGoh/fastapi-mcp-langgraph-template",
+      "rule_counts": {
+        "agent.python_tool_without_approval": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 544,
+      "tier": "public_reference"
+    },
+    {
+      "category": "crewai",
+      "commit_sha": "5adaa6223ca497a1db261a20204e4a853766411d",
+      "description": "CrewAI quickstarts and feature demos.",
+      "finding_count": 0,
+      "findings": [],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "crewai_quickstarts",
+      "license": "MIT",
+      "repo": "crewAIInc/crewAI-quickstarts",
+      "rule_counts": {},
+      "scan_path": ".",
+      "stars_at_curation": 58,
+      "tier": "public_reference"
+    },
+    {
+      "category": "autogen",
+      "commit_sha": "9b40fc1459a6dda748b1f47d72352a2fadafc8e6",
+      "description": "AG2, formerly AutoGen, open-source AgentOS and examples.",
+      "finding_count": 258,
+      "findings": [
+        {
+          "file": "autogen/agentchat/contrib/agent_optimizer.py",
+          "line": 290,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agentchat/contrib/llava_agent.py",
+          "line": 88,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agentchat/contrib/text_analyzer_agent.py",
+          "line": 90,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agentchat/contrib/vectordb/couchbase.py",
+          "line": 349,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agentchat/contrib/vectordb/pgvectordb.py",
+          "line": 201,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agentchat/contrib/vectordb/pgvectordb.py",
+          "line": 280,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agentchat/contrib/vectordb/pgvectordb.py",
+          "line": 425,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agentchat/contrib/web_surfer.py",
+          "line": 262,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agentchat/group/safeguards/enforcer.py",
+          "line": 615,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agents/experimental/a2ui/a2a_executor.py",
+          "line": 159,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agents/experimental/reasoning/reasoning_agent.py",
+          "line": 653,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agents/experimental/reasoning/reasoning_agent.py",
+          "line": 655,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agents/experimental/reasoning/reasoning_agent.py",
+          "line": 1090,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agents/experimental/reasoning/reasoning_agent.py",
+          "line": 1096,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/agents/experimental/wikipedia/wikipedia.py",
+          "line": 71,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/beta/aggregate.py",
+          "line": 190,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/beta/policies/alert.py",
+          "line": 85,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/beta/policies/episodic_memory.py",
+          "line": 51,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/beta/policies/sliding_window.py",
+          "line": 36,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/beta/policies/token_budget.py",
+          "line": 48,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/beta/policies/working_memory.py",
+          "line": 34,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/beta/tools/subagents/run_task.py",
+          "line": 78,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "autogen/oai/gemini.py",
+          "line": 304,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "cli/src/ag2_cli/commands/create.py",
+          "line": 449,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "cli/src/ag2_cli/commands/create.py",
+          "line": 674,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "cli/src/ag2_cli/testing/assertions.py",
+          "line": 207,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "cli/tests/test_client.py",
+          "line": 79,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "cli/tests/test_client.py",
+          "line": 87,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "cli/tests/test_create_new_features.py",
+          "line": 43,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/agentchat/contrib/capabilities/test_tools_capability.py",
+          "line": 29,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/agentchat/contrib/test_web_surfer.py",
+          "line": 143,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/const.py",
+          "line": 12,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 641,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 645,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 650,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 660,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 664,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 669,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 681,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 688,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 1105,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 1115,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_client.py",
+          "line": 1125,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 316,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 326,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 327,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 329,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 600,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 603,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 605,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 607,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 608,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 609,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 610,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 611,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 612,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 613,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 614,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 615,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/oai/test_utils.py",
+          "line": 616,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 66,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 74,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 85,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 98,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 106,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 134,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 145,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 165,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 172,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 182,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 191,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 423,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 428,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 436,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 441,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 449,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 454,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 463,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 467,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 473,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 477,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 494,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 552,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 582,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 601,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 819,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 831,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 841,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 857,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 871,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 889,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_llm_config.py",
+          "line": 904,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "test/test_logger_redaction.py",
+          "line": 19,
+          "rule_id": "agent.python_api_key_hardcoded"
+        },
+        {
+          "file": "autogen/agentchat/realtime/experimental/realtime_agent.py",
+          "line": 165,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/agent.py",
+          "line": 1273,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/agent.py",
+          "line": 1277,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/agent.py",
+          "line": 1330,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/config/gemini/mappers.py",
+          "line": 109,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/config/gemini/mappers.py",
+          "line": 112,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/config/gemini/mappers.py",
+          "line": 115,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/config/gemini/mappers.py",
+          "line": 125,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/network/client/tools/channels.py",
+          "line": 61,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/network/client/tools/context.py",
+          "line": 45,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/network/client/tools/delegate.py",
+          "line": 46,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/network/client/tools/peers.py",
+          "line": 54,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/network/client/tools/say.py",
+          "line": 42,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/network/client/tools/tasks.py",
+          "line": 62,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/final/function_tool.py",
+          "line": 178,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/search/duckduckgo.py",
+          "line": 56,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/search/exa.py",
+          "line": 149,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/search/exa.py",
+          "line": 221,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/search/exa.py",
+          "line": 269,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/search/exa.py",
+          "line": 304,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/search/perplexity.py",
+          "line": 136,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/search/perplexity.py",
+          "line": 202,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/search/tavily.py",
+          "line": 77,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/skills/local_skills/toolkit.py",
+          "line": 88,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/skills/local_skills/toolkit.py",
+          "line": 103,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/skills/local_skills/toolkit.py",
+          "line": 120,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/skills/skill_search/toolkit.py",
+          "line": 115,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/skills/skill_search/toolkit.py",
+          "line": 159,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/skills/skill_search/toolkit.py",
+          "line": 204,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/subagents/subagent_tool.py",
+          "line": 31,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 84,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 112,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 138,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 166,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 200,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/interop/crewai/crewai.py",
+          "line": 77,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/interop/langchain/langchain_tool.py",
+          "line": 62,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/interop/pydantic_ai/pydantic_ai.py",
+          "line": 157,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/mcp/mcp_client.py",
+          "line": 203,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/mcp/mcp_client.py",
+          "line": 249,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/oai/gemini.py",
+          "line": 911,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/oai/gemini.py",
+          "line": 930,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/oai/gemini.py",
+          "line": 932,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/tools/experimental/google/drive/toolkit.py",
+          "line": 50,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/tools/experimental/google/drive/toolkit.py",
+          "line": 60,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/tools/experimental/reliable/reliable.py",
+          "line": 786,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/tools/tool.py",
+          "line": 186,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "cli/src/ag2_cli/commands/serve.py",
+          "line": 113,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "cli/src/ag2_cli/commands/serve.py",
+          "line": 121,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/a2a/client_tool.py",
+          "line": 9,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/a2a/server_basic.py",
+          "line": 11,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/live_playground/live_gemini.py",
+          "line": 13,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/live_playground/live_tools_execution.py",
+          "line": 17,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/math/math_server.py",
+          "line": 9,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/math/math_server.py",
+          "line": 15,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_arxiv.py",
+          "line": 18,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_arxiv.py",
+          "line": 25,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_arxiv.py",
+          "line": 38,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_arxiv.py",
+          "line": 44,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_filesystem.py",
+          "line": 15,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_filesystem.py",
+          "line": 28,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_wikipedia.py",
+          "line": 18,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_wikipedia.py",
+          "line": 24,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_wikipedia.py",
+          "line": 38,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "notebook/mcp/mcp_wikipedia.py",
+          "line": 44,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/ag_ui/utils.py",
+          "line": 37,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agentchat/contrib/capabilities/test_tools_capability.py",
+          "line": 17,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agentchat/contrib/test_swarm.py",
+          "line": 1346,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agentchat/contrib/test_swarm.py",
+          "line": 1810,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agentchat/contrib/test_swarm.py",
+          "line": 1816,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agentchat/contrib/test_swarm.py",
+          "line": 1891,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agentchat/contrib/test_swarm.py",
+          "line": 1949,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agentchat/realtime_agent/test_swarm_start.py",
+          "line": 62,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agentchat/test_assistant_agent.py",
+          "line": 225,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/agents/experimental/document_agent/test_parser_utils.py",
+          "line": 145,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/ag_ui/test_adapter.py",
+          "line": 138,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/ag_ui/test_adapter.py",
+          "line": 176,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/ag_ui/test_adapter.py",
+          "line": 180,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/ag_ui/test_adapter.py",
+          "line": 311,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/ag_ui/test_adapter.py",
+          "line": 492,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/ag_ui/utils.py",
+          "line": 37,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/agent/test_concurrent_asks.py",
+          "line": 30,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/agent/test_concurrent_asks.py",
+          "line": 62,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_code_execution.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_tool_to_api.py",
+          "line": 17,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_tool_to_api.py",
+          "line": 41,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_tool_to_api.py",
+          "line": 65,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_tool_to_api.py",
+          "line": 106,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_web_fetch.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_web_search.py",
+          "line": 21,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_web_search.py",
+          "line": 32,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_web_search.py",
+          "line": 44,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/config/gemini/tools/test_web_search.py",
+          "line": 53,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/middleware/telemetry/test_telemetry.py",
+          "line": 110,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/middleware/telemetry/test_telemetry.py",
+          "line": 179,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/middleware/telemetry/test_telemetry.py",
+          "line": 316,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/middleware/test_tool_execution.py",
+          "line": 260,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/providers/agent/test_core_parity.py",
+          "line": 291,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/providers/anthropic/test_network_coverage_smoke.py",
+          "line": 391,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/providers/anthropic/test_network_coverage_smoke.py",
+          "line": 396,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/providers/anthropic/test_workflow_smoke.py",
+          "line": 141,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/providers/test_network_mixed_provider.py",
+          "line": 272,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/spec/helpers.py",
+          "line": 11,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/spec/helpers.py",
+          "line": 17,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/spec/helpers.py",
+          "line": 23,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/test_alert_halt.py",
+          "line": 40,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/test_plugin/test_plugin.py",
+          "line": 61,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/test_watch_advanced.py",
+          "line": 39,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/test_watch_advanced.py",
+          "line": 41,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_client_tool.py",
+          "line": 108,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_execution.py",
+          "line": 259,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_mcp.py",
+          "line": 61,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_mcp.py",
+          "line": 96,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_mcp.py",
+          "line": 121,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_mcp.py",
+          "line": 122,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_mcp.py",
+          "line": 123,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_mcp.py",
+          "line": 143,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_mcp.py",
+          "line": 173,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_naming.py",
+          "line": 150,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 103,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 485,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 521,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 572,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 610,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 615,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 665,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 669,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 673,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 693,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 697,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_task.py",
+          "line": 905,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_toolkit.py",
+          "line": 88,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_toolkit.py",
+          "line": 94,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_toolkit.py",
+          "line": 156,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_toolkit.py",
+          "line": 250,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/beta/tools/test_toolkit.py",
+          "line": 287,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/interop/langchain/test_langchain.py",
+          "line": 84,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/interop/pydantic_ai/test_pydantic_ai.py",
+          "line": 32,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/interop/pydantic_ai/test_pydantic_ai.py",
+          "line": 84,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/interop/pydantic_ai/test_pydantic_ai.py",
+          "line": 113,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/interop/pydantic_ai/test_pydantic_ai.py",
+          "line": 148,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/interop/pydantic_ai/test_pydantic_ai_tool.py",
+          "line": 26,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/interop/pydantic_ai/test_pydantic_ai_tool.py",
+          "line": 27,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/mcp/math_server.py",
+          "line": 10,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/mcp/math_server.py",
+          "line": 16,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/oai/test_gemini.py",
+          "line": 1178,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/tools/test_tool.py",
+          "line": 19,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/tools/test_toolkit.py",
+          "line": 15,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/tools/test_toolkit.py",
+          "line": 19,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "test/tools/test_toolkit.py",
+          "line": 41,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 151,
+          "rule_id": "agent.python_unrestricted_file_access"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 185,
+          "rule_id": "agent.python_unrestricted_file_access"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 209,
+          "rule_id": "agent.python_unrestricted_file_access"
+        },
+        {
+          "file": "autogen/beta/tools/toolkits/filesystem.py",
+          "line": 211,
+          "rule_id": "agent.python_unrestricted_file_access"
+        },
+        {
+          "file": "notebook/mcp/mcp_wikipedia.py",
+          "line": 30,
+          "rule_id": "agent.python_unrestricted_file_access"
+        },
+        {
+          "file": ".github/workflows/beta-llm-test.yml",
+          "line": 32,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/claude-code-review.yml",
+          "line": 41,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/claude.yml",
+          "line": 37,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/contrib-graph-rag-tests.yml",
+          "line": 49,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/contrib-llm-test.yml",
+          "line": 40,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/core-llm-test.yml",
+          "line": 51,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/integration-test.yml",
+          "line": 53,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/zizmor.yml",
+          "line": 39,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/build-mkdocs.yml",
+          "line": 70,
+          "rule_id": "workflow.deploy_without_approval"
+        },
+        {
+          "file": ".github/workflows/pr_labeler.yaml",
+          "line": 4,
+          "rule_id": "workflow.pull_request_target_secrets_risk"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "ag2",
+      "license": "Apache-2.0",
+      "repo": "ag2ai/ag2",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 26,
+        "agent.python_api_key_hardcoded": 67,
+        "agent.python_tool_without_approval": 150,
+        "agent.python_unrestricted_file_access": 5,
+        "bypass.direct_github_token": 8,
+        "workflow.deploy_without_approval": 1,
+        "workflow.pull_request_target_secrets_risk": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 4536,
+      "tier": "public_reference"
+    },
+    {
+      "category": "openai",
+      "commit_sha": "9e312635c02bbcd5ad178d59f56405231867505b",
+      "description": "OpenAI API examples and guides.",
+      "finding_count": 20,
+      "findings": [
+        {
+          "file": "examples/fine-tuned_qa/answers_with_ft.py",
+          "line": 88,
+          "rule_id": "agent.credential_to_llm_context"
+        },
+        {
+          "file": "examples/chatgpt/rag-quickstart/gcp/main.py",
+          "line": 42,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "examples/evals/imagegen_evals/shared/rendering.py",
+          "line": 39,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "examples/fine-tuned_qa/answers_with_ft.py",
+          "line": 88,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "examples/gpt-5/prompt-optimization-cookbook/run_FailSafeQA.py",
+          "line": 398,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "examples/partners/temporal_agents_with_knowledge_graphs/db_interface.py",
+          "line": 164,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "examples/partners/temporal_agents_with_knowledge_graphs/db_interface.py",
+          "line": 166,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 132,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 164,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 213,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 248,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 296,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 344,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 376,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 416,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/agents_sdk/multi-agent-portfolio-collaboration/mcp/yahoo_finance_server.py",
+          "line": 467,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/deep_research_api/how_to_build_a_deep_research_mcp_server/main.py",
+          "line": 39,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/deep_research_api/how_to_build_a_deep_research_mcp_server/main.py",
+          "line": 109,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/partners/mcp_powered_voice_agents/search_server.py",
+          "line": 36,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/partners/mcp_powered_voice_agents/search_server.py",
+          "line": 47,
+          "rule_id": "agent.python_tool_without_approval"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "openai_cookbook",
+      "license": "MIT",
+      "repo": "openai/openai-cookbook",
+      "rule_counts": {
+        "agent.credential_to_llm_context": 1,
+        "agent.dynamic_prompt_from_user_input": 6,
+        "agent.python_tool_without_approval": 13
+      },
+      "scan_path": ".",
+      "stars_at_curation": 73473,
+      "tier": "public_reference"
+    },
+    {
+      "category": "openai",
+      "commit_sha": "564584513f74e74f7916bd865ea77003d47b739c",
+      "description": "OpenAI Agents SDK for multi-agent workflows.",
+      "finding_count": 101,
+      "findings": [
+        {
+          "file": "src/agents/extensions/sandbox/blaxel/sandbox.py",
+          "line": 311,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "src/agents/sandbox/session/runtime_helpers.py",
+          "line": 262,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "examples/mcp/manager_example/mcp_server.py",
+          "line": 15,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/manager_example/mcp_server.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/sse_example/server.py",
+          "line": 13,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/sse_example/server.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/sse_example/server.py",
+          "line": 26,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/streamablehttp_custom_client_example/server.py",
+          "line": 13,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/streamablehttp_custom_client_example/server.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/streamablehttp_example/server.py",
+          "line": 14,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/streamablehttp_example/server.py",
+          "line": 21,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcp/streamablehttp_example/server.py",
+          "line": 27,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/sandbox/misc/reference_policy_mcp_server.py",
+          "line": 6,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/agents/tool.py",
+          "line": 525,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/helpers.py",
+          "line": 95,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_caching.py",
+          "line": 31,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_caching.py",
+          "line": 32,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 37,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 83,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 104,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 123,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 133,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 143,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 155,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 273,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_client_session_retries.py",
+          "line": 452,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_connect_disconnect.py",
+          "line": 27,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_connect_disconnect.py",
+          "line": 28,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_connect_disconnect.py",
+          "line": 57,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_connect_disconnect.py",
+          "line": 58,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 474,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 495,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 523,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 537,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 568,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 604,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 634,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 653,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 677,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 697,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 764,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 778,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 812,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 824,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 842,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 864,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 889,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 913,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 953,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 963,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 994,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1055,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1083,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1111,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1151,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1176,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1210,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1478,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1587,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1611,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1737,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1760,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1789,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1816,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1844,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1874,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1909,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1936,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1951,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_mcp_util.py",
+          "line": 1966,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/mcp/test_runner_calls_mcp.py",
+          "line": 216,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 345,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 366,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 478,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 623,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 888,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 911,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 920,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 929,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 938,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 963,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_function_tool.py",
+          "line": 974,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_process_model_response.py",
+          "line": 93,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_source_compat_constructors.py",
+          "line": 179,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_stream_events.py",
+          "line": 131,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_tool_context.py",
+          "line": 233,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_tool_context.py",
+          "line": 273,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_tool_context.py",
+          "line": 311,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_tool_context.py",
+          "line": 348,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_tool_origin.py",
+          "line": 145,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_tool_origin.py",
+          "line": 174,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_tool_origin.py",
+          "line": 308,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": ".github/workflows/issues.yml",
+          "line": 28,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/pr-labels.yml",
+          "line": 39,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/release-pr-update.yml",
+          "line": 33,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/release-pr.yml",
+          "line": 128,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/docs.yml",
+          "line": 48,
+          "rule_id": "workflow.deploy_without_approval"
+        },
+        {
+          "file": ".github/workflows/release-pr-update.yml",
+          "line": 40,
+          "rule_id": "workflow.deploy_without_approval"
+        },
+        {
+          "file": ".github/workflows/release-pr.yml",
+          "line": 34,
+          "rule_id": "workflow.deploy_without_approval"
+        },
+        {
+          "file": ".github/workflows/release-tag.yml",
+          "line": 62,
+          "rule_id": "workflow.deploy_without_approval"
+        },
+        {
+          "file": ".github/workflows/pr-labels.yml",
+          "line": 4,
+          "rule_id": "workflow.pull_request_target_secrets_risk"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "openai_agents_python",
+      "license": "MIT",
+      "repo": "openai/openai-agents-python",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 2,
+        "agent.python_tool_without_approval": 90,
+        "bypass.direct_github_token": 4,
+        "workflow.deploy_without_approval": 4,
+        "workflow.pull_request_target_secrets_risk": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 26230,
+      "tier": "public_reference"
+    },
+    {
+      "category": "openai",
+      "commit_sha": "6af0b4caf37dca4526dfd98e9fbd8ce36e7eeb22",
+      "description": "Educational multi-agent orchestration framework from OpenAI.",
+      "finding_count": 4,
+      "findings": [
+        {
+          "file": "examples/customer_service_streaming/src/utils.py",
+          "line": 23,
+          "rule_id": "agent.credential_to_llm_context"
+        },
+        {
+          "file": "examples/customer_service_streaming/src/utils.py",
+          "line": 35,
+          "rule_id": "agent.credential_to_llm_context"
+        },
+        {
+          "file": "examples/customer_service_streaming/src/swarm/engines/local_engine.py",
+          "line": 36,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/customer_service_streaming/src/validator.py",
+          "line": 9,
+          "rule_id": "agent.python_tool_without_approval"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "openai_swarm",
+      "license": "MIT",
+      "repo": "openai/swarm",
+      "rule_counts": {
+        "agent.credential_to_llm_context": 2,
+        "agent.python_tool_without_approval": 2
+      },
+      "scan_path": ".",
+      "stars_at_curation": 21479,
+      "tier": "public_reference"
+    },
+    {
+      "category": "anthropic",
+      "commit_sha": "3f8bf356e779d366ae7fcc0e84be12019747e5e3",
+      "description": "Anthropic Claude notebooks and tool-use recipes.",
+      "finding_count": 23,
+      "findings": [
+        {
+          "file": "capabilities/contextual-embeddings/contextual-rag-lambda-function/lambda_function.py",
+          "line": 70,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/retrieval_augmented_generation/evaluation/eval_end_to_end.py",
+          "line": 9,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/retrieval_augmented_generation/evaluation/prompts.py",
+          "line": 29,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/retrieval_augmented_generation/evaluation/prompts.py",
+          "line": 65,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/retrieval_augmented_generation/evaluation/prompts.py",
+          "line": 103,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/retrieval_augmented_generation/evaluation/prompts.py",
+          "line": 180,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/retrieval_augmented_generation/evaluation/provider_retrieval.py",
+          "line": 59,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/summarization/evaluation/custom_evals/llm_eval.py",
+          "line": 22,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/summarization/evaluation/prompts.py",
+          "line": 2,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/summarization/evaluation/prompts.py",
+          "line": 15,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "capabilities/summarization/evaluation/prompts.py",
+          "line": 39,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "tool_use/memory_demo/code_review_demo.py",
+          "line": 111,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "tool_use/memory_demo/sample_code/sql_query_builder.py",
+          "line": 30,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "tool_use/memory_demo/sample_code/sql_query_builder.py",
+          "line": 49,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "tool_use/memory_demo/sample_code/sql_query_builder.py",
+          "line": 60,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "tool_use/memory_demo/sample_code/sql_query_builder.py",
+          "line": 72,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": ".github/workflows/claude-link-review.yml",
+          "line": 65,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/claude-model-check.yml",
+          "line": 66,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/claude-pr-review.yml",
+          "line": 47,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/lint-format.yml",
+          "line": 123,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/notebook-diff-comment.yml",
+          "line": 94,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/notebook-quality.yml",
+          "line": 61,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": ".github/workflows/notebook-tests.yml",
+          "line": 132,
+          "rule_id": "bypass.direct_github_token"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "anthropic_cookbook",
+      "license": "MIT",
+      "repo": "anthropics/anthropic-cookbook",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 16,
+        "bypass.direct_github_token": 7
+      },
+      "scan_path": ".",
+      "stars_at_curation": 42815,
+      "tier": "public_reference"
+    },
+    {
+      "category": "mcp",
+      "commit_sha": "161834d4aee2633c42d3976c8f8751b6c4d947d5",
+      "description": "Official Python SDK for Model Context Protocol servers and clients.",
+      "finding_count": 198,
+      "findings": [
+        {
+          "file": "examples/snippets/servers/sampling.py",
+          "line": 10,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        },
+        {
+          "file": "examples/clients/simple-chatbot/mcp_simple_chatbot/main.py",
+          "line": 115,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/complex_inputs.py",
+          "line": 22,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/desktop.py",
+          "line": 21,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/direct_call_tool_result_return.py",
+          "line": 17,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/echo.py",
+          "line": 9,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/icons_demo.py",
+          "line": 24,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/icons_demo.py",
+          "line": 42,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/logging_and_progress.py",
+          "line": 11,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/memory.py",
+          "line": 265,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/memory.py",
+          "line": 276,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/parameter_descriptions.py",
+          "line": 11,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/readme-quickstart.py",
+          "line": 8,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/screenshot.py",
+          "line": 15,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/simple_echo.py",
+          "line": 9,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/text_me.py",
+          "line": 44,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/unicode_example.py",
+          "line": 10,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/unicode_example.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/unicode_example.py",
+          "line": 36,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/weather_structured.py",
+          "line": 35,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/weather_structured.py",
+          "line": 51,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/weather_structured.py",
+          "line": 58,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/weather_structured.py",
+          "line": 83,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/weather_structured.py",
+          "line": 108,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/mcpserver/weather_structured.py",
+          "line": 140,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 93,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 99,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 105,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 111,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 126,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 143,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 156,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 174,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 199,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 231,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 290,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 308,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/everything-server/mcp_everything_server/server.py",
+          "line": 314,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-auth/mcp_simple_auth/legacy_as_server.py",
+          "line": 87,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-auth/mcp_simple_auth/server.py",
+          "line": 79,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-pagination/mcp_simple_pagination/server.py",
+          "line": 18,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-streamablehttp-stateless/mcp_simple_streamablehttp_stateless/server.py",
+          "line": 18,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-streamablehttp/mcp_simple_streamablehttp/server.py",
+          "line": 21,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-task-interactive/mcp_simple_task_interactive/server.py",
+          "line": 23,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-task-interactive/mcp_simple_task_interactive/server.py",
+          "line": 32,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-task/mcp_simple_task/server.py",
+          "line": 16,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/simple-tool/mcp_simple_tool/server.py",
+          "line": 23,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/sse-polling-demo/mcp_sse_polling_demo/server.py",
+          "line": 34,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/servers/structured-output-lowlevel/mcp_structured_output_lowlevel/__main__.py",
+          "line": 24,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/basic_tool.py",
+          "line": 6,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/basic_tool.py",
+          "line": 12,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/direct_call_tool_result.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/direct_call_tool_result.py",
+          "line": 29,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/direct_call_tool_result.py",
+          "line": 39,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/direct_execution.py",
+          "line": 15,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/elicitation.py",
+          "line": 29,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/elicitation.py",
+          "line": 53,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/elicitation.py",
+          "line": 77,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/images.py",
+          "line": 10,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/lifespan_example.py",
+          "line": 52,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/lowlevel/direct_call_tool_result.py",
+          "line": 18,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/lowlevel/lifespan.py",
+          "line": 54,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/lowlevel/structured_output.py",
+          "line": 19,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/mcpserver_quickstart.py",
+          "line": 14,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/notifications.py",
+          "line": 6,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/oauth_server.py",
+          "line": 33,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/sampling.py",
+          "line": 7,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/streamable_config.py",
+          "line": 11,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/streamable_http_basic_mounting.py",
+          "line": 18,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/streamable_http_host_mounting.py",
+          "line": 18,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/streamable_http_multiple_servers.py",
+          "line": 19,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/streamable_http_multiple_servers.py",
+          "line": 25,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/streamable_http_path_config.py",
+          "line": 16,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/streamable_starlette_mount.py",
+          "line": 16,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/streamable_starlette_mount.py",
+          "line": 26,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/structured_output.py",
+          "line": 22,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/structured_output.py",
+          "line": 41,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/structured_output.py",
+          "line": 48,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/structured_output.py",
+          "line": 66,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/structured_output.py",
+          "line": 79,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/structured_output.py",
+          "line": 86,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/structured_output.py",
+          "line": 93,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "examples/snippets/servers/tool_progress.py",
+          "line": 6,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/mcp/server/mcpserver/server.py",
+          "line": 387,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_client.py",
+          "line": 84,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_client.py",
+          "line": 139,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_client.py",
+          "line": 344,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_http_unicode.py",
+          "line": 54,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_list_methods_cursor.py",
+          "line": 23,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_list_methods_cursor.py",
+          "line": 114,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_list_roots_callback.py",
+          "line": 27,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_logging_callback.py",
+          "line": 28,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_logging_callback.py",
+          "line": 34,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_logging_callback.py",
+          "line": 42,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_output_schema_validation.py",
+          "line": 48,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_output_schema_validation.py",
+          "line": 76,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_output_schema_validation.py",
+          "line": 99,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_output_schema_validation.py",
+          "line": 127,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_sampling_callback.py",
+          "line": 34,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_sampling_callback.py",
+          "line": 79,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_session.py",
+          "line": 616,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/test_session_group.py",
+          "line": 64,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/client/transports/test_memory.py",
+          "line": 37,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/server/test_server.py",
+          "line": 190,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/server/test_server.py",
+          "line": 196,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/server/test_server.py",
+          "line": 202,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/test_elicitation_scenarios.py",
+          "line": 192,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/test_elicitation_scenarios.py",
+          "line": 275,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/test_elicitation_scenarios.py",
+          "line": 543,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/test_request_context.py",
+          "line": 108,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/test_request_context.py",
+          "line": 121,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/experimental/tasks/test_request_context.py",
+          "line": 134,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_100_tool_listing.py",
+          "line": 15,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_1338_icons_and_metadata.py",
+          "line": 25,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_1338_icons_and_metadata.py",
+          "line": 106,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_1338_icons_and_metadata.py",
+          "line": 127,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_188_concurrency.py",
+          "line": 23,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_188_concurrency.py",
+          "line": 56,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_355_type_error.py",
+          "line": 46,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_88_random_error.py",
+          "line": 39,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/issues/test_88_random_error.py",
+          "line": 44,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/lowlevel/test_server_listing.py",
+          "line": 60,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/lowlevel/test_server_listing.py",
+          "line": 71,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/servers/test_file_server.py",
+          "line": 65,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 23,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 98,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 148,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 189,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 215,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 234,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 263,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 328,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 352,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_elicitation.py",
+          "line": 367,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_parameter_descriptions.py",
+          "line": 13,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_server.py",
+          "line": 98,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_server.py",
+          "line": 131,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_server.py",
+          "line": 1130,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_title.py",
+          "line": 43,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_title.py",
+          "line": 48,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_title.py",
+          "line": 54,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_title.py",
+          "line": 59,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_title.py",
+          "line": 201,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_title.py",
+          "line": 204,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_title.py",
+          "line": 207,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_title.py",
+          "line": 210,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_tool_manager.py",
+          "line": 46,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_tool_manager.py",
+          "line": 427,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_tool_manager.py",
+          "line": 660,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_tool_manager.py",
+          "line": 684,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_tool_manager.py",
+          "line": 703,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_tool_manager.py",
+          "line": 708,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_tool_manager.py",
+          "line": 713,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_tool_manager.py",
+          "line": 779,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 50,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 76,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 102,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 128,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 165,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 196,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 239,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 252,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 294,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation.py",
+          "line": 324,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation_error_throw.py",
+          "line": 16,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation_error_throw.py",
+          "line": 57,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/test_url_elicitation_error_throw.py",
+          "line": 98,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/test_cancel_handling.py",
+          "line": 41,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/test_lifespan.py",
+          "line": 144,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/test_lowlevel_tool_annotations.py",
+          "line": 17,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/test_session.py",
+          "line": 299,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/test_session.py",
+          "line": 422,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/test_session_race_condition.py",
+          "line": 67,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/test_validation.py",
+          "line": 59,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/test_validation.py",
+          "line": 75,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_otel.py",
+          "line": 20,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_progress_notifications.py",
+          "line": 67,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_progress_notifications.py",
+          "line": 232,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_sse.py",
+          "line": 81,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_sse.py",
+          "line": 366,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_sse.py",
+          "line": 371,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 172,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 177,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 182,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 187,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 192,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 197,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 202,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 207,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 212,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 223,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 1471,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/shared/test_streamable_http.py",
+          "line": 1476,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_types.py",
+          "line": 220,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/test_types.py",
+          "line": 324,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "tests/server/mcpserver/servers/test_file_server.py",
+          "line": 70,
+          "rule_id": "agent.python_unrestricted_file_access"
+        },
+        {
+          "file": ".github/workflows/publish-docs-manually.yml",
+          "line": 33,
+          "rule_id": "workflow.deploy_without_approval"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "modelcontextprotocol_python_sdk",
+      "license": "MIT",
+      "repo": "modelcontextprotocol/python-sdk",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 1,
+        "agent.python_tool_without_approval": 195,
+        "agent.python_unrestricted_file_access": 1,
+        "workflow.deploy_without_approval": 1
+      },
+      "scan_path": ".",
+      "stars_at_curation": 22973,
+      "tier": "public_reference"
+    },
+    {
+      "category": "mcp",
+      "commit_sha": "f51340ecd5778952405044b203d3a2d4c8a46833",
+      "description": "Python MCP server for Excel file manipulation.",
+      "finding_count": 25,
+      "findings": [
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 115,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 148,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 171,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 230,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 277,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 310,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 329,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 348,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 384,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 418,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 448,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 470,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 491,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 513,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 534,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 552,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 570,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 587,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 620,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 651,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 675,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 724,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 747,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 770,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "src/excel_mcp/server.py",
+          "line": 793,
+          "rule_id": "agent.python_tool_without_approval"
+        }
+      ],
+      "gitleaks": {
+        "available": false,
+        "finding_count": null,
+        "rule_counts": {}
+      },
+      "id": "excel_mcp_server",
+      "license": "MIT",
+      "repo": "haris-musa/excel-mcp-server",
+      "rule_counts": {
+        "agent.python_tool_without_approval": 25
+      },
+      "scan_path": ".",
+      "stars_at_curation": 3815,
+      "tier": "public_reference"
+    }
+  ],
+  "report_root": "/tmp/lurkr-benchmark-reports",
+  "schema_version": 1,
+  "synthetic": [
+    {
+      "comparison": {
+        "bypass.direct_github_token": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        },
+        "identity.private_key_unencrypted": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        },
+        "tool.shell_without_approval": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        },
+        "workflow.deploy_without_approval": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        },
+        "workflow.pull_request_target_secrets_risk": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "Workflow, identity, and manifest high-risk controls.",
+      "expected_findings": {
+        "bypass.direct_github_token": 1,
+        "identity.private_key_unencrypted": 1,
+        "tool.shell_without_approval": 1,
+        "workflow.deploy_without_approval": 1,
+        "workflow.pull_request_target_secrets_risk": 1
+      },
+      "finding_count": 5,
+      "findings": [
+        {
+          "file": ".github/workflows/dangerous.yml",
+          "line": 11,
+          "rule_id": "bypass.direct_github_token"
+        },
+        {
+          "file": "keys/synthetic_unencrypted_private_key.pem",
+          "line": 1,
+          "rule_id": "identity.private_key_unencrypted"
+        },
+        {
+          "file": "mcp.json",
+          "line": 5,
+          "rule_id": "tool.shell_without_approval"
+        },
+        {
+          "file": ".github/workflows/dangerous.yml",
+          "line": 12,
+          "rule_id": "workflow.deploy_without_approval"
+        },
+        {
+          "file": ".github/workflows/dangerous.yml",
+          "line": 3,
+          "rule_id": "workflow.pull_request_target_secrets_risk"
+        }
+      ],
+      "id": "dangerous_github_project",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_github_project",
+      "rule_counts": {
+        "bypass.direct_github_token": 1,
+        "identity.private_key_unencrypted": 1,
+        "tool.shell_without_approval": 1,
+        "workflow.deploy_without_approval": 1,
+        "workflow.pull_request_target_secrets_risk": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.declared_vs_imported_delta": {
+          "expected": 2,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 2,
+          "true_positive": 2
+        }
+      },
+      "description": "MCP declared-vs-imported shadow capabilities.",
+      "expected_findings": {
+        "agent.declared_vs_imported_delta": 2
+      },
+      "finding_count": 2,
+      "findings": [
+        {
+          "file": "agent.py",
+          "line": 9,
+          "rule_id": "agent.declared_vs_imported_delta"
+        },
+        {
+          "file": "agent.py",
+          "line": 14,
+          "rule_id": "agent.declared_vs_imported_delta"
+        }
+      ],
+      "id": "dangerous_shadow_capabilities",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_shadow_capabilities",
+      "rule_counts": {
+        "agent.declared_vs_imported_delta": 2
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.declared_vs_imported_delta": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "CrewAI declared-vs-imported shadow capability.",
+      "expected_findings": {
+        "agent.declared_vs_imported_delta": 1
+      },
+      "finding_count": 1,
+      "findings": [
+        {
+          "file": "agent.py",
+          "line": 19,
+          "rule_id": "agent.declared_vs_imported_delta"
+        }
+      ],
+      "id": "dangerous_crewai_shadow",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_crewai_shadow",
+      "rule_counts": {
+        "agent.declared_vs_imported_delta": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.credential_to_llm_context": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "Credential-bearing value passed into LLM context.",
+      "expected_findings": {
+        "agent.credential_to_llm_context": 1
+      },
+      "finding_count": 1,
+      "findings": [
+        {
+          "file": "agent.py",
+          "line": 8,
+          "rule_id": "agent.credential_to_llm_context"
+        }
+      ],
+      "id": "dangerous_credential_to_llm",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_credential_to_llm",
+      "rule_counts": {
+        "agent.credential_to_llm_context": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.dynamic_prompt_from_user_input": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "Function parameter interpolated directly into prompt template.",
+      "expected_findings": {
+        "agent.dynamic_prompt_from_user_input": 1
+      },
+      "finding_count": 1,
+      "findings": [
+        {
+          "file": "agent.py",
+          "line": 2,
+          "rule_id": "agent.dynamic_prompt_from_user_input"
+        }
+      ],
+      "id": "dangerous_dynamic_prompt",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_dynamic_prompt",
+      "rule_counts": {
+        "agent.dynamic_prompt_from_user_input": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.unverified_mcp_endpoint": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "MCP endpoint pointing to external host.",
+      "expected_findings": {
+        "agent.unverified_mcp_endpoint": 1
+      },
+      "finding_count": 1,
+      "findings": [
+        {
+          "file": ".mcp.json",
+          "line": 4,
+          "rule_id": "agent.unverified_mcp_endpoint"
+        }
+      ],
+      "id": "dangerous_mcp_external",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_mcp_external",
+      "rule_counts": {
+        "agent.unverified_mcp_endpoint": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.python_subprocess_in_tool": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        },
+        "agent.python_tool_without_approval": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "Python tool exposes subprocess execution.",
+      "expected_findings": {
+        "agent.python_subprocess_in_tool": 1,
+        "agent.python_tool_without_approval": 1
+      },
+      "finding_count": 2,
+      "findings": [
+        {
+          "file": "agent.py",
+          "line": 7,
+          "rule_id": "agent.python_subprocess_in_tool"
+        },
+        {
+          "file": "agent.py",
+          "line": 5,
+          "rule_id": "agent.python_tool_without_approval"
+        }
+      ],
+      "id": "dangerous_python_subprocess_tool",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_python_subprocess_tool",
+      "rule_counts": {
+        "agent.python_subprocess_in_tool": 1,
+        "agent.python_tool_without_approval": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.python_eval_exec_in_tool": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        },
+        "agent.python_tool_without_approval": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "Python tool exposes dynamic evaluation.",
+      "expected_findings": {
+        "agent.python_eval_exec_in_tool": 1,
+        "agent.python_tool_without_approval": 1
+      },
+      "finding_count": 2,
+      "findings": [
+        {
+          "file": "agent.py",
+          "line": 6,
+          "rule_id": "agent.python_eval_exec_in_tool"
+        },
+        {
+          "file": "agent.py",
+          "line": 4,
+          "rule_id": "agent.python_tool_without_approval"
+        }
+      ],
+      "id": "dangerous_python_eval_tool",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_python_eval_tool",
+      "rule_counts": {
+        "agent.python_eval_exec_in_tool": 1,
+        "agent.python_tool_without_approval": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.python_tool_without_approval": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        },
+        "agent.python_unrestricted_file_access": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "Python tool exposes file mutation.",
+      "expected_findings": {
+        "agent.python_tool_without_approval": 1,
+        "agent.python_unrestricted_file_access": 1
+      },
+      "finding_count": 2,
+      "findings": [
+        {
+          "file": "agent.py",
+          "line": 6,
+          "rule_id": "agent.python_tool_without_approval"
+        },
+        {
+          "file": "agent.py",
+          "line": 8,
+          "rule_id": "agent.python_unrestricted_file_access"
+        }
+      ],
+      "id": "dangerous_python_file_access_tool",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_python_file_access_tool",
+      "rule_counts": {
+        "agent.python_tool_without_approval": 1,
+        "agent.python_unrestricted_file_access": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {
+        "agent.python_api_key_hardcoded": {
+          "expected": 1,
+          "extra_observed": 0,
+          "false_negative": 0,
+          "observed": 1,
+          "true_positive": 1
+        }
+      },
+      "description": "API-key-shaped literal in Python source.",
+      "expected_findings": {
+        "agent.python_api_key_hardcoded": 1
+      },
+      "finding_count": 1,
+      "findings": [
+        {
+          "file": "agent.py",
+          "line": 1,
+          "rule_id": "agent.python_api_key_hardcoded"
+        }
+      ],
+      "id": "dangerous_python_api_key_literal",
+      "kind": "adversarial",
+      "path": "fixtures/dangerous_python_api_key_literal",
+      "rule_counts": {
+        "agent.python_api_key_hardcoded": 1
+      },
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {},
+      "description": "Existing clean workflow and manifest fixture.",
+      "expected_findings": {},
+      "finding_count": 0,
+      "findings": [],
+      "id": "clean_github_project",
+      "kind": "clean_control",
+      "path": "fixtures/clean_github_project",
+      "rule_counts": {},
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {},
+      "description": "Manifest fully declares reachable Python tools.",
+      "expected_findings": {},
+      "finding_count": 0,
+      "findings": [],
+      "id": "clean_declared_match",
+      "kind": "clean_control",
+      "path": "fixtures/clean_declared_match",
+      "rule_counts": {},
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {},
+      "description": "Credential stays in provider client configuration.",
+      "expected_findings": {},
+      "finding_count": 0,
+      "findings": [],
+      "id": "clean_credential_handling",
+      "kind": "clean_control",
+      "path": "fixtures/clean_credential_handling",
+      "rule_counts": {},
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {},
+      "description": "Prompt template uses explicit placeholders.",
+      "expected_findings": {},
+      "finding_count": 0,
+      "findings": [],
+      "id": "clean_prompt_template",
+      "kind": "clean_control",
+      "path": "fixtures/clean_prompt_template",
+      "rule_counts": {},
+      "tier": "synthetic"
+    },
+    {
+      "comparison": {},
+      "description": "MCP servers use local or stdio endpoints.",
+      "expected_findings": {},
+      "finding_count": 0,
+      "findings": [],
+      "id": "clean_mcp_local",
+      "kind": "clean_control",
+      "path": "fixtures/clean_mcp_local",
+      "rule_counts": {},
+      "tier": "synthetic"
+    }
+  ]
+}

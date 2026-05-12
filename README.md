@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/agentveil-protocol/lurkr/main/docs/lurkr-logo.png" alt="Lurkr logo" width="180">
+  <img src="docs/lurkr-logo.png" alt="Lurkr logo" width="180">
 </p>
 
 <h1 align="center">Lurkr</h1>

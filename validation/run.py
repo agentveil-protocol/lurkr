@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Labeled validation harness for AgentVeil Posture rules."""
+"""Labeled validation harness for Lurkr rules."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from agentveil_posture.report import RULE_DESCRIPTORS  # noqa: E402
-from agentveil_posture.scanner import ScanError, scan_path  # noqa: E402
+from lurkr.report import RULE_DESCRIPTORS  # noqa: E402
+from lurkr.scanner import ScanError, scan_path  # noqa: E402
 
 
 DEFAULT_PRECISION = 0.85
@@ -147,7 +147,7 @@ def run_validation(
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run labeled AgentVeil Posture validation.")
+    parser = argparse.ArgumentParser(description="Run labeled Lurkr validation.")
     parser.add_argument(
         "--labels",
         type=Path,

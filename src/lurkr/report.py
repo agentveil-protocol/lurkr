@@ -1,4 +1,4 @@
-"""Versioned JSON report model for AgentVeil Posture."""
+"""Versioned JSON report model for Lurkr."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import json
 
 
 REPORT_VERSION = "0.1"
-SCANNER_VERSION = "agentveil-posture/0.2.0"
+SCANNER_VERSION = "lurkr/0.2.0"
 SEVERITIES = ("critical", "high", "medium", "low", "info")
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 SARIF_VERSION = "2.1.0"
@@ -27,7 +27,7 @@ SEVERITY_TO_SECURITY_SEVERITY = {
     "low": "3.0",
     "info": "0.0",
 }
-RULE_DOC_BASE_URL = "https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules"
+RULE_DOC_BASE_URL = "https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules"
 
 
 def _rule_doc_url(rule_id: str) -> str:
@@ -151,8 +151,8 @@ class PostureReport:
                 {
                     "tool": {
                         "driver": {
-                            "name": "AgentVeil Posture",
-                            "informationUri": "https://github.com/agentveil-protocol/agentveil-posture",
+                            "name": "Lurkr",
+                            "informationUri": "https://github.com/agentveil-protocol/lurkr",
                             "semanticVersion": "0.2.0",
                             "rules": [_sarif_rule(rule_id) for rule_id in rule_ids],
                         }

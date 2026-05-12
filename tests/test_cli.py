@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import agentveil_posture.report as report_module
-from agentveil_posture.cli import main
+import lurkr.report as report_module
+from lurkr.cli import main
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -18,7 +18,7 @@ def test_cli_scan_writes_json_report(tmp_path):
     assert exit_code == 0
     data = json.loads(output.read_text(encoding="utf-8"))
     assert data["report_version"] == "0.1"
-    assert data["scanner_version"] == "agentveil-posture/0.2.0"
+    assert data["scanner_version"] == "lurkr/0.2.0"
 
 
 def test_cli_default_and_format_json_match_existing_json_output(tmp_path, monkeypatch):
@@ -106,7 +106,7 @@ def test_cli_default_and_format_json_match_existing_json_output(tmp_path, monkey
         "report_version": "0.1",
         "scanned_at": "2026-05-07T00:00:00Z",
         "scanned_path": str(scan_root.resolve()),
-        "scanner_version": "agentveil-posture/0.2.0",
+        "scanner_version": "lurkr/0.2.0",
         "summary": {
             "by_severity": {
                 "critical": 0,

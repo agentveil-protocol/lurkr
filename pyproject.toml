@@ -3,10 +3,10 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentveil-posture"
+name = "lurkr"
 version = "0.2.0"
-description = "Pre-deployment posture checks for risky AI agent capabilities."
-keywords = ["security", "agent", "mcp", "posture", "github-actions", "ai-agents"]
+description = "Lurkr — pre-deployment scanner for risky AI agent capabilities. Static. Offline. Redacted."
+keywords = ["security", "agent", "mcp", "ai-agents", "github-actions", "static-analysis", "pre-deployment"]
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -30,7 +30,7 @@ classifiers = [
 ]
 
 [project.scripts]
-agentveil = "agentveil_posture.cli:main"
+lurkr = "lurkr.cli:main"
 
 [project.optional-dependencies]
 test = [
@@ -43,9 +43,9 @@ validation = [
 
 [project.urls]
 Homepage = "https://agentveil.dev"
-Repository = "https://github.com/agentveil-protocol/agentveil-posture"
-Issues = "https://github.com/agentveil-protocol/agentveil-posture/issues"
-Documentation = "https://github.com/agentveil-protocol/agentveil-posture#readme"
+Repository = "https://github.com/agentveil-protocol/lurkr"
+Issues = "https://github.com/agentveil-protocol/lurkr/issues"
+Documentation = "https://github.com/agentveil-protocol/lurkr#readme"
 
 [tool.setuptools.packages.find]
 where = ["src"]

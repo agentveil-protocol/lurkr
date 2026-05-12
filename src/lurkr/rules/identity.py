@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentveil_posture.report import Finding
+from lurkr.report import Finding
 
 
 HEADER_LIMIT_BYTES = 4096

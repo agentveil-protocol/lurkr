@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from agentveil_posture.rules import parsing
-from agentveil_posture.scanner import scan_path
+from lurkr.rules import parsing
+from lurkr.scanner import scan_path
 
 
 def test_manifest_direct_github_token_fires_without_secret_value(tmp_path):

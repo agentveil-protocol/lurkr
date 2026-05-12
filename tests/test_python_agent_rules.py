@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from agentveil_posture.scanner import scan_path
-from agentveil_posture.python_ast import MAX_SOURCE_BYTES
+from lurkr.scanner import scan_path
+from lurkr.python_ast import MAX_SOURCE_BYTES
 
 
 def test_tool_decorator_without_approval_fires(tmp_path):

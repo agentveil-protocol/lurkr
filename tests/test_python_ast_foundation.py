@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from agentveil_posture import python_ast
+from lurkr import python_ast
 
 
 def test_valid_python_parses_with_import_aliases_and_positions(tmp_path):

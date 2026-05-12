@@ -6,8 +6,8 @@ from pathlib import Path
 import re
 from typing import Any
 
-from agentveil_posture.report import Finding
-from agentveil_posture.rules.parsing import (
+from lurkr.report import Finding
+from lurkr.rules.parsing import (
     MAX_TEXT_BYTES as MAX_WORKFLOW_BYTES,
     MAX_YAML_ALIAS_TOKENS,
     ParsedDocument,

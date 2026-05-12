@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from agentveil_posture.rules import parsing
-from agentveil_posture.rules import workflow
-from agentveil_posture.scanner import scan_path
+from lurkr.rules import parsing
+from lurkr.rules import workflow
+from lurkr.scanner import scan_path
 
 
 NEW_DEPLOY_MARKERS = (

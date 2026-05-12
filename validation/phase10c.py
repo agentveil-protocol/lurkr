@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 10c reviewer checks for AgentVeil Posture."""
+"""Phase 10c reviewer checks for Lurkr."""
 
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from agentveil_posture.report import RULE_DESCRIPTORS, SARIF_SCHEMA  # noqa: E402
-from agentveil_posture.scanner import scan_path  # noqa: E402
+from lurkr.report import RULE_DESCRIPTORS, SARIF_SCHEMA  # noqa: E402
+from lurkr.scanner import scan_path  # noqa: E402
 
 
 SARIF_SCHEMA_CACHE = REPO_ROOT / "validation" / ".cache" / "sarif-2.1.0.json"
@@ -205,13 +205,13 @@ def _validate_same_repo_github_link(
 ) -> list[str] | None:
     path_parts = [part for part in parsed.path.split("/") if part]
     if parsed.netloc == "raw.githubusercontent.com":
-        if path_parts[:3] != ["agentveil-protocol", "agentveil-posture", "main"]:
+        if path_parts[:3] != ["agentveil-protocol", "lurkr", "main"]:
             return None
         return _validate_local_same_repo_path(source, repo_root, path_parts[3:], parsed.fragment, link)
 
     if parsed.netloc != "github.com":
         return None
-    if path_parts[:2] != ["agentveil-protocol", "agentveil-posture"]:
+    if path_parts[:2] != ["agentveil-protocol", "lurkr"]:
         return None
     repo_parts = path_parts[2:]
     if repo_parts[:2] == ["blob", "main"]:

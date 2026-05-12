@@ -7,8 +7,8 @@ from pathlib import Path
 import re
 from typing import Any
 
-from agentveil_posture.report import Finding
-from agentveil_posture.rules.parsing import ParsedDocument, load_json_document, load_yaml_document
+from lurkr.report import Finding
+from lurkr.rules.parsing import ParsedDocument, load_json_document, load_yaml_document
 
 
 EXACT_MANIFEST_PATHS = {

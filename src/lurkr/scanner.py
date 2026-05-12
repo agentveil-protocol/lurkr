@@ -1,12 +1,12 @@
-"""Static scan orchestrator for AgentVeil Posture."""
+"""Static scan orchestrator for Lurkr."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-from agentveil_posture.report import Finding, PostureReport, build_report
-from agentveil_posture.rules import (
+from lurkr.report import Finding, PostureReport, build_report
+from lurkr.rules import (
     is_agent_manifest,
     scan_identity_private_key_unencrypted,
     scan_manifest_rules,

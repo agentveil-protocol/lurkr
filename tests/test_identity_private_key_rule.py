@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from agentveil_posture.scanner import scan_path
+from lurkr.scanner import scan_path
 
 
 def test_unencrypted_private_key_fires_with_redacted_report(tmp_path):

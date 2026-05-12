@@ -6,8 +6,8 @@ import re
 
 import pytest
 
-from agentveil_posture.report import Finding, RULE_DESCRIPTORS, build_report, empty_report
-from agentveil_posture.scanner import scan_path
+from lurkr.report import Finding, RULE_DESCRIPTORS, build_report, empty_report
+from lurkr.scanner import scan_path
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -25,7 +25,7 @@ def test_empty_report_schema_contains_scanner_version_and_whole_second_time(tmp_
         "findings",
         "summary",
     }
-    assert data["scanner_version"] == "agentveil-posture/0.2.0"
+    assert data["scanner_version"] == "lurkr/0.2.0"
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", data["scanned_at"])
     assert data["summary"]["by_severity"] == {
         "critical": 0,

@@ -1,2 +1,2 @@
-"""Test package for AgentVeil Posture."""
+"""Test package for Lurkr."""
 

@@ -1,4 +1,4 @@
-"""AgentVeil Posture static scanner."""
+"""Lurkr static scanner."""
 
 __all__ = ["__version__"]
 

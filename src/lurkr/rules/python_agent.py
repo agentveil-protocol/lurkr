@@ -6,14 +6,14 @@ import ast
 from pathlib import Path
 import re
 
-from agentveil_posture.python_ast import (
+from lurkr.python_ast import (
     PythonAstDocument,
     PythonName,
     iter_ast_nodes,
     load_python_ast_document,
     resolve_name,
 )
-from agentveil_posture.report import Finding
+from lurkr.report import Finding
 
 
 TOOL_DECORATOR_BASENAMES = {

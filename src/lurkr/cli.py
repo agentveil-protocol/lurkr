@@ -1,4 +1,4 @@
-"""Command-line interface for AgentVeil Posture."""
+"""Command-line interface for Lurkr."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from pathlib import Path
 import sys
 from typing import Sequence
 
-from agentveil_posture.report import SEVERITIES, Finding, PostureReport
-from agentveil_posture.scanner import ScanError, scan_path
+from lurkr.report import SEVERITIES, Finding, PostureReport
+from lurkr.scanner import ScanError, scan_path
 
 
 def build_parser() -> argparse.ArgumentParser:

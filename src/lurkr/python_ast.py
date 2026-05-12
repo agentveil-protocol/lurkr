@@ -8,7 +8,7 @@ from pathlib import Path
 import tokenize
 from typing import Iterator
 
-from agentveil_posture.rules.parsing import MAX_TEXT_BYTES
+from lurkr.rules.parsing import MAX_TEXT_BYTES
 
 
 MAX_SOURCE_BYTES = MAX_TEXT_BYTES

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentveil_posture.scanner import scan_path
+from lurkr.scanner import scan_path
 from validation import phase10c
 
 
@@ -77,7 +77,7 @@ def test_phase10c_link_checker_validates_same_repo_github_links_locally(tmp_path
     docs.mkdir(parents=True)
     (docs / "example.md").write_text("# Example\n", encoding="utf-8")
     (tmp_path / "README.md").write_text(
-        "[rule](https://github.com/agentveil-protocol/agentveil-posture/blob/main/docs/rules/example.md)\n",
+        "[rule](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/example.md)\n",
         encoding="utf-8",
     )
 

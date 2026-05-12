@@ -10,8 +10,8 @@ import socket
 import subprocess
 import urllib.request
 
-from agentveil_posture import python_ast
-from agentveil_posture.scanner import scan_path
+from lurkr import python_ast
+from lurkr.scanner import scan_path
 
 
 def test_scan_does_not_call_network_or_subprocess(monkeypatch, tmp_path):
@@ -49,7 +49,7 @@ def test_scan_does_not_mutate_scanned_files(tmp_path):
 
 
 def test_scanner_source_does_not_use_unsafe_yaml_load():
-    src_root = Path(__file__).resolve().parents[1] / "src" / "agentveil_posture"
+    src_root = Path(__file__).resolve().parents[1] / "src" / "lurkr"
     source = "\n".join(path.read_text(encoding="utf-8") for path in src_root.rglob("*.py"))
 
     assert "yaml.load(" not in source

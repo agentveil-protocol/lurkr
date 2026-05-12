@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentveil_posture.scanner import scan_path
+from lurkr.scanner import scan_path
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"

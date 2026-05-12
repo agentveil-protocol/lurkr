@@ -1,12 +1,12 @@
 # Installed-Framework Fixtures
 
-These fixtures validate that AgentVeil Posture recognizes canonical tool wiring
+These fixtures validate that Lurkr recognizes canonical tool wiring
 patterns while the corresponding framework packages are installed.
 
-The validation remains static-only: `agent.py` files are parsed by Posture but
+The validation remains static-only: `agent.py` files are parsed by Lurkr but
 are not imported or executed. The runner installs each framework in an isolated
 virtual environment, verifies the framework import surface is present, then runs
-`agentveil posture scan` against the fixture directory.
+`lurkr scan` against the fixture directory.
 
 Each fixture includes:
 

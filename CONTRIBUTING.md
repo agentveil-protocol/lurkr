@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve AgentVeil Posture.
+Thanks for helping improve Lurkr.
 
 ## Issues
 
@@ -37,8 +37,8 @@ git diff --check
 ## Development Setup
 
 ```bash
-git clone https://github.com/agentveil-protocol/agentveil-posture
-cd agentveil-posture
+git clone https://github.com/agentveil-protocol/lurkr
+cd lurkr
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[test]'
@@ -47,6 +47,6 @@ python -m pytest
 
 ## Rule Guidelines
 
-AgentVeil Posture v0.1 rules should remain static, local-only, read-only, and
+Lurkr rules should remain static, local-only, read-only, and
 secret-safe. Detection logic must not execute scanned project code, call the
 network, or report raw secret material.

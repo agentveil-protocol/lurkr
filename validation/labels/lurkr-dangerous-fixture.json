@@ -1,5 +1,5 @@
 {
-  "repo": "agentveil-protocol/agentveil-posture",
+  "repo": "agentveil-protocol/lurkr",
   "commit": "WORKTREE",
   "checkout_path": ".",
   "scan_path": "fixtures/dangerous_github_project",

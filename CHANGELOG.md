@@ -7,6 +7,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## v0.2.0 — 2026-05-12
+
+**BREAKING — rebrand.** Package, CLI, GitHub Action, pre-commit hook, and
+Python import surfaces are now branded as `lurkr`, `lurkr scan`,
+`agentveil-protocol/lurkr`, hook ID `lurkr`, and `import lurkr`.
+
+Detection logic, rules, and finding shapes are byte-identical to the unreleased
+internal v0.2.0 before the rename. This is a pure rebrand, not a behavior
+change.
+
+Install: `pip install lurkr`.
+
 ## [0.2.0] - 2026-05-07
 
 ### Added
@@ -41,17 +53,16 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   workflow `uses:` fields.
 - Detect exact shell-capable tool names in pinned agent manifests without
   matching substrings such as `search_tool` or `shellfish`.
-- Updated the README logo URL so future PyPI releases render the logo from a
-  public raw GitHub URL.
+- Updated repository README logo handling for public GitHub rendering.
 
 ## [0.1.0] - 2026-05-07
 
 ### Added
 
-- Initial `agentveil posture scan` CLI for static, local-only AI agent posture checks.
-- GitHub Action wrapper for repository posture scans.
-- Pre-commit hook manifest for local posture review before commits.
-- PyPI package metadata for `agentveil-posture`.
+- Initial `lurkr scan` CLI for static, local-only AI agent capability checks.
+- GitHub Action wrapper for repository capability scans.
+- Pre-commit hook manifest for local capability review before commits.
+- PyPI package metadata for `lurkr`.
 - Five high-severity v0.1 rules covering GitHub token exposure surfaces,
   deployment approval gaps, privileged pull request workflows, shell-capable
   tool manifests, and committed unencrypted private keys.

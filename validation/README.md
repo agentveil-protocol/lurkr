@@ -1,4 +1,4 @@
-# AgentVeil Posture Validation Harness
+# Lurkr Validation Harness
 
 This directory contains the Cat 1 labeled validation harness for public rule
 changes. It is separate from unit tests: unit tests check local invariants, while
@@ -19,7 +19,7 @@ python validation/run.py
 ```
 
 If an external checkout env var is omitted, the harness clones the public repo
-to `/tmp/agentveil-posture-validation` and checks out the pinned commit. The
+to `/tmp/lurkr-validation` and checks out the pinned commit. The
 AVP SDK dogfood label uses the env var when the repo is not publicly cloneable.
 The corpus also includes two in-repository calibration labels for synthetic
 fixtures that cover rules unlikely to appear safely in public examples, such as

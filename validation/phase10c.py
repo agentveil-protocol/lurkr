@@ -274,7 +274,7 @@ def _check_external_link_with_get(source: Path, link: str) -> list[str]:
 def _external_request(link: str, *, method: str) -> Request:
     return Request(
         link,
-        headers={"User-Agent": "agentveil-posture-validation/0.2"},
+        headers={"User-Agent": "lurkr-validation/0.2"},
         method=method,
     )
 

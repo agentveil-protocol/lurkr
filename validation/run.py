@@ -24,7 +24,7 @@ from lurkr.scanner import ScanError, scan_path  # noqa: E402
 
 DEFAULT_PRECISION = 0.85
 DEFAULT_RECALL = 0.80
-DEFAULT_WORKDIR = Path(os.environ.get("AGENTVEIL_POSTURE_VALIDATION_WORKDIR", "/tmp/agentveil-posture-validation"))
+DEFAULT_WORKDIR = Path(os.environ.get("LURKR_VALIDATION_WORKDIR", "/tmp/lurkr-validation"))
 WORKTREE_COMMIT = "WORKTREE"
 
 

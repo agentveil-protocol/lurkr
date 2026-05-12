@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lurkr"
-version = "0.2.0"
+version = "0.2.0.post1"
 description = "Lurkr — pre-deployment scanner for risky AI agent capabilities. Static. Offline. Redacted."
 keywords = ["security", "agent", "mcp", "ai-agents", "github-actions", "static-analysis", "pre-deployment"]
 readme = "PYPI_README.md"

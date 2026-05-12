@@ -14,6 +14,7 @@ from lurkr.rules import (
     scan_identity_private_key_unencrypted,
     scan_manifest_rules,
     scan_python_agent_rules,
+    scan_unverified_mcp_endpoint,
     scan_workflow_rules,
 )
 
@@ -40,6 +41,7 @@ def scan_path(path: Path) -> PostureReport:
             findings.extend(scan_workflow_rules(root, candidate))
         if is_agent_manifest(root, candidate):
             findings.extend(scan_manifest_rules(root, candidate))
+            findings.extend(scan_unverified_mcp_endpoint(root, candidate))
         if _is_python_source(candidate):
             python_files.append(candidate)
             findings.extend(scan_python_agent_rules(root, candidate))

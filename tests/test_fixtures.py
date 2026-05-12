@@ -74,3 +74,75 @@ def test_dangerous_crewai_shadow_fixture_finds_declared_delta_only():
     assert [finding.rule_id for finding in report.findings] == [
         "agent.declared_vs_imported_delta"
     ]
+
+
+def test_clean_credential_handling_fixture_has_no_credential_to_llm_findings():
+    report = scan_path(FIXTURES / "clean_credential_handling")
+
+    assert [
+        finding
+        for finding in report.findings
+        if finding.rule_id == "agent.credential_to_llm_context"
+    ] == []
+
+
+def test_dangerous_credential_to_llm_fixture_finds_credential_leak():
+    report = scan_path(FIXTURES / "dangerous_credential_to_llm")
+
+    findings = [
+        finding
+        for finding in report.findings
+        if finding.rule_id == "agent.credential_to_llm_context"
+    ]
+    assert len(findings) == 1
+    assert findings[0].file == "agent.py"
+    assert findings[0].line == 8
+    assert "token" in findings[0].message
+
+
+def test_clean_prompt_template_fixture_has_no_dynamic_prompt_findings():
+    report = scan_path(FIXTURES / "clean_prompt_template")
+
+    assert [
+        finding
+        for finding in report.findings
+        if finding.rule_id == "agent.dynamic_prompt_from_user_input"
+    ] == []
+
+
+def test_dangerous_dynamic_prompt_fixture_finds_interpolation():
+    report = scan_path(FIXTURES / "dangerous_dynamic_prompt")
+
+    findings = [
+        finding
+        for finding in report.findings
+        if finding.rule_id == "agent.dynamic_prompt_from_user_input"
+    ]
+    assert len(findings) == 1
+    assert findings[0].file == "agent.py"
+    assert findings[0].line == 2
+    assert "user_input" in findings[0].message
+
+
+def test_clean_mcp_local_fixture_has_no_unverified_mcp_findings():
+    report = scan_path(FIXTURES / "clean_mcp_local")
+
+    assert [
+        finding
+        for finding in report.findings
+        if finding.rule_id == "agent.unverified_mcp_endpoint"
+    ] == []
+
+
+def test_dangerous_mcp_external_fixture_finds_unverified_endpoint():
+    report = scan_path(FIXTURES / "dangerous_mcp_external")
+
+    findings = [
+        finding
+        for finding in report.findings
+        if finding.rule_id == "agent.unverified_mcp_endpoint"
+    ]
+    assert len(findings) == 1
+    assert findings[0].file == ".mcp.json"
+    assert findings[0].line == 4
+    assert "mcp.example.com" in findings[0].message

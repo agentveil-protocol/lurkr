@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-filesystem"
+      ],
+      "approval_required": true
+    },
+    "local_api": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}

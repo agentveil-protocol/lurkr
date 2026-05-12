@@ -13,7 +13,7 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 def test_cli_scan_writes_json_report(tmp_path):
     output = tmp_path / "report.json"
 
-    exit_code = main(["posture", "scan", "--path", str(tmp_path), "--output", str(output)])
+    exit_code = main(["scan", "--path", str(tmp_path), "--output", str(output)])
 
     assert exit_code == 0
     data = json.loads(output.read_text(encoding="utf-8"))
@@ -27,10 +27,9 @@ def test_cli_default_and_format_json_match_existing_json_output(tmp_path, monkey
     default_output = tmp_path / "default.json"
     explicit_output = tmp_path / "explicit.json"
 
-    default_exit = main(["posture", "scan", "--path", str(scan_root), "--output", str(default_output)])
+    default_exit = main(["scan", "--path", str(scan_root), "--output", str(default_output)])
     explicit_exit = main(
         [
-            "posture",
             "scan",
             "--path",
             str(scan_root),
@@ -127,7 +126,7 @@ def test_cli_scan_writes_sarif_report(tmp_path):
     output = tmp_path / "report.sarif"
 
     exit_code = main(
-        ["posture", "scan", "--path", str(tmp_path), "--output", str(output), "--format", "sarif"]
+        ["scan", "--path", str(tmp_path), "--output", str(output), "--format", "sarif"]
     )
 
     assert exit_code == 0
@@ -141,7 +140,6 @@ def test_cli_without_fail_on_returns_0_for_high_findings(tmp_path):
 
     exit_code = main(
         [
-            "posture",
             "scan",
             "--path",
             str(FIXTURES / "dangerous_github_project"),
@@ -159,7 +157,6 @@ def test_cli_fail_on_high_returns_1_for_high_findings(tmp_path):
 
     exit_code = main(
         [
-            "posture",
             "scan",
             "--path",
             str(FIXTURES / "dangerous_github_project"),
@@ -179,7 +176,6 @@ def test_cli_fail_on_high_returns_0_without_high_findings(tmp_path):
 
     exit_code = main(
         [
-            "posture",
             "scan",
             "--path",
             str(FIXTURES / "clean_github_project"),
@@ -199,7 +195,6 @@ def test_cli_fail_on_critical_returns_0_for_only_high_findings(tmp_path):
 
     exit_code = main(
         [
-            "posture",
             "scan",
             "--path",
             str(FIXTURES / "dangerous_github_project"),
@@ -218,7 +213,7 @@ def test_cli_missing_path_exits_1(tmp_path, capsys):
     output = tmp_path / "report.json"
 
     exit_code = main(
-        ["posture", "scan", "--path", str(tmp_path / "missing"), "--output", str(output)]
+        ["scan", "--path", str(tmp_path / "missing"), "--output", str(output)]
     )
 
     captured = capsys.readouterr()
@@ -232,7 +227,7 @@ def test_cli_file_path_exits_1(tmp_path, capsys):
     scan_file.write_text("content", encoding="utf-8")
     output = tmp_path / "report.json"
 
-    exit_code = main(["posture", "scan", "--path", str(scan_file), "--output", str(output)])
+    exit_code = main(["scan", "--path", str(scan_file), "--output", str(output)])
 
     captured = capsys.readouterr()
     assert exit_code == 1
@@ -243,7 +238,7 @@ def test_cli_file_path_exits_1(tmp_path, capsys):
 def test_cli_uncreatable_output_exits_1(tmp_path, capsys):
     output = tmp_path / "missing" / "report.json"
 
-    exit_code = main(["posture", "scan", "--path", str(tmp_path), "--output", str(output)])
+    exit_code = main(["scan", "--path", str(tmp_path), "--output", str(output)])
 
     captured = capsys.readouterr()
     assert exit_code == 1

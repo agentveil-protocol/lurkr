@@ -66,7 +66,7 @@ def test_run_fixture_invokes_venv_install_import_check_and_scan(tmp_path, monkey
 
     def fake_run(command, check, text, capture_output):
         commands.append([str(part) for part in command])
-        if "agentveil" in str(command[0]):
+        if "lurkr" in str(command[0]):
             output = Path(command[command.index("--output") + 1])
             output.write_text((tmp_path / "observed.json").read_text(encoding="utf-8"), encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, "", "")
@@ -85,7 +85,7 @@ def test_run_fixture_invokes_venv_install_import_check_and_scan(tmp_path, monkey
     assert any(command[-2:] == ["-r", str(fixture / "requirements.txt")] for command in commands)
     assert any(command[-2:] == ["-e", str(phase10e.REPO_ROOT)] for command in commands)
     assert any("importlib.util.find_spec" in " ".join(command) for command in commands)
-    assert any("posture" in command and "scan" in command for command in commands)
+    assert any("lurkr" in command[0] and "scan" in command for command in commands)
 
 
 def test_run_fixture_fails_on_extra_and_missing_findings(tmp_path, monkeypatch):
@@ -97,7 +97,7 @@ def test_run_fixture_fails_on_extra_and_missing_findings(tmp_path, monkeypatch):
     )
 
     def fake_run(command, check, text, capture_output):
-        if "agentveil" in str(command[0]):
+        if "lurkr" in str(command[0]):
             output = Path(command[command.index("--output") + 1])
             output.write_text((tmp_path / "observed.json").read_text(encoding="utf-8"), encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, "", "")

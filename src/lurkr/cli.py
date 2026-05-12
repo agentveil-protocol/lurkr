@@ -14,21 +14,12 @@ from lurkr.scanner import ScanError, scan_path
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="agentveil",
-        description="AgentVeil developer tools.",
+        prog="lurkr",
+        description="Find risky AI agent capabilities before deployment.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    posture_parser = subparsers.add_parser(
-        "posture",
-        help="Run static posture checks.",
-    )
-    posture_subparsers = posture_parser.add_subparsers(
-        dest="posture_command",
-        required=True,
-    )
-
-    scan_parser = posture_subparsers.add_parser(
+    scan_parser = subparsers.add_parser(
         "scan",
         help="Scan a project and write a posture report.",
     )
@@ -54,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Exit 1 when findings at or above this severity are present.",
     )
-    scan_parser.set_defaults(handler=_handle_posture_scan)
+    scan_parser.set_defaults(handler=_handle_scan)
 
     return parser
 
@@ -69,7 +60,7 @@ def _report_meets_threshold(report: PostureReport, threshold: str | None) -> boo
     return any(_finding_meets_threshold(finding, threshold) for finding in report.findings)
 
 
-def _handle_posture_scan(args: argparse.Namespace) -> int:
+def _handle_scan(args: argparse.Namespace) -> int:
     try:
         report = scan_path(Path(args.path))
         if args.format == "json":
@@ -81,7 +72,7 @@ def _handle_posture_scan(args: argparse.Namespace) -> int:
             return 1
         return 0
     except (OSError, ScanError) as exc:
-        print(f"agentveil posture scan: {exc}", file=sys.stderr)
+        print(f"lurkr scan: {exc}", file=sys.stderr)
         return 1
 
 

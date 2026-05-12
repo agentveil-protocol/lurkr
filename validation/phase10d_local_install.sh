@@ -9,10 +9,10 @@ trap cleanup EXIT
 
 python3 -m venv "$TMPDIR/venv"
 "$TMPDIR/venv/bin/pip" install --quiet -e .
-"$TMPDIR/venv/bin/agentveil" --help > "$TMPDIR/help.txt"
+"$TMPDIR/venv/bin/lurkr" --help > "$TMPDIR/help.txt"
 
 set +e
-"$TMPDIR/venv/bin/agentveil" posture scan \
+"$TMPDIR/venv/bin/lurkr" scan \
   --path fixtures/dangerous_github_project \
   --output "$TMPDIR/report.json" \
   --fail-on high
@@ -24,7 +24,7 @@ if [ "$fail_on_status" -ne 1 ]; then
   exit 1
 fi
 
-"$TMPDIR/venv/bin/agentveil" posture scan \
+"$TMPDIR/venv/bin/lurkr" scan \
   --path fixtures/dangerous_github_project \
   --output "$TMPDIR/report.json"
 

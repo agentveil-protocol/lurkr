@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DIST_DIR="${DIST_DIR:-/tmp/agentveil-posture-v0.2.0-release-dist}"
+DIST_DIR="${DIST_DIR:-/tmp/lurkr-v0.2.0-release-dist}"
 PYTHON_BIN="${PYTHON:-python3}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMPDIR="$(mktemp -d)"
@@ -31,7 +31,7 @@ PY
 "$TMPDIR/venv/bin/pip" install --quiet "$DIST_DIR"/*.whl
 
 set +e
-"$TMPDIR/venv/bin/agentveil" posture scan \
+"$TMPDIR/venv/bin/lurkr" scan \
   --path "$REPO_ROOT/fixtures/dangerous_github_project" \
   --output "$TMPDIR/report.json" \
   --fail-on high
@@ -54,7 +54,7 @@ if report["summary"]["total"] != 5:
 PY
 
 set +e
-"$TMPDIR/venv/bin/agentveil" posture scan \
+"$TMPDIR/venv/bin/lurkr" scan \
   --path "$REPO_ROOT/fixtures/dangerous_github_project" \
   --output "$TMPDIR/report.sarif" \
   --format sarif \

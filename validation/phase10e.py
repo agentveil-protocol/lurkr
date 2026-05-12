@@ -17,7 +17,7 @@ import tempfile
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURES_ROOT = REPO_ROOT / "validation" / "fixtures" / "installed_frameworks"
-DEFAULT_VENV_ROOT = Path(tempfile.gettempdir()) / "agentveil-posture-phase10e-venvs"
+DEFAULT_VENV_ROOT = Path(tempfile.gettempdir()) / "lurkr-phase10e-venvs"
 
 
 @dataclass(frozen=True)
@@ -188,10 +188,10 @@ def venv_python(venv: Path) -> Path:
     return venv / "bin" / "python"
 
 
-def venv_agentveil(venv: Path) -> Path:
+def venv_lurkr(venv: Path) -> Path:
     if sys.platform == "win32":
-        return venv / "Scripts" / "agentveil.exe"
-    return venv / "bin" / "agentveil"
+        return venv / "Scripts" / "lurkr.exe"
+    return venv / "bin" / "lurkr"
 
 
 def verify_imports(venv: Path, module_names: list[str]) -> None:
@@ -206,11 +206,10 @@ def verify_imports(venv: Path, module_names: list[str]) -> None:
 
 
 def run_scan(fixture_dir: Path, venv: Path) -> set[FindingKey]:
-    report_path = Path(tempfile.gettempdir()) / f"agentveil-posture-phase10e-{fixture_dir.name}.json"
+    report_path = Path(tempfile.gettempdir()) / f"lurkr-phase10e-{fixture_dir.name}.json"
     run_command(
         [
-            str(venv_agentveil(venv)),
-            "posture",
+            str(venv_lurkr(venv)),
             "scan",
             "--path",
             str(fixture_dir),

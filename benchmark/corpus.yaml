@@ -1,0 +1,239 @@
+snapshot_date: "2026-05-12"
+clone_root: "/tmp/lurkr-benchmark-clones"
+report_root: "/tmp/lurkr-benchmark-reports"
+
+public_references:
+  - id: langchain_react_agent
+    repo: langchain-ai/react-agent
+    commit_sha: 9f06f66af4da5ed9b9def2e0e4456210b211a360
+    category: langgraph
+    description: LangGraph template for a simple ReAct agent.
+    stars_at_curation: 730
+    license: MIT
+  - id: langchain_retrieval_agent_template
+    repo: langchain-ai/retrieval-agent-template
+    commit_sha: d3c39132ef23021fa437ac6292f528127297d65e
+    category: langgraph
+    description: LangGraph retrieval agent template.
+    stars_at_curation: 161
+    license: MIT
+  - id: langchain_data_enrichment
+    repo: langchain-ai/data-enrichment
+    commit_sha: bb6eeb2d384bf803e0594f8e5a9efb116a114beb
+    category: langgraph
+    description: LangGraph Studio template for web research and structured data enrichment.
+    stars_at_curation: 230
+    license: MIT
+  - id: langchain_open_deep_research
+    repo: langchain-ai/open_deep_research
+    commit_sha: 0dd30bd47ed6ed3ac4d2b678997662830f227a14
+    category: langgraph
+    description: Open deep research agent reference implementation.
+    stars_at_curation: 11375
+    license: MIT
+  - id: langchain_local_deep_researcher
+    repo: langchain-ai/local-deep-researcher
+    commit_sha: e1721099870bb6169a8b30d11a43e1dd7a7853ab
+    category: langgraph
+    description: Fully local web research and report-writing assistant.
+    stars_at_curation: 9143
+    license: MIT
+  - id: langchain_langgraph_supervisor_py
+    repo: langchain-ai/langgraph-supervisor-py
+    commit_sha: 5d341ac33475c1199a1ce2c9226338f063016a5e
+    category: langgraph
+    description: LangGraph supervisor reference package for multi-agent workflows.
+    stars_at_curation: 1574
+    license: MIT
+  - id: google_gemini_fullstack_langgraph_quickstart
+    repo: google-gemini/gemini-fullstack-langgraph-quickstart
+    commit_sha: e34e569de465340e42f36cd3cab4fac0c3ce7036
+    category: gemini
+    description: Full-stack Gemini and LangGraph agent quickstart.
+    stars_at_curation: 18160
+    license: Apache-2.0
+  - id: guy_hartstein_company_research_agent
+    repo: guy-hartstein/company-research-agent
+    commit_sha: 200383d0e7e07e785cded5041ec1cff68b5242d9
+    category: langgraph
+    description: Agentic company research tool powered by LangGraph and Tavily.
+    stars_at_curation: 1887
+    license: Apache-2.0
+  - id: wassim249_fastapi_langgraph_template
+    repo: wassim249/fastapi-langgraph-agent-production-ready-template
+    commit_sha: d97f375a07f140a640838b3bd52d9c3a6ba7b462
+    category: langgraph
+    description: FastAPI template for LangGraph AI agent services.
+    stars_at_curation: 2255
+    license: MIT
+  - id: vstorm_full_stack_ai_agent_template
+    repo: vstorm-co/full-stack-ai-agent-template
+    commit_sha: 85a0ceb62e0047268ce0a1bfcfac61772079d29f
+    category: mixed
+    description: Full-stack FastAPI and Next.js AI agent template with RAG and integrations.
+    stars_at_curation: 1255
+    license: MIT
+  - id: agentailor_fullstack_langgraph_nextjs_agent
+    repo: agentailor/fullstack-langgraph-nextjs-agent
+    commit_sha: 815db9ec5b8d003a0588c4251e0935589740e156
+    category: langgraph
+    description: Next.js LangGraph agent template with MCP integration and human approval.
+    stars_at_curation: 105
+    license: MIT
+  - id: nicholasgoh_fastapi_mcp_langgraph_template
+    repo: NicholasGoh/fastapi-mcp-langgraph-template
+    commit_sha: 2bd004a51e5d741e8eaf5bb01716b6a673684a53
+    category: mixed
+    description: FastAPI, MCP, and LangGraph template for agentic orchestration.
+    stars_at_curation: 544
+    license: MIT
+  - id: crewai_quickstarts
+    repo: crewAIInc/crewAI-quickstarts
+    commit_sha: 5adaa6223ca497a1db261a20204e4a853766411d
+    category: crewai
+    description: CrewAI quickstarts and feature demos.
+    stars_at_curation: 58
+    license: MIT
+  - id: ag2
+    repo: ag2ai/ag2
+    commit_sha: 9b40fc1459a6dda748b1f47d72352a2fadafc8e6
+    category: autogen
+    description: AG2, formerly AutoGen, open-source AgentOS and examples.
+    stars_at_curation: 4536
+    license: Apache-2.0
+  - id: openai_cookbook
+    repo: openai/openai-cookbook
+    commit_sha: 9e312635c02bbcd5ad178d59f56405231867505b
+    category: openai
+    description: OpenAI API examples and guides.
+    stars_at_curation: 73473
+    license: MIT
+  - id: openai_agents_python
+    repo: openai/openai-agents-python
+    commit_sha: 564584513f74e74f7916bd865ea77003d47b739c
+    category: openai
+    description: OpenAI Agents SDK for multi-agent workflows.
+    stars_at_curation: 26230
+    license: MIT
+  - id: openai_swarm
+    repo: openai/swarm
+    commit_sha: 6af0b4caf37dca4526dfd98e9fbd8ce36e7eeb22
+    category: openai
+    description: Educational multi-agent orchestration framework from OpenAI.
+    stars_at_curation: 21479
+    license: MIT
+  - id: anthropic_cookbook
+    repo: anthropics/anthropic-cookbook
+    commit_sha: 3f8bf356e779d366ae7fcc0e84be12019747e5e3
+    category: anthropic
+    description: Anthropic Claude notebooks and tool-use recipes.
+    stars_at_curation: 42815
+    license: MIT
+  - id: modelcontextprotocol_python_sdk
+    repo: modelcontextprotocol/python-sdk
+    commit_sha: 161834d4aee2633c42d3976c8f8751b6c4d947d5
+    category: mcp
+    description: Official Python SDK for Model Context Protocol servers and clients.
+    stars_at_curation: 22973
+    license: MIT
+  - id: excel_mcp_server
+    repo: haris-musa/excel-mcp-server
+    commit_sha: f51340ecd5778952405044b203d3a2d4c8a46833
+    category: mcp
+    description: Python MCP server for Excel file manipulation.
+    stars_at_curation: 3815
+    license: MIT
+
+synthetic:
+  - id: dangerous_github_project
+    path: fixtures/dangerous_github_project
+    kind: adversarial
+    description: Workflow, identity, and manifest high-risk controls.
+    expected_findings:
+      bypass.direct_github_token: 1
+      workflow.deploy_without_approval: 1
+      workflow.pull_request_target_secrets_risk: 1
+      identity.private_key_unencrypted: 1
+      tool.shell_without_approval: 1
+  - id: dangerous_shadow_capabilities
+    path: fixtures/dangerous_shadow_capabilities
+    kind: adversarial
+    description: MCP declared-vs-imported shadow capabilities.
+    expected_findings:
+      agent.declared_vs_imported_delta: 2
+  - id: dangerous_crewai_shadow
+    path: fixtures/dangerous_crewai_shadow
+    kind: adversarial
+    description: CrewAI declared-vs-imported shadow capability.
+    expected_findings:
+      agent.declared_vs_imported_delta: 1
+  - id: dangerous_credential_to_llm
+    path: fixtures/dangerous_credential_to_llm
+    kind: adversarial
+    description: Credential-bearing value passed into LLM context.
+    expected_findings:
+      agent.credential_to_llm_context: 1
+  - id: dangerous_dynamic_prompt
+    path: fixtures/dangerous_dynamic_prompt
+    kind: adversarial
+    description: Function parameter interpolated directly into prompt template.
+    expected_findings:
+      agent.dynamic_prompt_from_user_input: 1
+  - id: dangerous_mcp_external
+    path: fixtures/dangerous_mcp_external
+    kind: adversarial
+    description: MCP endpoint pointing to external host.
+    expected_findings:
+      agent.unverified_mcp_endpoint: 1
+  - id: dangerous_python_subprocess_tool
+    path: fixtures/dangerous_python_subprocess_tool
+    kind: adversarial
+    description: Python tool exposes subprocess execution.
+    expected_findings:
+      agent.python_tool_without_approval: 1
+      agent.python_subprocess_in_tool: 1
+  - id: dangerous_python_eval_tool
+    path: fixtures/dangerous_python_eval_tool
+    kind: adversarial
+    description: Python tool exposes dynamic evaluation.
+    expected_findings:
+      agent.python_tool_without_approval: 1
+      agent.python_eval_exec_in_tool: 1
+  - id: dangerous_python_file_access_tool
+    path: fixtures/dangerous_python_file_access_tool
+    kind: adversarial
+    description: Python tool exposes file mutation.
+    expected_findings:
+      agent.python_tool_without_approval: 1
+      agent.python_unrestricted_file_access: 1
+  - id: dangerous_python_api_key_literal
+    path: fixtures/dangerous_python_api_key_literal
+    kind: adversarial
+    description: API-key-shaped literal in Python source.
+    expected_findings:
+      agent.python_api_key_hardcoded: 1
+  - id: clean_github_project
+    path: fixtures/clean_github_project
+    kind: clean_control
+    description: Existing clean workflow and manifest fixture.
+    expected_findings: {}
+  - id: clean_declared_match
+    path: fixtures/clean_declared_match
+    kind: clean_control
+    description: Manifest fully declares reachable Python tools.
+    expected_findings: {}
+  - id: clean_credential_handling
+    path: fixtures/clean_credential_handling
+    kind: clean_control
+    description: Credential stays in provider client configuration.
+    expected_findings: {}
+  - id: clean_prompt_template
+    path: fixtures/clean_prompt_template
+    kind: clean_control
+    description: Prompt template uses explicit placeholders.
+    expected_findings: {}
+  - id: clean_mcp_local
+    path: fixtures/clean_mcp_local
+    kind: clean_control
+    description: MCP servers use local or stdio endpoints.
+    expected_findings: {}

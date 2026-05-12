@@ -25,3 +25,4 @@ htmlcov/
 report.json
 lurkr-report.json
 *-lurkr-report.json
+/tmp/lurkr-benchmark-clones/

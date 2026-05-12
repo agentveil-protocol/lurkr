@@ -4,6 +4,7 @@ import json
 
 from lurkr.manifest import (
     collect_declared,
+    extract_mcp_servers,
     normalize_capability_name,
     parse_manifest,
 )
@@ -114,3 +115,53 @@ def test_multiple_manifests_union_expected_set(tmp_path):
 def test_normalize_capability_name_snake_cases_framework_identifiers():
     assert normalize_capability_name("admin.tools.getUser") == "admin_tools_get_user"
     assert normalize_capability_name("DATA_EXPORT-v2") == "data_export_v2"
+
+
+def test_extract_mcp_servers_stdio_server_has_no_url():
+    servers = extract_mcp_servers(
+        {"mcpServers": {"filesystem": {"command": "npx", "args": ["server"]}}}
+    )
+
+    assert len(servers) == 1
+    assert servers[0].name == "filesystem"
+    assert servers[0].url is None
+    assert servers[0].transport == "stdio"
+    assert servers[0].line is None
+
+
+def test_extract_mcp_servers_localhost_url():
+    servers = extract_mcp_servers(
+        {"mcpServers": {"local": {"url": "http://localhost:3000/mcp"}}}
+    )
+
+    assert servers[0].url == "http://localhost:3000/mcp"
+    assert servers[0].transport == "http"
+
+
+def test_extract_mcp_servers_external_https_url():
+    servers = extract_mcp_servers(
+        {"mcpServers": {"remote": {"serverUrl": "https://mcp.example.com/sse"}}}
+    )
+
+    assert servers[0].name == "remote"
+    assert servers[0].url == "https://mcp.example.com/sse"
+    assert servers[0].transport == "https"
+
+
+def test_extract_mcp_servers_http_url_from_server_list():
+    servers = extract_mcp_servers(
+        {"servers": [{"name": "public", "httpUrl": "http://mcp.example.com"}]}
+    )
+
+    assert servers[0].name == "public"
+    assert servers[0].url == "http://mcp.example.com"
+    assert servers[0].transport == "http"
+
+
+def test_extract_mcp_servers_malformed_url_still_returns_candidate_for_rule():
+    servers = extract_mcp_servers(
+        {"mcpServers": {"remote": {"endpoint": "not a url"}}}
+    )
+
+    assert servers[0].url == "not a url"
+    assert servers[0].transport == "unknown"

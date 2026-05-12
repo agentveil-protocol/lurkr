@@ -7,13 +7,9 @@ import os
 from pathlib import Path
 import re
 from typing import Any, Iterable
+from urllib.parse import urlparse
 
-from lurkr.rules.manifest import (
-    CREWAI_PATH_REGEX,
-    EXACT_MANIFEST_PATHS,
-    is_agent_manifest,
-    load_manifest,
-)
+from lurkr.rules.manifest import is_agent_manifest, load_manifest
 
 
 @dataclass(frozen=True)
@@ -24,6 +20,16 @@ class DeclaredCapability:
     raw_name: str
     source_file: Path
     source_line: int
+
+
+@dataclass(frozen=True)
+class McpServer:
+    """Single MCP server entry declared in an MCP-style manifest."""
+
+    name: str
+    url: str | None
+    transport: str
+    line: int | None
 
 
 def discover_manifests(scan_root: Path) -> Iterable[Path]:
@@ -79,6 +85,18 @@ def collect_declared(scan_root: Path) -> set[str]:
     return declared
 
 
+def extract_mcp_servers(data: dict[str, Any]) -> list[McpServer]:
+    """Extract MCP server entries from an MCP-style manifest payload."""
+    servers: list[McpServer] = []
+    for field_name in ("mcpServers", "mcp_servers", "servers"):
+        value = data.get(field_name)
+        if isinstance(value, dict):
+            servers.extend(_servers_from_mapping(value))
+        elif isinstance(value, list):
+            servers.extend(_servers_from_list(value))
+    return servers
+
+
 def normalize_capability_name(name: str) -> str:
     """Normalize framework-specific tool identifiers to snake_case for comparison."""
     value = name.strip()
@@ -91,6 +109,56 @@ def normalize_capability_name(name: str) -> str:
 
 def _parse_mcp(data: dict[str, Any]) -> list[str]:
     return _names_from_tools_value(data.get("tools"))
+
+
+def _servers_from_mapping(value: dict[str, Any]) -> list[McpServer]:
+    servers: list[McpServer] = []
+    for name, config in value.items():
+        if isinstance(config, dict):
+            servers.append(_server_from_config(str(name), config))
+    return servers
+
+
+def _servers_from_list(value: list[Any]) -> list[McpServer]:
+    servers: list[McpServer] = []
+    for index, config in enumerate(value, start=1):
+        if not isinstance(config, dict):
+            continue
+        raw_name = config.get("name")
+        name = raw_name if isinstance(raw_name, str) and raw_name.strip() else f"server_{index}"
+        servers.append(_server_from_config(name, config))
+    return servers
+
+
+def _server_from_config(name: str, config: dict[str, Any]) -> McpServer:
+    url = _server_url(config)
+    return McpServer(
+        name=name,
+        url=url,
+        transport=_server_transport(config, url),
+        line=None,
+    )
+
+
+def _server_url(config: dict[str, Any]) -> str | None:
+    for key in ("url", "serverUrl", "endpoint", "httpUrl", "wsUrl"):
+        value = config.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _server_transport(config: dict[str, Any], url: str | None) -> str:
+    transport = config.get("transport")
+    if isinstance(transport, str) and transport.strip():
+        return transport.strip().lower()
+    if url is not None:
+        scheme = urlparse(url).scheme.strip().lower()
+        if scheme:
+            return scheme
+    if "command" in config or "args" in config:
+        return "stdio"
+    return "unknown"
 
 
 def _parse_crewai(data: dict[str, Any]) -> list[str]:
@@ -106,6 +174,8 @@ def _parse_langchain(data: dict[str, Any]) -> list[str]:
 
 
 def _parser_for_path(path: Path):
+    from lurkr.rules.manifest import CREWAI_PATH_REGEX, EXACT_MANIFEST_PATHS
+
     relative = path.as_posix()
     name = path.name.lower()
     if name in EXACT_MANIFEST_PATHS or relative.endswith("/.cursor/mcp.json"):

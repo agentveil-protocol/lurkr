@@ -8,10 +8,8 @@ from pathlib import Path
 import tokenize
 from typing import Iterator
 
-from lurkr.rules.parsing import MAX_TEXT_BYTES
 
-
-MAX_SOURCE_BYTES = MAX_TEXT_BYTES
+MAX_SOURCE_BYTES = 1_000_000
 MAX_NODES = 10_000
 MAX_DEPTH = 50
 

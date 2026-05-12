@@ -8,6 +8,7 @@ from pathlib import Path
 from lurkr.report import Finding, PostureReport, build_report
 from lurkr.rules import (
     is_agent_manifest,
+    scan_credential_to_llm_context,
     scan_declared_vs_imported_delta,
     scan_identity_private_key_unencrypted,
     scan_manifest_rules,
@@ -41,6 +42,7 @@ def scan_path(path: Path) -> PostureReport:
         if _is_python_source(candidate):
             python_files.append(candidate)
             findings.extend(scan_python_agent_rules(root, candidate))
+            findings.extend(scan_credential_to_llm_context(root, candidate))
     findings.extend(scan_declared_vs_imported_delta(root, python_files))
 
     return build_report(str(root), findings)

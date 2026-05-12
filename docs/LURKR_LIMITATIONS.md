@@ -24,9 +24,8 @@ dynamically, imported through indirection, or guarded by runtime-only state, a
 purely static scanner cannot fully reconstruct every reachable capability
 without accepting either unsound conclusions or broad false positives.
 
-Reference: Henry G. Rice, "Classes of Recursively Enumerable Sets and Their
-Decision Problems", Transactions of the American Mathematical Society 74(2),
-1953 — https://www.ams.org/journals/tran/1953-074-02/S0002-9947-1953-0053041-6/
+Reference: Rice's theorem, introduced by Henry G. Rice in 1953 —
+https://en.wikipedia.org/wiki/Rice%27s_theorem
 
 ## Sound Approximation As Engineering Choice
 

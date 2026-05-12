@@ -352,6 +352,17 @@ security audit.
 - [Open an issue](https://github.com/agentveil-protocol/agentveil-posture/issues) — bugs, questions, and framework requests
 - [Integration guide](#install) — GitHub Action, pre-commit, Docker, and local CLI setup
 
+## Further reading
+
+For teams that want to attach Posture coverage to existing security and compliance artifacts:
+
+- [Design principles](docs/POSTURE_DESIGN_PRINCIPLES.md) — how each rule maps to Saltzer-Schroeder protection principles (1975).
+- [Attack trees](docs/POSTURE_ATTACK_TREES.md) — Schneier-style attack tree leaves indexed by rule ID.
+- [Compliance map](docs/POSTURE_COMPLIANCE_MAP.md) — OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF coverage.
+- [Static analysis limits](docs/POSTURE_LIMITATIONS.md) — Rice's theorem and the sound-by-design framing.
+
+Casual users do not need any of these to run `agentveil posture scan`. The Quick Start above is sufficient.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

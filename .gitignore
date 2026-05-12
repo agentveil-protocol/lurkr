@@ -23,5 +23,5 @@ htmlcov/
 .DS_Store
 
 report.json
-agentveil-posture-report.json
-*-posture-report.json
+lurkr-report.json
+*-lurkr-report.json

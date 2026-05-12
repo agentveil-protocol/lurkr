@@ -12,14 +12,14 @@ Describe the bug or incorrect finding.
 
 ## Environment
 
-- AgentVeil Posture version or commit:
+- Lurkr version or commit:
 - Python version:
 - Operating system:
 
 ## Command
 
 ```bash
-agentveil posture scan --path . --output report.json
+lurkr scan --path . --output report.json
 ```
 
 ## Expected Result

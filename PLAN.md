@@ -1,6 +1,10 @@
-# AgentVeil Posture v0.1 Plan
+# Lurkr v0.1 Plan
 
 Status: v0.1 implementation spec for Phase 1 Sprint 1.
+
+> **Note:** This planning doc was originally written before the Lurkr rebrand
+> on 2026-05-12. Product references have been updated for clarity; technical
+> content otherwise unchanged.
 
 Scope: local scanner, GitHub Action, fixtures, SARIF output, CI thresholding,
 and PyPI package metadata for v0.1. Remote creation, GitHub push, tag creation,
@@ -12,8 +16,8 @@ publication of `0.2.0` remains a separate pre-launch gate.
 
 ## Product Boundary
 
-AgentVeil Posture v0.1 is a local, static scanner for GitHub-focused agent
-posture risks. It helps teams find risky capabilities before production use.
+Lurkr v0.1 is a local, static scanner for GitHub-focused agent
+capability risks. It helps teams find risky capabilities before production use.
 
 Hard constraints:
 
@@ -25,7 +29,7 @@ Hard constraints:
 - no secrets handling beyond metadata and bounded header sniffing;
 - no raw secret values in findings, reports, logs, or GitHub Action summaries.
 
-Public wording must not claim runtime execution control. Posture is static
+Public wording must not claim runtime execution control. Lurkr is static
 analysis only — it finds risky capabilities, it does not block, gate, or
 enforce agent actions at runtime.
 
@@ -34,9 +38,9 @@ enforce agent actions at runtime.
 Package layout:
 
 ```text
-agentveil-posture/
+lurkr/
   pyproject.toml
-  src/agentveil_posture/
+  src/lurkr/
     __init__.py
     cli.py
     report.py
@@ -52,7 +56,7 @@ agentveil-posture/
 Data flow:
 
 ```text
-agentveil posture scan
+lurkr scan
   -> cli.parse_args()
   -> scanner.scan_path(path)
   -> scanner discovers bounded, static file candidates
@@ -65,7 +69,7 @@ agentveil posture scan
 Module responsibilities:
 
 - `cli.py`: owns argparse commands and exit-code mapping. v0.1 exposes only
-  `agentveil posture scan --path . --output report.json`.
+  `lurkr scan --path . --output report.json`.
 - `scanner.py`: orchestrates static discovery, applies rule registry, enforces
   hard constraints, and returns a report model.
 - `rules/__init__.py`: owns the v0.1 rule registry. Individual rule modules may
@@ -367,7 +371,7 @@ Stable v0.1 shape:
 ```json
 {
   "report_version": "0.1",
-  "scanner_version": "agentveil-posture/0.2.0",
+  "scanner_version": "lurkr/0.2.0",
   "scanned_at": "2026-05-06T00:00:00Z",
   "scanned_path": "/absolute/or/input/path",
   "findings": [
@@ -397,7 +401,7 @@ Schema rules:
 
 - `report_version` is a string and starts at `"0.1"`.
 - `scanner_version` is a string in the form
-  `"agentveil-posture/<package-version>"`.
+  `"lurkr/<package-version>"`.
 - `scanned_at` is UTC ISO-8601 with `Z` and whole-second precision.
 - `scanned_path` is the CLI input resolved by the scanner.
 - `findings[]` is stable and redacted.
@@ -412,7 +416,7 @@ Schema rules:
 The scanner can also emit SARIF v2.1.0 for GitHub Code Scanning:
 
 ```bash
-agentveil posture scan --path . --output agentveil-posture.sarif --format sarif
+lurkr scan --path . --output lurkr.sarif --format sarif
 ```
 
 SARIF rules:
@@ -434,12 +438,12 @@ SARIF rules:
 Command:
 
 ```bash
-agentveil posture scan --path . --output report.json --format json
+lurkr scan --path . --output report.json --format json
 ```
 
 Arguments:
 
-- `agentveil posture scan`: only v0.1 command. No `check` alias.
+- `lurkr scan`: only v0.1 command. No `check` alias.
 - `--path PATH`: scan root. Defaults to `.`.
 - `--output FILE`: report output path. Required by the public v0.1 signature for
   examples and CI.
@@ -458,13 +462,13 @@ Exit codes:
 ## GitHub Action Manifest
 
 v0.1 keeps the action in this same repo and distributes it as
-`agentveil-protocol/agentveil-posture@v0.2.0`.
+`agentveil-protocol/lurkr@v0.2.0`.
 
 `action.yml` shape:
 
 ```yaml
-name: AgentVeil Posture
-description: Static posture scan for risky agent capabilities
+name: Lurkr
+description: Find risky AI agent capabilities before deployment.
 inputs:
   path:
     description: Path to scan
@@ -473,7 +477,7 @@ inputs:
   output:
     description: Report output path
     required: false
-    default: agentveil-posture-report.json
+    default: lurkr-report.json
   format:
     description: Report format to write (json or sarif)
     required: false
@@ -489,21 +493,21 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Install agentveil-posture
+    - name: Install lurkr
       run: python -m pip install .
       shell: bash
       working-directory: ${{ github.action_path }}
     - id: scan
-      name: Run posture scan
+      name: Run Lurkr scan
       env:
-        AGENTVEIL_POSTURE_FAIL_ON: ${{ inputs.fail-on }}
+        LURKR_FAIL_ON: ${{ inputs.fail-on }}
       run: |
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
         fail_on_args=()
-        if [ -n "$AGENTVEIL_POSTURE_FAIL_ON" ]; then
-          fail_on_args=(--fail-on "$AGENTVEIL_POSTURE_FAIL_ON")
+        if [ -n "$LURKR_FAIL_ON" ]; then
+          fail_on_args=(--fail-on "$LURKR_FAIL_ON")
         fi
-        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}"
+        lurkr scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}"
       shell: bash
 ```
 
@@ -613,8 +617,8 @@ Cross-platform parsing tests:
 Local sanity tests:
 
 - `pip install -e .` succeeds in a fresh virtual environment;
-- `agentveil posture scan --help` prints the `posture scan` help;
-- `agentveil posture scan --path . --output /tmp/report.json` exits `0`;
+- `lurkr scan --help` prints the `scan` help;
+- `lurkr scan --path . --output /tmp/report.json` exits `0`;
 - `/tmp/report.json` parses as JSON and follows the empty v0.1 schema.
 
 ## Known Limitations

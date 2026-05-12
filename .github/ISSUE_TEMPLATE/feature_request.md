@@ -16,7 +16,7 @@ What workflow or risk would this help with?
 
 ## Proposed Behavior
 
-What should AgentVeil Posture do?
+What should Lurkr do?
 
 ## Alternatives Considered
 

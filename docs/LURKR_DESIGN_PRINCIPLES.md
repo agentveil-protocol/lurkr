@@ -7,7 +7,7 @@ Lurkr rules are not arbitrary heuristics. They are detection points
 for violations of protection principles that have been load-bearing in secure
 systems design for decades.
 
-This document maps each shipped v0.2.1 rule to the foundational principle or
+This document maps each shipped v0.2.2 rule to the foundational principle or
 principles it enforces. The mapping is intentionally concrete: every rule
 identifies a repository surface where an agent, tool, workflow, or credential
 can bypass the protection boundary a reviewer expects to exist.
@@ -41,13 +41,12 @@ https://www.cs.virginia.edu/~evans/cs551/saltzer/
 - **Psychological acceptability** — the human interface must be designed for
   ease of use.
 
-Not every shipped rule maps to every principle. The v0.2.1 rule set focuses on
+Not every shipped rule maps to every principle. The v0.2.2 rule set focuses on
 the principles most directly violated by repository-visible agent capability
 surfaces: fail-safe defaults, complete mediation, least privilege, separation
 of privilege, economy of mechanism, and least common mechanism. Open design
 and psychological acceptability remain important design constraints for the
-product itself, but they are not the primary finding category for the current
-ten rules.
+product itself, but they are not the primary finding category for every rule.
 
 ## Mapping Discipline
 
@@ -66,17 +65,17 @@ possible rule has been implemented.
 
 ## Principle Coverage Summary
 
-| Principle | v0.2.1 rules that primarily exercise it |
+| Principle | v0.2.2 rules that primarily exercise it |
 |---|---|
-| Fail-safe defaults | `bypass.direct_github_token`, `workflow.deploy_without_approval`, `identity.private_key_unencrypted`, `agent.python_api_key_hardcoded` |
-| Complete mediation | `workflow.pull_request_target_secrets_risk`, `tool.shell_without_approval`, `agent.python_tool_without_approval`, `agent.declared_vs_imported_delta` |
+| Fail-safe defaults | `bypass.direct_github_token`, `workflow.deploy_without_approval`, `identity.private_key_unencrypted`, `agent.python_api_key_hardcoded`, `agent.credential_to_llm_context` |
+| Complete mediation | `workflow.pull_request_target_secrets_risk`, `tool.shell_without_approval`, `agent.python_tool_without_approval`, `agent.declared_vs_imported_delta`, `agent.dynamic_prompt_from_user_input`, `agent.unverified_mcp_endpoint` |
 | Least privilege | `workflow.pull_request_target_secrets_risk`, `tool.shell_without_approval`, `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `agent.python_unrestricted_file_access` |
 | Separation of privilege | `workflow.deploy_without_approval`, `agent.python_tool_without_approval`, `agent.python_subprocess_in_tool` |
-| Economy of mechanism | `identity.private_key_unencrypted`, `agent.python_eval_exec_in_tool`, `agent.python_api_key_hardcoded` |
-| Least common mechanism | `bypass.direct_github_token` |
-| Open design | `agent.declared_vs_imported_delta` |
+| Economy of mechanism | `identity.private_key_unencrypted`, `agent.python_eval_exec_in_tool`, `agent.python_api_key_hardcoded`, `agent.credential_to_llm_context` |
+| Least common mechanism | `bypass.direct_github_token`, `agent.unverified_mcp_endpoint` |
+| Open design | `agent.declared_vs_imported_delta`, `agent.dynamic_prompt_from_user_input`, `agent.unverified_mcp_endpoint` |
 
-The detailed sections below are the authoritative mapping for v0.2.1. The summary
+The detailed sections below are the authoritative mapping for v0.2.2. The summary
 is only an index for reviewers who want to start from a principle and then
 drill down into the rule IDs.
 
@@ -225,6 +224,51 @@ reviewable scope of the agent. Shadow capabilities hide reachable behavior from
 that scope, violating open design. Complete Mediation requires every access to
 be checked at a known authority point: when a tool registration bypasses the
 manifest review checkpoint, the mediation chain breaks.
+
+### agent.credential_to_llm_context
+
+**Principles enforced:** Fail-Safe Defaults, Economy of Mechanism
+
+**What the rule detects:** Credential-bearing variables or literals passed
+into LLM completion calls as message content, prompt content, or direct model
+arguments.
+
+**Why these principles:** Fail-Safe Defaults requires credentials to remain
+outside model-visible context unless a narrow, explicit permission path exists.
+Passing a token through chat messages reverses that default by making
+conversation history a credential transport. Economy of Mechanism requires the
+credential boundary to stay small and explicit. Mixing credentials into LLM
+context spreads secret handling into prompts, traces, logs, and provider-side
+state, making the mechanism harder to reason about and review.
+
+### agent.dynamic_prompt_from_user_input
+
+**Principles enforced:** Complete Mediation, Open Design
+
+**What the rule detects:** Prompt templates constructed by directly
+interpolating function parameters through f-strings, string concatenation,
+`.format(...)`, or percent formatting.
+
+**Why these principles:** Complete Mediation requires user-controlled input to
+pass through a visible authority or templating boundary before it affects model
+instructions. Direct interpolation bypasses that boundary and turns data into
+instruction text before the framework can mediate it. Open Design requires the
+prompt structure to be reviewable. Hidden interpolation makes it harder for a
+reviewer to see what text is fixed policy and what text arrives from the user.
+
+### agent.unverified_mcp_endpoint
+
+**Principles enforced:** Open Design, Complete Mediation, Least Common Mechanism
+
+**What the rule detects:** MCP server endpoints in supported manifests whose
+URL points to a non-allowlisted external host.
+
+**Why these principles:** Open Design requires external trust boundaries to be
+explicit rather than hidden inside manifest URLs. Complete Mediation requires
+each external MCP connection to pass a review checkpoint before it can shape
+tools or context available to the agent. Least Common Mechanism applies because
+an external MCP server becomes a shared dependency surface: several tools,
+prompts, or workflows may depend on one remote authority.
 
 ## Closing Note
 

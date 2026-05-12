@@ -23,13 +23,13 @@ Static, local-only scanner for risky AI agent capabilities. No telemetry, no cod
 
 `lurkr` is a pre-deployment, static, local-only scanner that flags risky
 AI-agent and GitHub-workflow capability issues. No telemetry, no network
-calls, no project code execution. v0.2.1 includes eleven high-severity rules across
+calls, no project code execution. v0.2.2 includes fourteen high-severity rules across
 GitHub workflows, agent manifests, identity files, and bounded Python
 agent-source analysis.
 
 [Quick Start](#quick-start) |
 [What a finding looks like](#what-a-finding-looks-like) |
-[Detection scope](#detection-scope-v021) |
+[Detection scope](#detection-scope-v022) |
 [GitHub Action](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
 
@@ -71,7 +71,7 @@ Every finding contains rule ID, severity, repository-relative file path, line
 number when available, redacted message, and remediation pointer. Raw secrets,
 command bodies, and key material never appear in the report.
 
-## Detection Scope (v0.2.1)
+## Detection Scope (v0.2.2)
 
 All current rules are reported as `high` severity.
 
@@ -82,12 +82,15 @@ All current rules are reported as `high` severity.
 | [`workflow.pull_request_target_secrets_risk`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/workflow.pull_request_target_secrets_risk.md) | `pull_request_target` workflows that combine privileged context with checkout, run, or secrets | GitHub Actions |
 | [`tool.shell_without_approval`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/tool.shell_without_approval.md) | Agent tool manifests that enable shell execution without an approval flag | MCP/CrewAI-style manifests |
 | [`identity.private_key_unencrypted`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/identity.private_key_unencrypted.md) | Unencrypted PEM private key files committed to the repo | Repository files |
-| [`agent.python_tool_without_approval`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_tool_without_approval.md) | Python agent tool declarations without an approval marker | LangChain, LangGraph, CrewAI, MCP, OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini |
+| [`agent.credential_to_llm_context`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.credential_to_llm_context.md) | Credential-bearing values passed into LLM completion context | OpenAI, Anthropic, Gemini, LangChain direct call sites |
 | [`agent.declared_vs_imported_delta`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.declared_vs_imported_delta.md) | Python tool registrations not declared in agent manifest files | MCP, CrewAI, AutoGen, LangChain manifests + supported Python tool registrations |
-| [`agent.python_subprocess_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_subprocess_in_tool.md) | Subprocess or shell calls inside supported Python tool functions | Supported Python tool functions |
-| [`agent.python_eval_exec_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_eval_exec_in_tool.md) | `eval`/`exec`-style dynamic execution inside Python tool functions | Supported Python tool functions |
-| [`agent.python_unrestricted_file_access`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_unrestricted_file_access.md) | File write or delete calls inside Python tool functions | Supported Python tool functions |
+| [`agent.dynamic_prompt_from_user_input`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.dynamic_prompt_from_user_input.md) | Prompt templates directly interpolating function parameters | Prompt-shaped Python assignments and common template helpers |
 | [`agent.python_api_key_hardcoded`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_api_key_hardcoded.md) | API-key-shaped string literals in Python source | Module-wide; Anthropic, OpenAI, GitHub PAT, HuggingFace |
+| [`agent.python_eval_exec_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_eval_exec_in_tool.md) | `eval`/`exec`-style dynamic execution inside Python tool functions | Supported Python tool functions |
+| [`agent.python_subprocess_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_subprocess_in_tool.md) | Subprocess or shell calls inside supported Python tool functions | Supported Python tool functions |
+| [`agent.python_tool_without_approval`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_tool_without_approval.md) | Python agent tool declarations without an approval marker | LangChain, LangGraph, CrewAI, MCP, OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini |
+| [`agent.python_unrestricted_file_access`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_unrestricted_file_access.md) | File write or delete calls inside Python tool functions | Supported Python tool functions |
+| [`agent.unverified_mcp_endpoint`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.unverified_mcp_endpoint.md) | MCP server URLs pointing to non-allowlisted external hosts | MCP manifests |
 
 Deployment checks include common CLI deploy, release, registry push, and
 infrastructure apply commands. Build, preview, plan, and package-only commands
@@ -102,7 +105,7 @@ Lurkr focuses on **capability risk before deployment**.
 It scans the repo surfaces that turn an agent into an actor:
 - GitHub workflows that can deploy or expose secrets
 - Agent manifests that expose shell-capable tools
-- Python agent code that wires tools to subprocess, file writes, eval/exec, or direct tokens
+- Python agent code that wires tools to subprocess, file writes, eval/exec, direct tokens, LLM context, prompts, or external MCP endpoints
 
 Static. Local-only. Offline. Redacted by default.
 
@@ -120,12 +123,13 @@ The goal: find high-severity capabilities worth controlling before they become p
 
 ## Roadmap
 
-### Available now (v0.2.1)
+### Available now (v0.2.2)
 
-11 high-severity rules across:
+14 high-severity rules across:
 - GitHub workflows + agent manifests + identity files
 - Python agent code: LangChain / LangGraph, CrewAI, MCP (FastMCP and Server-style), OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini
 - Declared-vs-imported capability delta checks across MCP/CrewAI/AutoGen/LangChain manifests and Python tool registrations
+- AI-specific static checks for credential flow into LLM context, direct prompt interpolation, and external MCP endpoints
 
 ### v0.3.0 — broader framework coverage
 

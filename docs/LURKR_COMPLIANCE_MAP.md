@@ -39,7 +39,9 @@ pre-deployment risk.
 
 | OWASP LLM entry | Lurkr rules covering |
 |---|---|
-| LLM02:2025 Sensitive Information Disclosure | `agent.python_api_key_hardcoded`, `identity.private_key_unencrypted` |
+| LLM01:2025 Prompt Injection | `agent.dynamic_prompt_from_user_input` |
+| LLM02:2025 Sensitive Information Disclosure | `agent.python_api_key_hardcoded`, `identity.private_key_unencrypted`, `agent.credential_to_llm_context` |
+| LLM03:2025 Supply Chain | `agent.unverified_mcp_endpoint` |
 | LLM06:2025 Excessive Agency | `agent.python_tool_without_approval`, `agent.declared_vs_imported_delta`, `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `agent.python_unrestricted_file_access`, `tool.shell_without_approval` |
 | LLM07:2025 System Prompt Leakage | (not currently covered — gap noted) |
 | LLM08:2025 Vector and Embedding Weaknesses | (not currently covered — gap noted) |
@@ -47,25 +49,30 @@ pre-deployment risk.
 
 ### OWASP Coverage Notes
 
-`agent.python_api_key_hardcoded` and `identity.private_key_unencrypted` support
-LLM02 review by finding credential material that can be exposed through the
-repository before an agent ships. These rules are intentionally redacted: they
-report paths and rule IDs, not raw key values.
+`agent.python_api_key_hardcoded`, `identity.private_key_unencrypted`, and
+`agent.credential_to_llm_context` support LLM02 review by finding credential
+material that can be exposed through the repository or model context before an
+agent ships. These rules are intentionally redacted: they report paths and rule
+IDs, not raw key values.
 
-The LLM06 mapping is the strongest OWASP alignment for v0.2.1. Lurkr's Python
+The LLM06 mapping is the strongest OWASP alignment for v0.2.2. Lurkr's Python
 tool, manifest, subprocess, dynamic execution, and file-mutation rules all
 look for places where an agent has more authority than a reviewer may expect.
 Those are excessive-agency indicators, not runtime proof of misuse.
 
-Lurkr does not currently cover LLM01 Prompt Injection. Prompt injection is
-primarily a runtime interaction problem involving model input, tool output,
-conversation state, and policy mediation. The static scanner can identify
-dangerous capabilities that prompt injection might later abuse, but it does
-not decide whether a prompt is malicious.
+`agent.dynamic_prompt_from_user_input` gives partial LLM01 coverage by
+detecting a static setup pattern: direct interpolation of function parameters
+into prompt-shaped strings. It does not decide whether a runtime prompt is
+malicious.
 
-Lurkr also does not currently cover LLM05, LLM07, or LLM08 directly. Improper
-output handling, system prompt leakage, and vector or embedding weaknesses may
-be addressed in future static rules if repeatable repository-visible patterns
+`agent.unverified_mcp_endpoint` contributes to LLM03 review by surfacing
+external MCP server dependencies before deployment. It does not verify a
+server's provenance or tool schema; it marks the dependency as a trust review
+checkpoint.
+
+Lurkr does not currently cover LLM05, LLM07, or LLM08 directly. Improper output
+handling, system prompt leakage, and vector or embedding weaknesses may be
+addressed in future static rules if repeatable repository-visible patterns
 emerge. Until then, teams should cover those entries with complementary design
 review, live safeguards, and application-specific tests.
 
@@ -82,7 +89,9 @@ expansion, unauthorized deployment, and file or data impact.
 
 | ATLAS tactic | Relevant technique area | Lurkr rules covering |
 |---|---|---|
-| Initial Access | AML.T0012 Valid Accounts / token misuse | `bypass.direct_github_token`, `identity.private_key_unencrypted`, `agent.python_api_key_hardcoded` |
+| Initial Access | AML.T0012 Valid Accounts / token misuse; untrusted external service | `bypass.direct_github_token`, `identity.private_key_unencrypted`, `agent.python_api_key_hardcoded`, `agent.unverified_mcp_endpoint` |
+| Credential Access | Credential exposure through model context | `agent.credential_to_llm_context` |
+| Defense Evasion | Prompt injection bypasses model alignment or instruction boundaries | `agent.dynamic_prompt_from_user_input` |
 | Execution | AML.T0053 AI Agent Tool Invocation; AML.T0050 Command and Scripting Interpreter | `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `tool.shell_without_approval` |
 | Privilege Escalation | AML.T0053 AI Agent Tool Invocation; AML.T0105 Escape to Host | `agent.python_tool_without_approval`, `agent.declared_vs_imported_delta`, `tool.shell_without_approval`, `agent.python_subprocess_in_tool` |
 | Impact | AML.T0081 Modify AI Agent Configuration; AML.T0101 Data Destruction via AI Agent Tool Invocation | `workflow.deploy_without_approval`, `workflow.pull_request_target_secrets_risk`, `agent.python_unrestricted_file_access` |
@@ -99,6 +108,19 @@ removed.
 support Initial Access review. They surface repository-visible credentials
 that can become valid-account or token-abuse material if copied, leaked, or
 made accessible through an agent workflow.
+
+`agent.unverified_mcp_endpoint` contributes to Initial Access review when a
+repository connects an agent to an untrusted external MCP service. The finding
+does not prove compromise; it identifies a remote service boundary that should
+be reviewed before the agent can rely on it.
+
+`agent.credential_to_llm_context` maps to Credential Access because credentials
+placed in model-visible messages can be exposed through provider logs,
+conversation history, traces, or other retained context.
+
+`agent.dynamic_prompt_from_user_input` maps to Defense Evasion because direct
+prompt interpolation can let user-controlled text bypass the intended
+templating boundary and weaken alignment or instruction controls.
 
 `agent.python_subprocess_in_tool` and `agent.python_eval_exec_in_tool` map to
 Execution because they identify Python tool functions that can cross into host
@@ -139,7 +161,7 @@ reviewed before release.
 | NIST AI RMF subcategory | How Lurkr contributes |
 |---|---|
 | MEASURE 2.6 (AI system evaluated against established standards) | Lurkr scan produces evidence grounded in established protection principles (see `LURKR_DESIGN_PRINCIPLES.md`). Declared-vs-imported delta detection adds evidence of evaluation against established standards by surfacing scope deviations from the agent's declared manifest. |
-| MEASURE 2.7 (information security is adequate) | Lurkr finds credential exposure and bypass paths before deployment |
+| MEASURE 2.7 (information security is adequate) | Lurkr finds credential exposure, prompt-construction risks, external-service trust boundaries, and bypass paths before deployment |
 | MEASURE 2.9 (AI system evaluated regularly) | Lurkr can be scheduled in CI for continuous evidence |
 
 ### NIST AI RMF Coverage Notes
@@ -152,7 +174,9 @@ The scanner's findings are connected to established protection principles in
 For MEASURE 2.7, Lurkr contributes evidence about information security
 surfaces that appear before deployment: direct GitHub token references,
 unencrypted private keys, hardcoded API-key-shaped literals, privileged PR
-workflows, and tool surfaces that can execute commands or mutate files.
+workflows, credential flow into LLM context, prompt templates built directly
+from function parameters, external MCP endpoints, and tool surfaces that can
+execute commands or mutate files.
 
 For MEASURE 2.9, Lurkr can run locally, in pre-commit, or in CI. That makes
 it suitable for recurring measurement without sending repository contents to an
@@ -267,6 +291,33 @@ framework entries above.
 - NIST AI RMF: supports MEASURE 2.6 by creating evidence that declared scope
   and reachable implementation were evaluated against a documented standard.
 
+### agent.credential_to_llm_context
+
+- OWASP: supports LLM02 by identifying credential-bearing values passed into
+  LLM completion context.
+- ATLAS: supports Credential Access review because credentials in model
+  messages can leak through retained provider or application context.
+- NIST AI RMF: supports MEASURE 2.7 by surfacing credential-to-context leak
+  paths before deployment.
+
+### agent.dynamic_prompt_from_user_input
+
+- OWASP: supports LLM01 by identifying a static prompt-injection setup pattern:
+  direct interpolation of function parameters into prompt-shaped strings.
+- ATLAS: supports Defense Evasion review because direct interpolation can
+  bypass the intended prompt templating boundary.
+- NIST AI RMF: supports MEASURE 2.7 by surfacing prompt-construction risks
+  before deployment.
+
+### agent.unverified_mcp_endpoint
+
+- OWASP: supports LLM03 by identifying external MCP server dependencies that
+  need supply-chain and trust review.
+- ATLAS: supports Initial Access review because an untrusted external service
+  can become a path into the agent's tool and context surface.
+- NIST AI RMF: supports MEASURE 2.7 by surfacing external-service trust
+  boundaries before deployment.
+
 ### agent.python_subprocess_in_tool
 
 - OWASP: supports LLM06 by identifying host command capability inside
@@ -304,7 +355,7 @@ framework entries above.
 
 ## Known Gaps
 
-This map documents gaps rather than hiding them. Lurkr v0.2.1 does not cover
+This map documents gaps rather than hiding them. Lurkr v0.2.2 does not cover
 runtime prompt injection, system prompt leakage, vector-store poisoning,
 embedding weakness, output handling, model behavior evaluation, authorization
 logic, cloud IAM policy evaluation, runtime network egress, or historical

@@ -21,8 +21,8 @@ means the attacker needs the grouped conditions together. A leaf without `AND`
 is a concrete technique that can contribute directly to the goal. Bracketed
 items are Lurkr rule IDs; those are the scanner checks that cover the leaf.
 
-These five trees are not complete threat models. They are coverage maps for the
-v0.2.1 rule set. Leaves without a rule ID in your own threat model identify a
+These eight trees are not complete threat models. They are coverage maps for the
+v0.2.2 rule set. Leaves without a rule ID in your own threat model identify a
 gap to cover with another control or a candidate future Lurkr rule.
 
 ## Tree 1: Unauthorized Production Deploy
@@ -103,7 +103,7 @@ Common gap questions:
 - Does the agent framework expose tools from configuration that Lurkr does
   not yet parse?
 
-Those are future coverage candidates. In v0.2.1, Lurkr keeps this tree tied to
+Those are future coverage candidates. In v0.2.2, Lurkr keeps this tree tied to
 the same-file and pinned-manifest surfaces it can inspect reliably.
 
 ## Tree 3: Credential Exfiltration
@@ -148,7 +148,7 @@ Goal: agent writes or deletes data outside intended scope
 `-- Python tool with unrestricted file access            [agent.python_unrestricted_file_access]
 ```
 
-This tree is small because v0.2.1 has one direct file-mutation rule. That narrow
+This tree is small because v0.2.2 has one direct file-mutation rule. That narrow
 scope is intentional: the scanner reports the clearest repository-visible sign
 that an agent-callable Python tool can write or delete files.
 
@@ -167,7 +167,7 @@ Common gap questions:
 - Does the project write through a framework-specific storage abstraction?
 - Does the runtime mount sensitive host paths into the agent workspace?
 
-Those gaps are outside v0.2.1's static same-file model. They are useful inputs
+Those gaps are outside v0.2.2's static same-file model. They are useful inputs
 for future rule additions when real projects show repeatable patterns.
 
 ## Tree 5: Agent Gains Capability Beyond Declared Scope
@@ -199,9 +199,100 @@ Common gap questions:
 - Does the repository use a manifest format outside Lurkr's current discovery
   scope?
 
-Those gaps are outside v0.2.1's static manifest/code comparison model. They are
+Those gaps are outside v0.2.2's static manifest/code comparison model. They are
 useful inputs for future rule additions if real projects show repeatable
 patterns.
+
+## Tree 6: Credential Leaks To LLM Provider
+
+```text
+Goal: credential enters model-visible context
+|
+`-- credential variable passed to LLM completion call  [agent.credential_to_llm_context]
+```
+
+This tree covers the credential-to-context path: a token or key may be loaded
+correctly from the environment, but then placed into a chat message, prompt, or
+model argument where it can be retained outside the intended secret boundary.
+
+Review notes:
+
+- `agent.credential_to_llm_context` reports the flow into supported OpenAI,
+  Anthropic, Gemini, and LangChain direct call sites.
+- The rule does not report credentials used only in provider client
+  configuration or HTTP headers.
+- The finding line points at the LLM call, not the original credential source,
+  because the leak path is the handoff into model context.
+
+Common gap questions:
+
+- Does the project pass credentials through helper objects in another file?
+- Does a chain pipeline place secrets into messages after prompt assembly?
+- Are provider traces or chat histories configured to retain message content?
+
+Those gaps are outside v0.2.2's same-file static flow model. They are useful
+inputs for future rule additions and runtime review.
+
+## Tree 7: Prompt Injection Setup
+
+```text
+Goal: user input becomes instruction text without templating mediation
+|
+`-- function parameter directly interpolated into prompt [agent.dynamic_prompt_from_user_input]
+```
+
+This tree covers a statically visible prompt-injection setup path. The problem
+is not that every interpolated value is malicious; it is that direct
+interpolation erases the review boundary between fixed instructions and
+user-controlled data.
+
+Review notes:
+
+- `agent.dynamic_prompt_from_user_input` covers f-strings, string
+  concatenation, `.format(...)`, and percent formatting in prompt-shaped
+  targets.
+- Placeholder-based templates such as `ChatPromptTemplate.from_template(...)`
+  are intentionally treated as clean when user input is passed separately.
+- Non-prompt f-strings, such as logs and errors, are outside this rule.
+
+Common gap questions:
+
+- Does the project sanitize or normalize user input before prompt creation?
+- Does a wrapper function build prompts in another module?
+- Does a chain composition step substitute user input after static analysis?
+
+Those gaps are outside v0.2.2's bounded static model and should be covered by
+review, tests, or future rules when patterns repeat.
+
+## Tree 8: Unreviewed External Dependency
+
+```text
+Goal: agent trusts external server outside declared local boundary
+|
+`-- MCP manifest points to external server endpoint     [agent.unverified_mcp_endpoint]
+```
+
+This tree covers a remote MCP dependency path. An external MCP server can
+define tools, return context, and shape agent behavior, so it needs a review
+checkpoint before deployment.
+
+Review notes:
+
+- `agent.unverified_mcp_endpoint` reports non-allowlisted external MCP URLs in
+  supported MCP manifests.
+- Localhost, private IP, `.local`, Docker host, stdio, and pipe transports are
+  treated as clean by the built-in v0.2.2 allowlist.
+- HTTPS does not suppress the finding. Transport encryption does not prove the
+  server's tool surface is trusted.
+
+Common gap questions:
+
+- Who owns the external MCP server and its deployment pipeline?
+- Are the server's tool schemas pinned, reviewed, and versioned?
+- Can the connection be sandboxed or scoped to a narrower tool set?
+
+Those questions belong in the deployment review for any external MCP
+dependency. Lurkr's role is to make the dependency visible in the repository.
 
 ## Using These Trees
 

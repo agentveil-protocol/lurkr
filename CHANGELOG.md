@@ -7,6 +7,25 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## v0.2.2 — 2026-05-12
+
+**Three new rules.** Adds AI-specific detection surfaces no other static
+scanner catches:
+
+- `agent.credential_to_llm_context` — credentials passed into LLM completion
+  calls as message content (leak via conversation history and provider logs).
+- `agent.dynamic_prompt_from_user_input` — prompt templates built via f-string
+  or concatenation from function parameters (prompt injection setup,
+  statically detectable).
+- `agent.unverified_mcp_endpoint` — MCP server entries pointing to
+  non-allowlisted external hosts (untrusted server-side prompt injection or
+  tool-poisoning risk).
+
+All three rules use existing AST and manifest parser foundations.
+Backward-compatible. Existing reports and rule IDs unchanged.
+
+Total rules: 14.
+
 ## v0.2.1 — 2026-05-12
 
 **New rule.** Adds `agent.declared_vs_imported_delta` detecting shadow

@@ -3,9 +3,7 @@
 <p align="center">
   <a href="https://github.com/agentveil-protocol/lurkr/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://pypi.org/project/lurkr/"><img src="https://img.shields.io/pypi/v/lurkr?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI"></a>
-  <a href="https://github.com/agentveil-protocol/lurkr/actions/workflows/posture-self-test.yml"><img src="https://github.com/agentveil-protocol/lurkr/actions/workflows/posture-self-test.yml/badge.svg" alt="Self Test"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+"></a>
-  <a href="https://github.com/agentveil-protocol/lurkr/stargazers"><img src="https://img.shields.io/github/stars/agentveil-protocol/lurkr?style=for-the-badge&logo=github&color=gold" alt="GitHub stars"></a>
   <a href="https://github.com/agentveil-protocol/lurkr#use-as-a-github-action"><img src="https://img.shields.io/badge/GitHub-Action_ready-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Action"></a>
   <a href="https://github.com/agentveil-protocol/lurkr#hard-constraints"><img src="https://img.shields.io/badge/scanner-read--only-10b981?style=for-the-badge" alt="Lurkr: read-only"></a>
   <a href="https://asciinema.org/a/CBO9EuafgctnR1Q0"><img src="https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white" alt="Demo"></a>

@@ -1,11 +1,11 @@
 # Static Analysis Limits
 
-AgentVeil Posture is a sound-by-design static scanner, not a complete model of
+Lurkr is a sound-by-design static scanner, not a complete model of
 all possible agent behavior. It flags a bounded set of risky capability
 patterns that can be identified from repository files without executing code,
 calling the network, or collecting telemetry.
 
-False negatives are expected by design. A finding that Posture does not report
+False negatives are expected by design. A finding that Lurkr does not report
 is not a proof that a repository has no risky capability surface; it means the
 surface was outside the current static rule set or could not be identified
 within the scanner's bounded analysis model.
@@ -32,11 +32,11 @@ Decision Problems", Transactions of the American Mathematical Society 74(2),
 
 Patrick Cousot and Radhia Cousot's 1977 abstract interpretation work gives the
 engineering foundation for useful static analysis: approximate program
-behavior in a constrained model, then make the approximation explicit. Posture
+behavior in a constrained model, then make the approximation explicit. Lurkr
 uses that discipline. It chooses precise, reviewable rules over broad claims of
 complete behavioral coverage.
 
-For v0.2, that means Posture prioritizes confidence over recall. It reports
+For v0.2, that means Lurkr prioritizes confidence over recall. It reports
 capability surfaces that the scanner can identify from bounded repository
 inspection, and it accepts that subtle bypass paths may slip through until
 there is enough evidence to add a rule with low false-positive cost. This is
@@ -80,16 +80,16 @@ https://www.di.ens.fr/~cousot/COUSOTpapers/POPL77.shtml
   constructed at runtime are outside v0.2 scope.
 - Oversized, unreadable, malformed, alias-heavy, deeply nested, binary, or
   undecodable files may be skipped before parsing to preserve scanner safety.
-- Symlinks are skipped. Posture does not follow links inside or outside the
+- Symlinks are skipped. Lurkr does not follow links inside or outside the
   scan root because scanned repositories are untrusted input.
 
-## What Posture Does Not Replace
+## What Lurkr Does Not Replace
 
 - General-purpose SAST for application vulnerabilities, dependency issues, and
   language-specific bug classes outside the agent capability surface.
 - Dedicated secret scanning for broad credential formats, historical commits,
   cloud-provider token families, and rotation workflows.
-- Runtime mediation, policy decisions, or proof of executed actions. Posture is
+- Runtime mediation, policy decisions, or proof of executed actions. Lurkr is
   the pre-deployment scanner workstream in the broader AgentVeil ecosystem: it
   finds risky capabilities before deployment, but it does not approve, block,
   or execute agent actions.

@@ -1,9 +1,9 @@
 > "You can't trust code that you did not totally create yourself."
 > — Ken Thompson, *Reflections on Trusting Trust*, ACM Turing Award Lecture, Communications of the ACM 27(8), August 1984
 
-# Posture Design Principles
+# Lurkr Design Principles
 
-AgentVeil Posture rules are not arbitrary heuristics. They are detection points
+Lurkr rules are not arbitrary heuristics. They are detection points
 for violations of protection principles that have been load-bearing in secure
 systems design for decades.
 
@@ -12,7 +12,7 @@ principles it enforces. The mapping is intentionally concrete: every rule
 identifies a repository surface where an agent, tool, workflow, or credential
 can bypass the protection boundary a reviewer expects to exist.
 
-Posture is the pre-deployment scanner workstream in the broader AgentVeil
+Lurkr is the pre-deployment scanner workstream in the broader AgentVeil
 ecosystem. Its job is to find risky capability surfaces before deployment, not
 to approve, block, or prove runtime actions. That boundary is part of the
 design: each rule points at a place where a downstream decision or proof system
@@ -61,7 +61,7 @@ principle and deserves review before deployment.
 
 The mapping also does not claim that absence of a finding proves the principle
 is fully satisfied. Static analysis has documented limits; the principle map is
-a way to explain the rules Posture does ship, not a certificate that every
+a way to explain the rules Lurkr does ship, not a certificate that every
 possible rule has been implemented.
 
 ## Principle Coverage Summary

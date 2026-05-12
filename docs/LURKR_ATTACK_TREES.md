@@ -1,4 +1,4 @@
-# Posture Attack Trees
+# Lurkr Attack Trees
 
 Bruce Schneier introduced attack trees as a practical way to describe how an
 attacker can reach a goal through smaller sub-goals and concrete techniques.
@@ -6,10 +6,10 @@ They remain useful because they make coverage visible: a security team can look
 at a goal, enumerate the ways it might be reached, and mark which leaves are
 covered by controls or detection.
 
-AgentVeil Posture uses that framing for the agent capability surface. Each
+Lurkr uses that framing for the agent capability surface. Each
 tree below starts with an attacker goal that matters before deployment. The
 leaves are repository-visible techniques, and each leaf is indexed by the
-Posture rule ID that detects it.
+Lurkr rule ID that detects it.
 
 Reference: Bruce Schneier, "Attack Trees", Dr. Dobb's Journal, December 1999 —
 https://www.schneier.com/academic/archives/1999/12/attack_trees.html
@@ -19,11 +19,11 @@ https://www.schneier.com/academic/archives/1999/12/attack_trees.html
 The root line is the attacker goal. Indented children are sub-goals. `AND`
 means the attacker needs the grouped conditions together. A leaf without `AND`
 is a concrete technique that can contribute directly to the goal. Bracketed
-items are Posture rule IDs; those are the scanner checks that cover the leaf.
+items are Lurkr rule IDs; those are the scanner checks that cover the leaf.
 
 These trees are not complete threat models. They are coverage maps for the
 v0.2 rule set. Leaves without a rule ID in your own threat model identify a
-gap to cover with another control or a candidate future Posture rule.
+gap to cover with another control or a candidate future Lurkr rule.
 
 ## Tree 1: Unauthorized Production Deploy
 
@@ -63,7 +63,7 @@ Common gap questions:
 - Does branch protection or environment protection exist but not appear in the
   workflow file?
 
-If the answer to any of those is yes, Posture findings still help focus review,
+If the answer to any of those is yes, Lurkr findings still help focus review,
 but the tree needs complementary controls beyond this scanner.
 
 ## Tree 2: Agent Executes Arbitrary Code On Host
@@ -100,10 +100,10 @@ Common gap questions:
 
 - Does the project construct tools dynamically at runtime?
 - Does a tool call a helper in another file that performs execution?
-- Does the agent framework expose tools from configuration that Posture does
+- Does the agent framework expose tools from configuration that Lurkr does
   not yet parse?
 
-Those are future coverage candidates. In v0.2, Posture keeps this tree tied to
+Those are future coverage candidates. In v0.2, Lurkr keeps this tree tied to
 the same-file and pinned-manifest surfaces it can inspect reliably.
 
 ## Tree 3: Credential Exfiltration
@@ -117,7 +117,7 @@ Goal: attacker obtains credential from agent surface
 ```
 
 This tree covers credentials that are visible in the repository at scan time.
-It is deliberately narrower than a full secret-scanning model: Posture focuses
+It is deliberately narrower than a full secret-scanning model: Lurkr focuses
 on credential shapes that connect directly to agent identity, API access, or
 agent-controlled execution surfaces.
 
@@ -133,11 +133,11 @@ Review notes:
 Common gap questions:
 
 - Are there historical commits containing credentials?
-- Are there provider-specific token shapes outside Posture's current key
+- Are there provider-specific token shapes outside Lurkr's current key
   patterns?
 - Are secrets loaded from CI, cloud stores, or local files during runtime?
 
-Those questions belong in a broader credential review. Posture contributes by
+Those questions belong in a broader credential review. Lurkr contributes by
 surfacing the repository-visible agent credential leaves it currently covers.
 
 ## Tree 4: Agent Corrupts Or Deletes Data
@@ -172,20 +172,19 @@ for future rule additions when real projects show repeatable patterns.
 
 ## Using These Trees
 
-Security teams can map existing threat model nodes to Posture rule IDs. If a
-node in your model matches one of the leaves above, run `agentveil posture
-scan` and use the matching finding as review evidence for that capability
-surface.
+Security teams can map existing threat model nodes to Lurkr rule IDs. If a
+node in your model matches one of the leaves above, run `lurkr scan` and use
+the matching finding as review evidence for that capability surface.
 
 For gap analysis, copy the relevant tree and add your own leaves. Leaves with
-Posture rule IDs are covered by the current scanner. Leaves without rule IDs
+Lurkr rule IDs are covered by the current scanner. Leaves without rule IDs
 fall into one of two categories: an existing-rule scope gap that should be
 filed as an issue, or a non-scanned surface that needs another control.
 
 This structure is also roadmap signal. When multiple users report the same
 uncovered leaf, it becomes a strong candidate for a future rule because it has
 evidence, a threat-model location, and a clear relation to the capability
-surface Posture already scans.
+surface Lurkr already scans.
 
 ## Coverage Boundary
 
@@ -197,7 +196,7 @@ boundary.
 
 The value of these trees is focus. A reviewer can ask a narrow question:
 "Which repository-visible leaves make this agent capable of deployment,
-execution, credential exposure, or data mutation before it ships?" Posture
+execution, credential exposure, or data mutation before it ships?" Lurkr
 answers that question with rule IDs, redacted findings, and stable remediation
 text.
 

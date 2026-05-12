@@ -1,11 +1,11 @@
-# Posture Compliance Map
+# Lurkr Compliance Map
 
-AgentVeil Posture findings map cleanly to several AI-specific security and
+Lurkr findings map cleanly to several AI-specific security and
 risk frameworks that teams already use when reviewing agent systems. This
 document gives reviewers a compact cross-walk from framework entries to
-Posture rule IDs.
+Lurkr rule IDs.
 
-The map is evidence-oriented. A Posture scan does not create compliance by
+The map is evidence-oriented. A Lurkr scan does not create compliance by
 itself, and a clean scan does not prove that a system satisfies a framework.
 It provides pre-deployment evidence about repository-visible agent capability
 risks that can be attached to broader review, audit, and risk-management
@@ -13,7 +13,7 @@ artifacts.
 
 ## How To Read This Map
 
-Each table maps a framework entry to the Posture rule IDs that produce relevant
+Each table maps a framework entry to the Lurkr rule IDs that produce relevant
 findings. A rule ID means the scanner can surface at least one concrete
 repository pattern associated with that framework concern.
 
@@ -33,11 +33,11 @@ The OWASP Top 10 for Large Language Model Applications v2, released in 2025,
 is a widely recognized list of LLM-specific application risks:
 https://owasp.org/www-project-top-10-for-large-language-model-applications/
 
-Posture maps most directly to entries where repository-visible agent
+Lurkr maps most directly to entries where repository-visible agent
 capability, credentials, tool invocation, or host-side side effects create
 pre-deployment risk.
 
-| OWASP LLM entry | Posture rules covering |
+| OWASP LLM entry | Lurkr rules covering |
 |---|---|
 | LLM02:2025 Sensitive Information Disclosure | `agent.python_api_key_hardcoded`, `identity.private_key_unencrypted` |
 | LLM06:2025 Excessive Agency | `agent.python_tool_without_approval`, `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `agent.python_unrestricted_file_access`, `tool.shell_without_approval` |
@@ -52,18 +52,18 @@ LLM02 review by finding credential material that can be exposed through the
 repository before an agent ships. These rules are intentionally redacted: they
 report paths and rule IDs, not raw key values.
 
-The LLM06 mapping is the strongest OWASP alignment for v0.2. Posture's Python
+The LLM06 mapping is the strongest OWASP alignment for v0.2. Lurkr's Python
 tool, manifest, subprocess, dynamic execution, and file-mutation rules all
 look for places where an agent has more authority than a reviewer may expect.
 Those are excessive-agency indicators, not runtime proof of misuse.
 
-Posture does not currently cover LLM01 Prompt Injection. Prompt injection is
+Lurkr does not currently cover LLM01 Prompt Injection. Prompt injection is
 primarily a runtime interaction problem involving model input, tool output,
 conversation state, and policy mediation. The static scanner can identify
 dangerous capabilities that prompt injection might later abuse, but it does
 not decide whether a prompt is malicious.
 
-Posture also does not currently cover LLM05, LLM07, or LLM08 directly. Improper
+Lurkr also does not currently cover LLM05, LLM07, or LLM08 directly. Improper
 output handling, system prompt leakage, and vector or embedding weaknesses may
 be addressed in future static rules if repeatable repository-visible patterns
 emerge. Until then, teams should cover those entries with complementary design
@@ -76,11 +76,11 @@ modeled after MITRE ATT&CK:
 https://atlas.mitre.org/
 
 The technique IDs below were cross-checked against the current ATLAS data
-published by MITRE at the time of writing. Posture maps most directly to ATLAS
+published by MITRE at the time of writing. Lurkr maps most directly to ATLAS
 tactics involving credentials, tool invocation, command execution, privilege
 expansion, unauthorized deployment, and file or data impact.
 
-| ATLAS tactic | Relevant technique area | Posture rules covering |
+| ATLAS tactic | Relevant technique area | Lurkr rules covering |
 |---|---|---|
 | Initial Access | AML.T0012 Valid Accounts / token misuse | `bypass.direct_github_token`, `identity.private_key_unencrypted`, `agent.python_api_key_hardcoded` |
 | Execution | AML.T0053 AI Agent Tool Invocation; AML.T0050 Command and Scripting Interpreter | `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `tool.shell_without_approval` |
@@ -127,41 +127,41 @@ The NIST AI Risk Management Framework, AI 100-1 v1.0, published in January
 GOVERN, MAP, MEASURE, and MANAGE:
 https://www.nist.gov/itl/ai-risk-management-framework
 
-Posture contributes most directly to the MEASURE function. It gives teams
+Lurkr contributes most directly to the MEASURE function. It gives teams
 repeatable pre-deployment evidence about whether agent repositories contain
 risky capabilities, credential exposure, or bypass paths that should be
 reviewed before release.
 
-| NIST AI RMF subcategory | How Posture contributes |
+| NIST AI RMF subcategory | How Lurkr contributes |
 |---|---|
-| MEASURE 2.6 (AI system evaluated against established standards) | Posture scan produces evidence grounded in established protection principles (see `POSTURE_DESIGN_PRINCIPLES.md`) |
-| MEASURE 2.7 (information security is adequate) | Posture finds credential exposure and bypass paths before deployment |
-| MEASURE 2.9 (AI system evaluated regularly) | Posture can be scheduled in CI for continuous evidence |
+| MEASURE 2.6 (AI system evaluated against established standards) | Lurkr scan produces evidence grounded in established protection principles (see `LURKR_DESIGN_PRINCIPLES.md`) |
+| MEASURE 2.7 (information security is adequate) | Lurkr finds credential exposure and bypass paths before deployment |
+| MEASURE 2.9 (AI system evaluated regularly) | Lurkr can be scheduled in CI for continuous evidence |
 
 ### NIST AI RMF Coverage Notes
 
-For MEASURE 2.6, Posture provides a rule set with a documented design basis.
+For MEASURE 2.6, Lurkr provides a rule set with a documented design basis.
 The scanner's findings are connected to established protection principles in
-`POSTURE_DESIGN_PRINCIPLES.md`, and individual rules have remediation docs in
+`LURKR_DESIGN_PRINCIPLES.md`, and individual rules have remediation docs in
 `docs/rules/`.
 
-For MEASURE 2.7, Posture contributes evidence about information security
+For MEASURE 2.7, Lurkr contributes evidence about information security
 surfaces that appear before deployment: direct GitHub token references,
 unencrypted private keys, hardcoded API-key-shaped literals, privileged PR
 workflows, and tool surfaces that can execute commands or mutate files.
 
-For MEASURE 2.9, Posture can run locally, in pre-commit, or in CI. That makes
+For MEASURE 2.9, Lurkr can run locally, in pre-commit, or in CI. That makes
 it suitable for recurring measurement without sending repository contents to an
 external service. Teams can store JSON or SARIF reports as evidence according
 to their own retention process.
 
-Posture is one input to MEASURE. Full AI RMF adoption requires governance,
+Lurkr is one input to MEASURE. Full AI RMF adoption requires governance,
 system context, stakeholder accountability, risk acceptance, monitoring, and
 response processes beyond scanner output.
 
 ## Evidence Use
 
-The most useful way to attach Posture output to a framework artifact is to keep
+The most useful way to attach Lurkr output to a framework artifact is to keep
 the scanner evidence narrow and reproducible:
 
 - Record the scanner version.
@@ -169,13 +169,13 @@ the scanner evidence narrow and reproducible:
 - Store the JSON or SARIF report generated by the scan.
 - Link each finding back to its rule documentation under `docs/rules/`.
 - Link framework coverage back to this map and to
-  `POSTURE_DESIGN_PRINCIPLES.md`.
+  `LURKR_DESIGN_PRINCIPLES.md`.
 
 For a review packet, the report should answer three questions:
 
 1. Which repository-visible agent capability surfaces were found?
 2. Which framework entries do those findings support?
-3. Which framework entries remain outside Posture coverage?
+3. Which framework entries remain outside Lurkr coverage?
 
 That last question is important. Gaps should remain visible so the scanner does
 not become a substitute for threat modeling, runtime review, or operational
@@ -185,20 +185,20 @@ controls.
 
 Use precise language when referencing this map:
 
-- Prefer "Posture contributes evidence for MEASURE 2.7" over "Posture proves
+- Prefer "Lurkr contributes evidence for MEASURE 2.7" over "Lurkr proves
   MEASURE 2.7".
 - Prefer "this finding maps to LLM06" over "this system satisfies LLM06".
 - Prefer "ATLAS-relevant capability surface" over "confirmed ATLAS attack".
 - Prefer "not currently covered" over implying that the framework entry is
   irrelevant.
 
-The distinction keeps the scanner useful and defensible. Posture reports
+The distinction keeps the scanner useful and defensible. Lurkr reports
 static, pre-deployment findings; framework adoption still depends on system
 context and reviewer judgment.
 
 ## Rule Coverage Index
 
-The following index helps reviewers move from a Posture finding back to the
+The following index helps reviewers move from a Lurkr finding back to the
 framework entries above.
 
 ### bypass.direct_github_token
@@ -291,13 +291,13 @@ framework entries above.
 
 ## Known Gaps
 
-This map documents gaps rather than hiding them. Posture v0.2 does not cover
+This map documents gaps rather than hiding them. Lurkr v0.2 does not cover
 runtime prompt injection, system prompt leakage, vector-store poisoning,
 embedding weakness, output handling, model behavior evaluation, authorization
 logic, cloud IAM policy evaluation, runtime network egress, or historical
 secret exposure.
 
-Those areas need complementary controls. Some may become Posture rules if
+Those areas need complementary controls. Some may become Lurkr rules if
 there is a repeatable static pattern that can be detected with high confidence
 from repository files. Others belong to runtime mediation, application tests,
 architecture review, or operational monitoring.
@@ -306,6 +306,6 @@ architecture review, or operational monitoring.
 
 Use this map by pointing auditors, security reviewers, and AI safety leads to
 the rule IDs that cover each framework entry. The mapping is intentionally
-honest about gaps, so teams can combine Posture findings with the right
+honest about gaps, so teams can combine Lurkr findings with the right
 complementary controls instead of treating a scanner report as a complete
 framework answer.

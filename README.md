@@ -369,6 +369,7 @@ For teams that want to attach Lurkr coverage to existing security and compliance
 - [Design principles](docs/LURKR_DESIGN_PRINCIPLES.md) — how each rule maps to Saltzer-Schroeder protection principles (1975).
 - [Attack trees](docs/LURKR_ATTACK_TREES.md) — Schneier-style attack tree leaves indexed by rule ID.
 - [Compliance map](docs/LURKR_COMPLIANCE_MAP.md) — OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF coverage.
+- [Benchmark](docs/LURKR_BENCHMARK.md) — empirical coverage on curated public AI-agent template corpus.
 - [Static analysis limits](docs/LURKR_LIMITATIONS.md) — Rice's theorem and the sound-by-design framing.
 
 Casual users do not need any of these to run `lurkr scan`. The Quick Start above is sufficient.

@@ -9,7 +9,7 @@ import json
 
 
 REPORT_VERSION = "0.1"
-SCANNER_VERSION = "lurkr/0.2.0"
+SCANNER_VERSION = "lurkr/0.2.1"
 SEVERITIES = ("critical", "high", "medium", "low", "info")
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 SARIF_VERSION = "2.1.0"
@@ -64,6 +64,11 @@ RULE_DESCRIPTORS = {
         "short": "Python agent tool without approval",
         "full": "Flags Python agent tool decorators or constructors without an approval marker.",
         "help": _rule_doc_url("agent.python_tool_without_approval"),
+    },
+    "agent.declared_vs_imported_delta": {
+        "short": "Declared-vs-imported agent capability delta",
+        "full": "Flags Python tool registrations that are not declared in agent manifest files.",
+        "help": _rule_doc_url("agent.declared_vs_imported_delta"),
     },
     "agent.python_subprocess_in_tool": {
         "short": "Python agent tool subprocess use",
@@ -153,7 +158,7 @@ class PostureReport:
                         "driver": {
                             "name": "Lurkr",
                             "informationUri": "https://github.com/agentveil-protocol/lurkr",
-                            "semanticVersion": "0.2.0",
+                            "semanticVersion": "0.2.1",
                             "rules": [_sarif_rule(rule_id) for rule_id in rule_ids],
                         }
                     },

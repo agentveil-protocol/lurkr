@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## v0.2.1 — 2026-05-12
+
+**New rule.** Adds `agent.declared_vs_imported_delta` detecting shadow
+capabilities: Python tool registrations not declared in agent manifest files
+(MCP/CrewAI/AutoGen/LangChain).
+
+This is Lurkr's first rule that cross-references declared capabilities against
+reachable code. It surfaces a class of pre-deployment risk that token/secret
+scanners cannot detect: tools that exist in code but bypass the declared agent
+scope.
+
+Backward-compatible. Existing reports and rule IDs unchanged.
+
 ## v0.2.0 — 2026-05-12
 
 **BREAKING — rebrand.** Package, CLI, GitHub Action, pre-commit hook, and

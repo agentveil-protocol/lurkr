@@ -25,7 +25,7 @@ def test_empty_report_schema_contains_scanner_version_and_whole_second_time(tmp_
         "findings",
         "summary",
     }
-    assert data["scanner_version"] == "lurkr/0.2.0"
+    assert data["scanner_version"] == "lurkr/0.2.1"
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", data["scanned_at"])
     assert data["summary"]["by_severity"] == {
         "critical": 0,
@@ -117,6 +117,7 @@ def test_sarif_schema_version_and_rules_are_defined(tmp_path):
         "tool.shell_without_approval",
         "identity.private_key_unencrypted",
         "agent.python_tool_without_approval",
+        "agent.declared_vs_imported_delta",
         "agent.python_subprocess_in_tool",
         "agent.python_eval_exec_in_tool",
         "agent.python_unrestricted_file_access",

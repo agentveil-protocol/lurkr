@@ -14,8 +14,8 @@ python3 -m venv "$TMPDIR/venv"
 
 cd "$TMPDIR"
 git init --quiet
-git config user.email "posture-smoke@example.invalid"
-git config user.name "Posture Smoke"
+git config user.email "lurkr-smoke@example.invalid"
+git config user.name "Lurkr Smoke"
 mkdir -p .github/workflows
 cp "$REPO_ROOT/fixtures/dangerous_github_project/.github/workflows/dangerous.yml" \
   .github/workflows/
@@ -24,7 +24,7 @@ repos:
   - repo: file://$REPO_ROOT
     rev: $REPO_REV
     hooks:
-      - id: agentveil-posture
+      - id: lurkr
         args: ["--fail-on", "high"]
 EOF
 git add .

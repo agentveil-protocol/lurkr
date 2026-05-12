@@ -1,8 +1,8 @@
-- id: agentveil-posture
-  name: AgentVeil Posture
-  description: Pre-deployment posture check for AI agents
-  entry: agentveil posture scan
-  args: ["--path", ".", "--output", "agentveil-posture-report.json"]
+- id: lurkr
+  name: Lurkr
+  description: Find risky AI agent capabilities before deployment.
+  entry: lurkr scan
+  args: ["--path", ".", "--output", "lurkr-report.json"]
   language: python
   pass_filenames: false
   require_serial: true

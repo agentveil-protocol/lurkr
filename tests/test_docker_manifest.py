@@ -9,13 +9,11 @@ def test_dockerfile_runs_posture_scan_against_workspace():
     assert "FROM python:3.13-slim" in dockerfile
     assert "COPY src ./src" in dockerfile
     assert "python -m pip install --no-cache-dir ." in dockerfile
-    assert "useradd --create-home --uid 1000 posture" in dockerfile
-    assert "USER posture" in dockerfile
+    assert "useradd --create-home --uid 1000 lurkr" in dockerfile
+    assert "USER lurkr" in dockerfile
     assert 'WORKDIR /workspace' in dockerfile
-    assert (
-        'ENTRYPOINT ["agentveil", "posture", "scan", "--path", "/workspace"]' in dockerfile
-    )
-    assert 'CMD ["--output", "/workspace/agentveil-posture-report.json"]' in dockerfile
+    assert 'ENTRYPOINT ["lurkr", "scan", "--path", "/workspace"]' in dockerfile
+    assert 'CMD ["--output", "/workspace/lurkr-report.json"]' in dockerfile
 
 
 def test_dockerignore_excludes_build_and_git_context():

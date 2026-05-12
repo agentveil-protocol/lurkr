@@ -27,8 +27,8 @@ def test_docker_publish_workflow_uses_ghcr_tag_and_latest():
     build_step = workflow["jobs"]["docker-publish"]["steps"][-1]
     tags = build_step["with"]["tags"]
 
-    assert "ghcr.io/agentveil-protocol/agentveil-posture:${{ github.ref_name }}" in tags
-    assert "ghcr.io/agentveil-protocol/agentveil-posture:latest" in tags
+    assert "ghcr.io/agentveil-protocol/lurkr:${{ github.ref_name }}" in tags
+    assert "ghcr.io/agentveil-protocol/lurkr:latest" in tags
     assert build_step["with"]["push"] == "true"
 
 

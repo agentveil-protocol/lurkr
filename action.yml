@@ -1,5 +1,5 @@
-name: AgentVeil Posture
-description: Pre-deployment posture scan for risky AI agent capabilities
+name: Lurkr
+description: Find risky AI agent capabilities before deployment.
 branding:
   icon: shield
   color: blue
@@ -12,7 +12,7 @@ inputs:
   output:
     description: Report output path
     required: false
-    default: agentveil-posture-report.json
+    default: lurkr-report.json
   format:
     description: Report format to write (json or sarif)
     required: false
@@ -30,19 +30,19 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Install agentveil-posture
+    - name: Install lurkr
       run: python -m pip install .
       shell: bash
       working-directory: ${{ github.action_path }}
     - id: scan
-      name: Run posture scan
+      name: Run Lurkr scan
       env:
-        AGENTVEIL_POSTURE_FAIL_ON: ${{ inputs.fail-on }}
+        LURKR_FAIL_ON: ${{ inputs.fail-on }}
       run: |
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
         fail_on_args=()
-        if [ -n "$AGENTVEIL_POSTURE_FAIL_ON" ]; then
-          fail_on_args=(--fail-on "$AGENTVEIL_POSTURE_FAIL_ON")
+        if [ -n "$LURKR_FAIL_ON" ]; then
+          fail_on_args=(--fail-on "$LURKR_FAIL_ON")
         fi
-        agentveil posture scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}"
+        lurkr scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}"
       shell: bash

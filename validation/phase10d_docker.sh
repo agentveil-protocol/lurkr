@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="agentveil-posture:phase10d"
+IMAGE="lurkr:phase10d"
 TMPDIR="$(mktemp -d)"
 cleanup() {
   docker rmi "$IMAGE" > /dev/null 2>&1 || true

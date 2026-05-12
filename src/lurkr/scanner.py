@@ -8,6 +8,7 @@ from pathlib import Path
 from lurkr.report import Finding, PostureReport, build_report
 from lurkr.rules import (
     is_agent_manifest,
+    scan_declared_vs_imported_delta,
     scan_identity_private_key_unencrypted,
     scan_manifest_rules,
     scan_python_agent_rules,
@@ -28,6 +29,7 @@ def scan_path(path: Path) -> PostureReport:
         raise ScanError(f"scan path is not a directory: {path}")
 
     findings: list[Finding] = []
+    python_files: list[Path] = []
     for candidate in _iter_regular_files(root):
         finding = scan_identity_private_key_unencrypted(root, candidate)
         if finding is not None:
@@ -37,7 +39,9 @@ def scan_path(path: Path) -> PostureReport:
         if is_agent_manifest(root, candidate):
             findings.extend(scan_manifest_rules(root, candidate))
         if _is_python_source(candidate):
+            python_files.append(candidate)
             findings.extend(scan_python_agent_rules(root, candidate))
+    findings.extend(scan_declared_vs_imported_delta(root, python_files))
 
     return build_report(str(root), findings)
 

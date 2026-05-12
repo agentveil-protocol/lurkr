@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from lurkr.rules.declared_vs_imported import scan_declared_vs_imported_delta
 from lurkr.rules.identity import scan_identity_private_key_unencrypted
 from lurkr.rules.manifest import is_agent_manifest, scan_manifest_rules
 from lurkr.rules.python_agent import scan_python_agent_rules
@@ -12,11 +13,13 @@ RULES = (
     scan_workflow_rules,
     scan_manifest_rules,
     scan_python_agent_rules,
+    scan_declared_vs_imported_delta,
 )
 
 __all__ = [
     "RULES",
     "is_agent_manifest",
+    "scan_declared_vs_imported_delta",
     "scan_identity_private_key_unencrypted",
     "scan_manifest_rules",
     "scan_python_agent_rules",

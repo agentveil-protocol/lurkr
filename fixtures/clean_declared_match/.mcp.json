@@ -1,0 +1,10 @@
+{
+  "tools": [
+    {
+      "name": "get_repo"
+    },
+    {
+      "name": "list_files"
+    }
+  ]
+}

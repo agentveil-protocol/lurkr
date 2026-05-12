@@ -1,0 +1,6 @@
+researcher:
+  role: Researcher
+  goal: Search internal notes
+  backstory: Reads repository-local notes.
+  tools:
+    - search

@@ -21,8 +21,8 @@ means the attacker needs the grouped conditions together. A leaf without `AND`
 is a concrete technique that can contribute directly to the goal. Bracketed
 items are Lurkr rule IDs; those are the scanner checks that cover the leaf.
 
-These trees are not complete threat models. They are coverage maps for the
-v0.2 rule set. Leaves without a rule ID in your own threat model identify a
+These five trees are not complete threat models. They are coverage maps for the
+v0.2.1 rule set. Leaves without a rule ID in your own threat model identify a
 gap to cover with another control or a candidate future Lurkr rule.
 
 ## Tree 1: Unauthorized Production Deploy
@@ -103,7 +103,7 @@ Common gap questions:
 - Does the agent framework expose tools from configuration that Lurkr does
   not yet parse?
 
-Those are future coverage candidates. In v0.2, Lurkr keeps this tree tied to
+Those are future coverage candidates. In v0.2.1, Lurkr keeps this tree tied to
 the same-file and pinned-manifest surfaces it can inspect reliably.
 
 ## Tree 3: Credential Exfiltration
@@ -148,7 +148,7 @@ Goal: agent writes or deletes data outside intended scope
 `-- Python tool with unrestricted file access            [agent.python_unrestricted_file_access]
 ```
 
-This tree is small because v0.2 has one direct file-mutation rule. That narrow
+This tree is small because v0.2.1 has one direct file-mutation rule. That narrow
 scope is intentional: the scanner reports the clearest repository-visible sign
 that an agent-callable Python tool can write or delete files.
 
@@ -167,8 +167,41 @@ Common gap questions:
 - Does the project write through a framework-specific storage abstraction?
 - Does the runtime mount sensitive host paths into the agent workspace?
 
-Those gaps are outside v0.2's static same-file model. They are useful inputs
+Those gaps are outside v0.2.1's static same-file model. They are useful inputs
 for future rule additions when real projects show repeatable patterns.
+
+## Tree 5: Agent Gains Capability Beyond Declared Scope
+
+```text
+Goal: agent reaches capability not in declared review scope
+|
+`-- Python tool registered but not in agent manifest    [agent.declared_vs_imported_delta]
+```
+
+This tree covers the review-scope bypass path: a manifest appears to declare
+what an agent can call, but Python code registers an additional reachable tool.
+
+Review notes:
+
+- `agent.declared_vs_imported_delta` compares supported manifest declarations
+  with Python tool registrations after framework-independent `snake_case`
+  normalization.
+- The rule needs at least one supported manifest. Without a declared baseline,
+  Lurkr cannot identify a declared-vs-imported delta.
+- The rule reports the forward delta only: registered tools absent from
+  manifests. Manifest declarations absent from code are a separate review
+  question.
+
+Common gap questions:
+
+- Does the project build tool names dynamically at runtime?
+- Does a tool registration point to a helper function in another file?
+- Does the repository use a manifest format outside Lurkr's current discovery
+  scope?
+
+Those gaps are outside v0.2.1's static manifest/code comparison model. They are
+useful inputs for future rule additions if real projects show repeatable
+patterns.
 
 ## Using These Trees
 

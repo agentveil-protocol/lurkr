@@ -40,7 +40,7 @@ pre-deployment risk.
 | OWASP LLM entry | Lurkr rules covering |
 |---|---|
 | LLM02:2025 Sensitive Information Disclosure | `agent.python_api_key_hardcoded`, `identity.private_key_unencrypted` |
-| LLM06:2025 Excessive Agency | `agent.python_tool_without_approval`, `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `agent.python_unrestricted_file_access`, `tool.shell_without_approval` |
+| LLM06:2025 Excessive Agency | `agent.python_tool_without_approval`, `agent.declared_vs_imported_delta`, `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `agent.python_unrestricted_file_access`, `tool.shell_without_approval` |
 | LLM07:2025 System Prompt Leakage | (not currently covered — gap noted) |
 | LLM08:2025 Vector and Embedding Weaknesses | (not currently covered — gap noted) |
 | LLM05:2025 Improper Output Handling | (not currently covered — gap noted) |
@@ -52,7 +52,7 @@ LLM02 review by finding credential material that can be exposed through the
 repository before an agent ships. These rules are intentionally redacted: they
 report paths and rule IDs, not raw key values.
 
-The LLM06 mapping is the strongest OWASP alignment for v0.2. Lurkr's Python
+The LLM06 mapping is the strongest OWASP alignment for v0.2.1. Lurkr's Python
 tool, manifest, subprocess, dynamic execution, and file-mutation rules all
 look for places where an agent has more authority than a reviewer may expect.
 Those are excessive-agency indicators, not runtime proof of misuse.
@@ -84,7 +84,7 @@ expansion, unauthorized deployment, and file or data impact.
 |---|---|---|
 | Initial Access | AML.T0012 Valid Accounts / token misuse | `bypass.direct_github_token`, `identity.private_key_unencrypted`, `agent.python_api_key_hardcoded` |
 | Execution | AML.T0053 AI Agent Tool Invocation; AML.T0050 Command and Scripting Interpreter | `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `tool.shell_without_approval` |
-| Privilege Escalation | AML.T0053 AI Agent Tool Invocation; AML.T0105 Escape to Host | `agent.python_tool_without_approval`, `tool.shell_without_approval`, `agent.python_subprocess_in_tool` |
+| Privilege Escalation | AML.T0053 AI Agent Tool Invocation; AML.T0105 Escape to Host | `agent.python_tool_without_approval`, `agent.declared_vs_imported_delta`, `tool.shell_without_approval`, `agent.python_subprocess_in_tool` |
 | Impact | AML.T0081 Modify AI Agent Configuration; AML.T0101 Data Destruction via AI Agent Tool Invocation | `workflow.deploy_without_approval`, `workflow.pull_request_target_secrets_risk`, `agent.python_unrestricted_file_access` |
 
 ### ATLAS Coverage Notes
@@ -110,6 +110,10 @@ Privilege Escalation when an agent can invoke a capability that the user could
 not otherwise access directly. These findings indicate that authority is
 available to the agent surface without a visible approval marker.
 
+`agent.declared_vs_imported_delta` maps to the same tactic when a reachable
+Python tool bypasses the declared manifest scope that reviewers use as an
+authority checkpoint.
+
 `agent.python_unrestricted_file_access` maps to Impact when an agent-callable
 tool can write or delete files. `workflow.deploy_without_approval` and
 `workflow.pull_request_target_secrets_risk` map to Impact because deployment,
@@ -134,7 +138,7 @@ reviewed before release.
 
 | NIST AI RMF subcategory | How Lurkr contributes |
 |---|---|
-| MEASURE 2.6 (AI system evaluated against established standards) | Lurkr scan produces evidence grounded in established protection principles (see `LURKR_DESIGN_PRINCIPLES.md`) |
+| MEASURE 2.6 (AI system evaluated against established standards) | Lurkr scan produces evidence grounded in established protection principles (see `LURKR_DESIGN_PRINCIPLES.md`). Declared-vs-imported delta detection adds evidence of evaluation against established standards by surfacing scope deviations from the agent's declared manifest. |
 | MEASURE 2.7 (information security is adequate) | Lurkr finds credential exposure and bypass paths before deployment |
 | MEASURE 2.9 (AI system evaluated regularly) | Lurkr can be scheduled in CI for continuous evidence |
 
@@ -254,6 +258,15 @@ framework entries above.
 - NIST AI RMF: supports MEASURE 2.6 and MEASURE 2.7 by creating review evidence
   tied to a documented protection-principle map.
 
+### agent.declared_vs_imported_delta
+
+- OWASP: supports LLM06 by identifying reachable Python tools that exceed the
+  declared agent manifest scope.
+- ATLAS: supports Privilege Escalation review because a shadow capability can
+  expand agent authority beyond the reviewable manifest boundary.
+- NIST AI RMF: supports MEASURE 2.6 by creating evidence that declared scope
+  and reachable implementation were evaluated against a documented standard.
+
 ### agent.python_subprocess_in_tool
 
 - OWASP: supports LLM06 by identifying host command capability inside
@@ -291,7 +304,7 @@ framework entries above.
 
 ## Known Gaps
 
-This map documents gaps rather than hiding them. Lurkr v0.2 does not cover
+This map documents gaps rather than hiding them. Lurkr v0.2.1 does not cover
 runtime prompt injection, system prompt leakage, vector-store poisoning,
 embedding weakness, output handling, model behavior evaluation, authorization
 logic, cloud IAM policy evaluation, runtime network egress, or historical

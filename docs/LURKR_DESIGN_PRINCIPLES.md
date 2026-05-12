@@ -7,7 +7,7 @@ Lurkr rules are not arbitrary heuristics. They are detection points
 for violations of protection principles that have been load-bearing in secure
 systems design for decades.
 
-This document maps each shipped v0.2 rule to the foundational principle or
+This document maps each shipped v0.2.1 rule to the foundational principle or
 principles it enforces. The mapping is intentionally concrete: every rule
 identifies a repository surface where an agent, tool, workflow, or credential
 can bypass the protection boundary a reviewer expects to exist.
@@ -41,7 +41,7 @@ https://www.cs.virginia.edu/~evans/cs551/saltzer/
 - **Psychological acceptability** — the human interface must be designed for
   ease of use.
 
-Not every shipped rule maps to every principle. The v0.2 rule set focuses on
+Not every shipped rule maps to every principle. The v0.2.1 rule set focuses on
 the principles most directly violated by repository-visible agent capability
 surfaces: fail-safe defaults, complete mediation, least privilege, separation
 of privilege, economy of mechanism, and least common mechanism. Open design
@@ -66,16 +66,17 @@ possible rule has been implemented.
 
 ## Principle Coverage Summary
 
-| Principle | v0.2 rules that primarily exercise it |
+| Principle | v0.2.1 rules that primarily exercise it |
 |---|---|
 | Fail-safe defaults | `bypass.direct_github_token`, `workflow.deploy_without_approval`, `identity.private_key_unencrypted`, `agent.python_api_key_hardcoded` |
-| Complete mediation | `workflow.pull_request_target_secrets_risk`, `tool.shell_without_approval`, `agent.python_tool_without_approval` |
+| Complete mediation | `workflow.pull_request_target_secrets_risk`, `tool.shell_without_approval`, `agent.python_tool_without_approval`, `agent.declared_vs_imported_delta` |
 | Least privilege | `workflow.pull_request_target_secrets_risk`, `tool.shell_without_approval`, `agent.python_subprocess_in_tool`, `agent.python_eval_exec_in_tool`, `agent.python_unrestricted_file_access` |
 | Separation of privilege | `workflow.deploy_without_approval`, `agent.python_tool_without_approval`, `agent.python_subprocess_in_tool` |
 | Economy of mechanism | `identity.private_key_unencrypted`, `agent.python_eval_exec_in_tool`, `agent.python_api_key_hardcoded` |
 | Least common mechanism | `bypass.direct_github_token` |
+| Open design | `agent.declared_vs_imported_delta` |
 
-The detailed sections below are the authoritative mapping for v0.2. The summary
+The detailed sections below are the authoritative mapping for v0.2.1. The summary
 is only an index for reviewers who want to start from a principle and then
 drill down into the rule IDs.
 
@@ -210,6 +211,20 @@ attempt API access, which is the opposite of a fail-safe permission default. It
 also spreads credential handling into application code instead of keeping it in
 the smallest practical secret-management mechanism. Removing the literal keeps
 the code path simpler and the credential boundary clearer.
+
+### agent.declared_vs_imported_delta
+
+**Principles enforced:** Open Design, Complete Mediation
+
+**What the rule detects:** Python tool registrations whose names are absent
+from declared agent manifests (MCP/CrewAI/AutoGen/LangChain).
+
+**Why these principles:** Open Design requires that system protection not
+depend on attacker ignorance: a manifest's declared tool list is the open,
+reviewable scope of the agent. Shadow capabilities hide reachable behavior from
+that scope, violating open design. Complete Mediation requires every access to
+be checked at a known authority point: when a tool registration bypasses the
+manifest review checkpoint, the mediation chain breaks.
 
 ## Closing Note
 

@@ -7,7 +7,7 @@ name = "lurkr"
 version = "0.2.0"
 description = "Lurkr — pre-deployment scanner for risky AI agent capabilities. Static. Offline. Redacted."
 keywords = ["security", "agent", "mcp", "ai-agents", "github-actions", "static-analysis", "pre-deployment"]
-readme = "README.md"
+readme = "PYPI_README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [

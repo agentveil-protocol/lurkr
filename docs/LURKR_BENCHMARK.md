@@ -87,6 +87,66 @@ templates in that group are small, focused agent scaffolds; finding counts are
 low and better represent typical user-facing template scale. MCP and AutoGen
 rows include framework codebases, so they dominate raw count totals.
 
+### Manual Audit Sample
+
+To make Tier 1 numbers easier to interpret, 30 findings were manually labeled
+by reading the underlying source context. The sample uses a deterministic
+spread across sorted findings: 10 findings each from the three top-firing
+rules, sampled evenly by repo, file, and line.
+
+Labels:
+
+- `real surface`: capability or prompt surface worth review in production.
+- `expected example`: technically correct finding in test, notebook, cookbook,
+  or demonstration code.
+- `noise`: matched pattern is not a meaningful capability surface in context.
+
+| # | Rule | Repo | File:Line | Label | Reason |
+|---:|---|---|---|---|---|
+| 1 | `agent.python_tool_without_approval` | `NicholasGoh/fastapi-mcp-langgraph-template` | `backend/shared_mcp/tools.py:11` | `real surface` | Template exposes an MCP tool without an approval marker. |
+| 2 | `agent.python_tool_without_approval` | `ag2ai/ag2` | `notebook/mcp/math/math_server.py:9` | `expected example` | Notebook math server demonstrates MCP tool registration. |
+| 3 | `agent.python_tool_without_approval` | `ag2ai/ag2` | `test/beta/test_watch_advanced.py:39` | `expected example` | Test-only dummy tool registration. |
+| 4 | `agent.python_tool_without_approval` | `haris-musa/excel-mcp-server` | `src/excel_mcp/server.py:470` | `real surface` | MCP tool can delete worksheets; review is appropriate. |
+| 5 | `agent.python_tool_without_approval` | `modelcontextprotocol/python-sdk` | `examples/servers/everything-server/mcp_everything_server/server.py:156` | `expected example` | SDK example server intentionally exposes sample tools. |
+| 6 | `agent.python_tool_without_approval` | `modelcontextprotocol/python-sdk` | `tests/client/test_client.py:139` | `noise` | Expected `Tool(...)` object in a test assertion, not registration. |
+| 7 | `agent.python_tool_without_approval` | `modelcontextprotocol/python-sdk` | `tests/server/mcpserver/test_title.py:48` | `expected example` | Test-only decorator used to validate title metadata. |
+| 8 | `agent.python_tool_without_approval` | `modelcontextprotocol/python-sdk` | `tests/shared/test_streamable_http.py:1476` | `noise` | Expected `Tool(...)` object in fixture data, not a deployed tool. |
+| 9 | `agent.python_tool_without_approval` | `openai/openai-agents-python` | `tests/mcp/test_mcp_util.py:1111` | `noise` | Test verifies approval conversion; no unreviewed runtime surface. |
+| 10 | `agent.python_tool_without_approval` | `wassim249/fastapi-langgraph-agent-production-ready-template` | `app/core/langgraph/tools/ask_human.py:11` | `noise` | Human-interrupt helper is itself an approval path. |
+| 11 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `cli/tests/test_client.py:79` | `expected example` | Test fixture uses fake GitHub token value. |
+| 12 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/oai/test_client.py:645` | `expected example` | Mock OpenAI key used in config tests. |
+| 13 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/oai/test_client.py:1115` | `expected example` | Mock OpenAI key used in config tests. |
+| 14 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/oai/test_utils.py:603` | `expected example` | Fake key validates API-key format logic. |
+| 15 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/oai/test_utils.py:612` | `expected example` | Fake key validates API-key format logic. |
+| 16 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/test_llm_config.py:98` | `expected example` | Mock key asserted in LLM config tests. |
+| 17 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/test_llm_config.py:191` | `expected example` | Mock key used in parameterized config tests. |
+| 18 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/test_llm_config.py:463` | `expected example` | Mock key used in parameterized config tests. |
+| 19 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/test_llm_config.py:819` | `expected example` | Mock key used in config serialization tests. |
+| 20 | `agent.python_api_key_hardcoded` | `ag2ai/ag2` | `test/test_logger_redaction.py:19` | `expected example` | Sentinel key exists to test redaction behavior. |
+| 21 | `agent.dynamic_prompt_from_user_input` | `ag2ai/ag2` | `autogen/agentchat/contrib/agent_optimizer.py:290` | `real surface` | Runtime optimizer formats conversation history into a prompt. |
+| 22 | `agent.dynamic_prompt_from_user_input` | `ag2ai/ag2` | `autogen/agentchat/group/safeguards/enforcer.py:615` | `real surface` | Masking prompt embeds content and category values directly. |
+| 23 | `agent.dynamic_prompt_from_user_input` | `ag2ai/ag2` | `autogen/beta/policies/alert.py:85` | `real surface` | Alert messages are interpolated into LLM-visible prompt text. |
+| 24 | `agent.dynamic_prompt_from_user_input` | `ag2ai/ag2` | `cli/src/ag2_cli/commands/create.py:449` | `real surface` | User project description is inserted into project-generation prompt. |
+| 25 | `agent.dynamic_prompt_from_user_input` | `anthropics/anthropic-cookbook` | `capabilities/retrieval_augmented_generation/evaluation/prompts.py:180` | `expected example` | Cookbook RAG evaluation prompt demonstrates direct interpolation. |
+| 26 | `agent.dynamic_prompt_from_user_input` | `anthropics/anthropic-cookbook` | `tool_use/memory_demo/sample_code/sql_query_builder.py:49` | `noise` | SQL query construction, not an LLM prompt surface. |
+| 27 | `agent.dynamic_prompt_from_user_input` | `langchain-ai/local-deep-researcher` | `src/ollama_deep_researcher/graph.py:154` | `real surface` | Research topic is formatted into query-generation prompt. |
+| 28 | `agent.dynamic_prompt_from_user_input` | `langchain-ai/open_deep_research` | `src/legacy/multi_agent.py:365` | `real surface` | Section and MCP prompt values feed the system prompt. |
+| 29 | `agent.dynamic_prompt_from_user_input` | `modelcontextprotocol/python-sdk` | `examples/snippets/servers/sampling.py:10` | `expected example` | SDK snippet demonstrates LLM sampling with a topic prompt. |
+| 30 | `agent.dynamic_prompt_from_user_input` | `openai/openai-cookbook` | `examples/partners/temporal_agents_with_knowledge_graphs/db_interface.py:166` | `noise` | SQL table query, not prompt construction. |
+
+Aggregate sample labels:
+
+| Label | Count |
+|---|---:|
+| `real surface` | 8 |
+| `expected example` | 16 |
+| `noise` | 6 |
+
+This sample is illustrative, not statistical. It gives readers the texture
+behind aggregate counts. For controlled detection checks, use Tier 2 synthetic
+fixtures, where each rule has an expected dangerous fixture and matching clean
+control.
+
 ### Tier 1 Corpus
 
 | Repo | Category | Stars | License | Pinned SHA | Findings |

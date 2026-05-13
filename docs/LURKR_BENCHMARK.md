@@ -8,6 +8,40 @@ The benchmark does not classify public projects as vulnerable. Lurkr reports
 repository-visible capability surfaces. A finding means "review this surface in
 context", not "this project is exploitable."
 
+## How to Read This Benchmark
+
+This benchmark is intended to make Lurkr's behavior transparent and
+reproducible, not to claim that specific public projects are vulnerable.
+
+1. **A finding is a review surface, not a vulnerability.** Lurkr flags
+   repository-visible patterns where an agent can do something risky, such as
+   deploy, execute code, expose tools, leak credentials, or connect to external
+   MCP servers. Whether that surface is appropriate depends on project context.
+2. **Use median, not just mean.** The Tier 1 finding distribution is
+   right-skewed: median is 3.5, mean is 33.25, and the top three large framework
+   repos drive 83.8% of total findings. Median better reflects a typical agent
+   template; mean better reflects total review budget across this corpus.
+3. **Framework codebases differ from user templates.** Repos like `ag2ai/ag2`,
+   `modelcontextprotocol/python-sdk`, and `openai/openai-agents-python` contain
+   many tool implementations. High counts reflect codebase scale, not "more
+   vulnerable." User-facing LangGraph templates in this snapshot have median 1.
+4. **Example notebooks and tests inflate certain rules.** All 67
+   `agent.python_api_key_hardcoded` Tier 1 findings come from AG2 test fixtures
+   or sentinel values. Those are useful to audit, but they are not live leaked
+   credentials.
+5. **The synthetic tier is a controlled detection check.** Each rule has a
+   known-positive fixture and matching clean controls. Those fixtures check that
+   the algorithm fires when expected and stays silent on clean cases; they are
+   not a claim of real-world precision.
+6. **Use the per-framework breakdown to qualify yourself.** If your stack looks
+   like the small LangGraph templates, expect few findings. If your stack is a
+   framework SDK or cookbook with many examples, expect more findings and read
+   them with context.
+7. **Reproducibility is the trust signal.** Anyone can re-run
+   `python3 benchmark/run.py` and get the same numbers from the pinned corpus
+   snapshot. The numbers are not curated for impact; they are what Lurkr's
+   algorithm reports on those inputs.
+
 ## Methodology
 
 The corpus has two tiers:
@@ -229,8 +263,8 @@ gaps remain visible:
 - Dynamic runtime tool construction is not modeled.
 - Closed-source competitors are not compared because their static scanners and
   corpora are not reproducible from this repository.
-- Tier 1 findings are not manually classified as true positives or false
-  positives. They are capability surfaces requiring review.
+- The manual audit labels 30 Tier 1 findings to show texture behind the
+  aggregate. It is illustrative, not a full false-positive study.
 
 ## Reproducibility
 

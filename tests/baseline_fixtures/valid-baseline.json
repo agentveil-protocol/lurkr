@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "created": "2026-05-13T00:00:00Z",
+  "lurkr_version": "0.2.2",
+  "entries": [
+    {
+      "fingerprint": "abc123",
+      "rule_id": "agent.python_tool_without_approval",
+      "file": "tools.py"
+    }
+  ]
+}

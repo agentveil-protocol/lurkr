@@ -6,6 +6,7 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+"></a>
   <a href="https://github.com/agentveil-protocol/lurkr#use-as-a-github-action"><img src="https://img.shields.io/badge/GitHub-Action_ready-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Action"></a>
   <a href="https://github.com/agentveil-protocol/lurkr#hard-constraints"><img src="https://img.shields.io/badge/scanner-read--only-10b981?style=for-the-badge" alt="Lurkr: read-only"></a>
+  <a href="https://github.com/agentveil-protocol/lurkr#privacy--data-handling"><img src="https://img.shields.io/badge/no_telemetry-local_only-10b981?style=for-the-badge" alt="No telemetry"></a>
   <a href="https://asciinema.org/a/CBO9EuafgctnR1Q0"><img src="https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white" alt="Demo"></a>
 </p>
 
@@ -23,6 +24,7 @@ agent-source analysis.
 
 [Source repository](https://github.com/agentveil-protocol/lurkr) |
 [Quick Start](#quick-start) |
+[Privacy & data handling](#privacy--data-handling) |
 [Detection scope](#detection-scope-v023) |
 [GitHub Action](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
@@ -55,6 +57,22 @@ findings:
 lurkr scan --path . --save-baseline .lurkr-baseline.json
 lurkr scan --path . --baseline .lurkr-baseline.json --fail-on high
 ```
+
+## Privacy & Data Handling
+
+Lurkr is local-only by design.
+
+- It does not upload source code, manifests, scan reports, findings, paths, or
+  usage data to AgentVeil.
+- It does not make network calls during `lurkr scan`.
+- It does not execute scanned project code.
+- It writes output only to the terminal or to the report path you provide.
+- Reports are redacted: raw secrets, command bodies, private-key bytes, and
+  credential material are not included.
+
+If you use the optional GitHub Action, the scan still runs inside your CI
+environment. Any SARIF upload is performed by GitHub's own CodeQL upload action
+only when you add that step to your workflow.
 
 ## What a Finding Looks Like
 

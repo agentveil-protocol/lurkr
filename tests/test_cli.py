@@ -19,7 +19,7 @@ def test_cli_scan_writes_json_report(tmp_path):
     assert exit_code == 0
     data = json.loads(output.read_text(encoding="utf-8"))
     assert data["report_version"] == "0.1"
-    assert data["scanner_version"] == "lurkr/0.2.2"
+    assert data["scanner_version"] == "lurkr/0.2.3"
 
 
 def test_cli_default_and_format_json_match_existing_json_output(tmp_path, monkeypatch):
@@ -106,7 +106,7 @@ def test_cli_default_and_format_json_match_existing_json_output(tmp_path, monkey
         "report_version": "0.1",
         "scanned_at": "2026-05-07T00:00:00Z",
         "scanned_path": str(scan_root.resolve()),
-        "scanner_version": "lurkr/0.2.2",
+        "scanner_version": "lurkr/0.2.3",
         "summary": {
             "by_severity": {
                 "critical": 0,

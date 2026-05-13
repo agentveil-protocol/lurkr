@@ -17,13 +17,13 @@ Static, local-only scanner for risky AI agent capabilities. No telemetry, no cod
 
 `lurkr` is a pre-deployment, static, local-only scanner that flags risky
 AI-agent and GitHub-workflow capability issues. No telemetry, no network
-calls, no project code execution. v0.2.2 includes fourteen high-severity rules across
+calls, no project code execution. v0.2.3 includes fourteen high-severity rules across
 GitHub workflows, agent manifests, identity files, and bounded Python
 agent-source analysis.
 
 [Source repository](https://github.com/agentveil-protocol/lurkr) |
 [Quick Start](#quick-start) |
-[Detection scope](#detection-scope-v022) |
+[Detection scope](#detection-scope-v023) |
 [GitHub Action](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
 
@@ -48,6 +48,14 @@ To fail CI when findings meet a threshold, add `--fail-on`:
 lurkr scan --path . --output report.json --fail-on high
 ```
 
+For existing repositories, create a baseline first so CI only fails on new
+findings:
+
+```bash
+lurkr scan --path . --save-baseline .lurkr-baseline.json
+lurkr scan --path . --baseline .lurkr-baseline.json --fail-on high
+```
+
 ## What a Finding Looks Like
 
 ```json
@@ -65,7 +73,7 @@ Every finding contains rule ID, severity, repository-relative file path, line
 number when available, redacted message, and remediation pointer. Raw secrets,
 command bodies, and key material never appear in the report.
 
-## Detection Scope (v0.2.2)
+## Detection Scope (v0.2.3)
 
 All current rules are reported as `high` severity.
 
@@ -117,13 +125,14 @@ The goal: find high-severity capabilities worth controlling before they become p
 
 ## Roadmap
 
-### Available now (v0.2.2)
+### Available now (v0.2.3)
 
 14 high-severity rules across:
 - GitHub workflows + agent manifests + identity files
 - Python agent code: LangChain / LangGraph, CrewAI, MCP (FastMCP and Server-style), OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini
 - Declared-vs-imported capability delta checks across MCP/CrewAI/AutoGen/LangChain manifests and Python tool registrations
 - AI-specific static checks for credential flow into LLM context, direct prompt interpolation, and external MCP endpoints
+- Baseline mode for CI adoption: save current findings, then fail only on new findings
 
 ### v0.3.0 — broader framework coverage
 
@@ -138,7 +147,6 @@ Roadmap items being considered:
 - Auto-fix patches via SARIF `fixes` field
 - Per-finding contextual remediation
 - Suppression comments / inline `lurkr: ignore`
-- Baseline mode (lock current findings, only fail on new)
 - Cross-file `Tool(func=external_module.helper)` resolution
 - More manifest formats (mcp.json variants)
 
@@ -157,7 +165,7 @@ pip install lurkr
 **From GitHub release:**
 
 ```bash
-pip install git+https://github.com/agentveil-protocol/lurkr@v0.2.0
+pip install git+https://github.com/agentveil-protocol/lurkr@v0.2.3
 ```
 
 **From source (development):**
@@ -190,7 +198,7 @@ present.
 Use the action from the same repository:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.0
+- uses: agentveil-protocol/lurkr@v0.2.3
   with:
     path: "."
     output: lurkr-report.json
@@ -201,10 +209,21 @@ The action requires Python 3.10 or newer on the runner. It writes the report
 path to the `report` output and does not upload data to AgentVeil. Omit
 `fail-on` to keep review-only behavior.
 
+For existing repositories, commit a baseline and only fail on new findings:
+
+```yaml
+- uses: agentveil-protocol/lurkr@v0.2.3
+  with:
+    path: "."
+    output: lurkr-report.json
+    baseline: ".lurkr-baseline.json"
+    fail-on: high
+```
+
 For GitHub Code Scanning, write SARIF and upload it with CodeQL:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.0
+- uses: agentveil-protocol/lurkr@v0.2.3
   with:
     path: "."
     output: lurkr.sarif
@@ -225,7 +244,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/agentveil-protocol/lurkr
-    rev: v0.2.0
+    rev: v0.2.3
     hooks:
       - id: lurkr
         args: ["--fail-on", "high"]
@@ -339,6 +358,7 @@ For teams that want to attach Lurkr coverage to existing security and compliance
 - [Design principles](https://github.com/agentveil-protocol/lurkr/blob/main/docs/LURKR_DESIGN_PRINCIPLES.md) — how each rule maps to Saltzer-Schroeder protection principles (1975).
 - [Attack trees](https://github.com/agentveil-protocol/lurkr/blob/main/docs/LURKR_ATTACK_TREES.md) — Schneier-style attack tree leaves indexed by rule ID.
 - [Compliance map](https://github.com/agentveil-protocol/lurkr/blob/main/docs/LURKR_COMPLIANCE_MAP.md) — OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF coverage.
+- [Baseline mode](https://github.com/agentveil-protocol/lurkr/blob/main/docs/BASELINE.md) — adopt Lurkr in CI while grandfathering current findings.
 - [Static analysis limits](https://github.com/agentveil-protocol/lurkr/blob/main/docs/LURKR_LIMITATIONS.md) — Rice's theorem and the sound-by-design framing.
 
 Casual users do not need any of these to run `lurkr scan`. The Quick Start above is sufficient.

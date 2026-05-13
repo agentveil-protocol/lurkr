@@ -7,6 +7,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## v0.2.3 — 2026-05-13
+
+**Baseline mode.** Adds `--baseline` and `--save-baseline` CLI flags for
+adoption-friendly CI integration. Teams can run Lurkr once on an existing repo,
+save a baseline, and then enable Lurkr in CI to only flag new findings:
+existing findings are grandfathered until intentionally addressed.
+
+This follows the standard static-scanner adoption pattern used by tools such as
+Snyk, SonarCloud, and Bandit. It removes the main adoption friction for
+existing repositories with current findings.
+
+See `docs/BASELINE.md` for the workflow.
+
+Backward-compatible. Existing reports, rule IDs, and CLI behavior without
+`--baseline` or `--save-baseline` are unchanged.
+
 ## v0.2.2 — 2026-05-12
 
 **Three new rules.** Adds AI-specific detection surfaces no other static

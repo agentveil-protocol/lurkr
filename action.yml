@@ -21,6 +21,10 @@ inputs:
     description: Fail when findings at or above this severity are present
     required: false
     default: ""
+  baseline:
+    description: Baseline file path. When set, only findings not in the baseline are reported
+    required: false
+    default: ""
 
 outputs:
   report:
@@ -38,11 +42,16 @@ runs:
       name: Run Lurkr scan
       env:
         LURKR_FAIL_ON: ${{ inputs.fail-on }}
+        LURKR_BASELINE: ${{ inputs.baseline }}
       run: |
         echo "report=${{ inputs.output }}" >> "$GITHUB_OUTPUT"
         fail_on_args=()
         if [ -n "$LURKR_FAIL_ON" ]; then
           fail_on_args=(--fail-on "$LURKR_FAIL_ON")
         fi
-        lurkr scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}"
+        baseline_args=()
+        if [ -n "$LURKR_BASELINE" ]; then
+          baseline_args=(--baseline "$LURKR_BASELINE")
+        fi
+        lurkr scan --path "${{ inputs.path }}" --output "${{ inputs.output }}" --format "${{ inputs.format }}" "${fail_on_args[@]}" "${baseline_args[@]}"
       shell: bash

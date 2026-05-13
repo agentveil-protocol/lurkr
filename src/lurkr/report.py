@@ -9,7 +9,7 @@ import json
 
 
 REPORT_VERSION = "0.1"
-SCANNER_VERSION = "lurkr/0.2.2"
+SCANNER_VERSION = "lurkr/0.2.3"
 SEVERITIES = ("critical", "high", "medium", "low", "info")
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 SARIF_VERSION = "2.1.0"
@@ -173,7 +173,7 @@ class PostureReport:
                         "driver": {
                             "name": "Lurkr",
                             "informationUri": "https://github.com/agentveil-protocol/lurkr",
-                            "semanticVersion": "0.2.2",
+                            "semanticVersion": "0.2.3",
                             "rules": [_sarif_rule(rule_id) for rule_id in rule_ids],
                         }
                     },

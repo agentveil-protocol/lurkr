@@ -40,8 +40,18 @@ that file and renders a Markdown summary.
 At the pinned snapshot in `benchmark/corpus.yaml`, Lurkr reported at least one
 finding in **15 of 20** public reference repositories (**75.0%**).
 
-Across the Tier 1 corpus, Lurkr reported **665** findings, averaging **33.25**
-findings per repository.
+Across the Tier 1 corpus, Lurkr reported **665** findings (median **3.5** per
+repo, mean **33.25**). The distribution is right-skewed: 5 repos had no
+findings, 8 had 1-10, 4 had 11-50, and 3 large framework codebases had more
+than 50. Those three repos - `ag2ai/ag2`,
+`modelcontextprotocol/python-sdk`, and `openai/openai-agents-python` -
+contribute **83.8%** of total findings.
+
+The high counts on framework repos reflect codebase scale. AG2, the MCP Python
+SDK, and OpenAI Agents contain many tool implementations; high counts do not
+mean those projects are "more vulnerable" than smaller templates. Use median
+to estimate what a typical agent template looks like, and mean to estimate the
+total review budget across this corpus.
 
 Again, these are not vulnerability claims. They are high-severity capability
 surfaces that Lurkr considers worth reviewing before deployment.
@@ -56,6 +66,26 @@ surfaces that Lurkr considers worth reviewing before deployment.
 | `bypass.direct_github_token` | 5 | 21 |
 | `workflow.deploy_without_approval` | 5 | 8 |
 | `workflow.pull_request_target_secrets_risk` | 2 | 2 |
+
+### Per-Framework Breakdown
+
+Tier 1 repos grouped by primary framework category:
+
+| Framework | Repos | Median Findings | Range | Total |
+|---|---:|---:|---|---:|
+| LangChain / LangGraph | 9 | 1 | 0-18 | 30 |
+| OpenAI cookbook, agents, swarm | 3 | 20 | 4-101 | 125 |
+| MCP Python SDK and servers | 2 | 111.5 | 25-198 | 223 |
+| AutoGen / AG2 | 1 | 258 | 258-258 | 258 |
+| Anthropic cookbook | 1 | 23 | 23-23 | 23 |
+| Google Gemini | 1 | 4 | 4-4 | 4 |
+| CrewAI | 1 | 0 | 0-0 | 0 |
+| Mixed templates | 2 | 1 | 1-1 | 2 |
+
+The LangChain/LangGraph cluster is the largest ecosystem in the corpus. Most
+templates in that group are small, focused agent scaffolds; finding counts are
+low and better represent typical user-facing template scale. MCP and AutoGen
+rows include framework codebases, so they dominate raw count totals.
 
 ### Tier 1 Corpus
 

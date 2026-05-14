@@ -13,15 +13,15 @@
   <a href="#use-as-a-github-action"><img src="https://img.shields.io/badge/GitHub-Action_ready-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Action"></a>
   <a href="#hard-constraints"><img src="https://img.shields.io/badge/scanner-read--only-10b981?style=for-the-badge" alt="Lurkr: read-only"></a>
   <a href="#privacy--data-handling"><img src="https://img.shields.io/badge/no_telemetry-local_only-10b981?style=for-the-badge" alt="No telemetry"></a>
-  <a href="https://asciinema.org/a/GnIfYuCzZyUcSLrc"><img src="https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white" alt="Demo"></a>
+  <a href="https://asciinema.org/a/n0p5nax6GFyZuvEN"><img src="https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white" alt="Demo"></a>
 </p>
 
 <p align="center">
-  <strong>Find what your agent can touch before you deploy it.</strong>
+  <strong>Find what your agent can touch before you deploy it — and how to fix it.</strong>
 </p>
 
 <p align="center">
-  <a href="https://asciinema.org/a/GnIfYuCzZyUcSLrc"><img src="docs/lurkr-demo.gif" alt="Lurkr scan demo: 5 high-severity capability surfaces detected on a vulnerable agent fixture" width="720"></a>
+  <a href="https://asciinema.org/a/n0p5nax6GFyZuvEN"><img src="docs/lurkr-demo.gif" alt="Lurkr scan demo: detects 5 high-severity capability surfaces and surfaces remediation guidance" width="780"></a>
 </p>
 
 Static, local-only scanner for risky AI agent capabilities. No telemetry, no code execution, redacted output.

@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## v0.2.5 — 2026-05-14
+
+**Version-sync bug fix.** `SCANNER_VERSION` in `report.py` and
+`semanticVersion` in the SARIF output were hardcoded literals that drifted
+from `__version__` across releases. Fixed by deriving both from the canonical
+`lurkr.__version__` at import time, so JSON and SARIF reports always reflect
+the installed package version. Also bumps the `v0.2.3` release-pin references
+in `README.md` and `PYPI_README.md` to `v0.2.5` for consistency.
+
+Includes the v0.2.4 promotion to `Development Status :: 4 - Beta`.
+
 ## v0.2.4 — 2026-05-14
 
 **Beta release.** Promotes the PyPI `Development Status` classifier from
@@ -17,6 +28,10 @@ The promotion reflects readiness for production-trial use: 316 tests
 passing, 14 high-severity rules, benchmark methodology documented, and
 baseline mode shipped in v0.2.3. Real-world adoption feedback drives the
 remaining gap to a `5 - Production/Stable` classification.
+
+Note: a hardcoded `scanner_version` literal in `report.py` made
+`report.json` continue to report `lurkr/0.2.3` after the bump. Fixed in
+v0.2.5.
 
 ## v0.2.3 — 2026-05-13
 

@@ -6,6 +6,7 @@ import re
 
 import pytest
 
+from lurkr import __version__
 from lurkr.report import Finding, RULE_DESCRIPTORS, build_report, empty_report
 from lurkr.scanner import scan_path
 
@@ -25,7 +26,7 @@ def test_empty_report_schema_contains_scanner_version_and_whole_second_time(tmp_
         "findings",
         "summary",
     }
-    assert data["scanner_version"] == "lurkr/0.2.3"
+    assert data["scanner_version"] == f"lurkr/{__version__}"
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", data["scanned_at"])
     assert data["summary"]["by_severity"] == {
         "critical": 0,

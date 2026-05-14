@@ -28,7 +28,7 @@ Static, local-only scanner for risky AI agent capabilities. No telemetry, no cod
 
 `lurkr` is a pre-deployment, static, local-only scanner that flags risky
 AI-agent and GitHub-workflow capability issues. No telemetry, no network
-calls, no project code execution. v0.2.3 includes fourteen high-severity rules across
+calls, no project code execution. v0.2.5 includes fourteen high-severity rules across
 GitHub workflows, agent manifests, identity files, and bounded Python
 agent-source analysis.
 
@@ -101,7 +101,7 @@ Every finding contains rule ID, severity, repository-relative file path, line
 number when available, redacted message, and remediation pointer. Raw secrets,
 command bodies, and key material never appear in the report.
 
-## Detection Scope (v0.2.3)
+## Detection Scope (v0.2.5)
 
 All current rules are reported as `high` severity.
 
@@ -153,7 +153,7 @@ The goal: find high-severity capabilities worth controlling before they become p
 
 ## Roadmap
 
-### Available now (v0.2.3)
+### Available now (v0.2.5)
 
 14 high-severity rules across:
 - GitHub workflows + agent manifests + identity files
@@ -197,7 +197,7 @@ pip install lurkr
 <summary><b>From GitHub release</b></summary>
 
 ```bash
-pip install git+https://github.com/agentveil-protocol/lurkr@v0.2.3
+pip install git+https://github.com/agentveil-protocol/lurkr@v0.2.5
 ```
 
 </details>
@@ -238,7 +238,7 @@ present.
 Use the action from the same repository:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.3
+- uses: agentveil-protocol/lurkr@v0.2.5
   with:
     path: "."
     output: lurkr-report.json
@@ -252,7 +252,7 @@ path to the `report` output and does not upload data to AgentVeil. Omit
 For existing repositories, commit a baseline and only fail on new findings:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.3
+- uses: agentveil-protocol/lurkr@v0.2.5
   with:
     path: "."
     output: lurkr-report.json
@@ -263,7 +263,7 @@ For existing repositories, commit a baseline and only fail on new findings:
 For GitHub Code Scanning, write SARIF and upload it with CodeQL:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.3
+- uses: agentveil-protocol/lurkr@v0.2.5
   with:
     path: "."
     output: lurkr.sarif
@@ -284,7 +284,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/agentveil-protocol/lurkr
-    rev: v0.2.3
+    rev: v0.2.5
     hooks:
       - id: lurkr
         args: ["--fail-on", "high"]

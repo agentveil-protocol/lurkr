@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <strong>Pre-deploy detection for AI-agent risks. Free, local, MIT.</strong>
+  <strong>Pre-deploy detection for AI-agent risks, local, MIT.</strong>
 </p>
 
 <p align="center">

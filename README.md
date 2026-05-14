@@ -13,15 +13,15 @@
   <a href="#use-as-a-github-action"><img src="https://img.shields.io/badge/GitHub-Action_ready-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Action"></a>
   <a href="#hard-constraints"><img src="https://img.shields.io/badge/scanner-read--only-10b981?style=for-the-badge" alt="Lurkr: read-only"></a>
   <a href="#privacy--data-handling"><img src="https://img.shields.io/badge/no_telemetry-local_only-10b981?style=for-the-badge" alt="No telemetry"></a>
-  <a href="https://asciinema.org/a/EzovWZD8nK9BxCxm"><img src="https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white" alt="Demo"></a>
+  <a href="https://asciinema.org/a/fWtgojrBf8gEJBak"><img src="https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white" alt="Demo"></a>
 </p>
 
 <p align="center">
-  <strong>Find what your agent can touch before you deploy it — and how to fix it.</strong>
+  <strong>Pre-deploy detection for AI-agent risks. Free, local, MIT.</strong>
 </p>
 
 <p align="center">
-  <a href="https://asciinema.org/a/EzovWZD8nK9BxCxm"><img src="docs/lurkr-demo.gif" alt="Lurkr scan demo: each detected capability surface paired with actionable remediation guidance" width="820"></a>
+  <a href="https://asciinema.org/a/fWtgojrBf8gEJBak"><img src="docs/lurkr-demo.gif" alt="Lurkr scan demo: 8 high-severity AI-agent capability surfaces across 6 distinct rules (shadow capabilities, credential-to-LLM leak, eval-in-tool, subprocess-in-tool, tool-without-approval, unverified MCP endpoint), each paired with actionable remediation" width="820"></a>
 </p>
 
 Static, local-only scanner for risky AI agent capabilities. No telemetry, no code execution, redacted output.

@@ -1,0 +1,10 @@
+{
+  "tools": [
+    {"name": "search_docs"}
+  ],
+  "mcpServers": {
+    "knowledge_base": {
+      "url": "https://api.example.com/mcp"
+    }
+  }
+}

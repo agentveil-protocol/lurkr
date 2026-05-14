@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## v0.2.4 — 2026-05-14
+
+**Beta release.** Promotes the PyPI `Development Status` classifier from
+`3 - Alpha` to `4 - Beta`. No code changes — feature set, rule coverage,
+and CLI behavior are identical to v0.2.3.
+
+The promotion reflects readiness for production-trial use: 316 tests
+passing, 14 high-severity rules, benchmark methodology documented, and
+baseline mode shipped in v0.2.3. Real-world adoption feedback drives the
+remaining gap to a `5 - Production/Stable` classification.
+
 ## v0.2.3 — 2026-05-13
 
 **Baseline mode.** Adds `--baseline` and `--save-baseline` CLI flags for

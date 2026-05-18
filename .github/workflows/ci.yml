@@ -2,16 +2,45 @@ name: ci
 
 on:
   pull_request:
-  push:
     branches: [main]
+  push:
+    branches: [main, "codex/**"]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  pytest:
-    name: pytest (${{ matrix.os }}, py${{ matrix.python-version }})
+  fast:
+    name: fast pytest (ubuntu-latest, py3.12)
+    if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run tests
+        run: python -m pytest
+
+  compatibility:
+    name: compatibility (${{ matrix.os }}, py${{ matrix.python-version }})
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

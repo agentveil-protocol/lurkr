@@ -2,29 +2,11 @@
 
 **Find what your agent can touch before you deploy it.**
 
-[![PyPI](https://img.shields.io/badge/PyPI-v0.2.7-f97316?logo=pypi&logoColor=white)](https://pypi.org/project/lurkr/)
-[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-v0.2.7-2088FF?logo=githubactions&logoColor=white)](https://github.com/agentveil-protocol/lurkr#use-as-a-github-action)
-[![CI](https://github.com/agentveil-protocol/lurkr/actions/workflows/ci.yml/badge.svg)](https://github.com/agentveil-protocol/lurkr/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://github.com/agentveil-protocol/lurkr/blob/main/LICENSE)
+Lurkr is a static, local-only scanner for risky AI-agent and GitHub-workflow
+capability surfaces. It runs before deployment, does not execute project code,
+does not make network calls during scan, and redacts sensitive output.
 
-Static, local-only scanner for risky AI-agent and GitHub-workflow capability
-surfaces. No telemetry, no network calls during scan, no project code execution,
-redacted output.
-
-`lurkr` is a pre-deployment scanner for local review and CI gates. v0.2.7
-includes fourteen high-severity rules across GitHub workflows, agent manifests,
-identity files, and bounded Python agent-source analysis.
-
-[Source repository](https://github.com/agentveil-protocol/lurkr) |
-[Quick Start](#quick-start) |
-[Privacy & data handling](#privacy--data-handling) |
-[Detection scope](#detection-scope-v027) |
-[GitHub Action](#use-as-a-github-action) |
-[Why this exists](#why-this-exists)
-
----
-
-## Quick Start
+## Local CLI
 
 ```bash
 pip install lurkr
@@ -50,6 +32,24 @@ findings:
 lurkr scan --path . --save-baseline .lurkr-baseline.json
 lurkr scan --path . --baseline .lurkr-baseline.json --fail-on high
 ```
+
+Use the GitHub Action when you want the same check in CI:
+
+```yaml
+- uses: agentveil-protocol/lurkr@v0.2.7
+  with:
+    path: "."
+    output: lurkr-report.json
+    fail-on: high
+```
+
+[Source repository](https://github.com/agentveil-protocol/lurkr) |
+[Privacy & data handling](#privacy--data-handling) |
+[Detection scope](#detection-scope-v027) |
+[GitHub Action](#use-as-a-github-action) |
+[Why this exists](#why-this-exists)
+
+---
 
 ## Privacy & Data Handling
 

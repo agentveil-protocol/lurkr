@@ -1,30 +1,38 @@
+<p align="center">
+  <img src="docs/lurkr-logo.png" alt="Lurkr logo" width="96">
+</p>
+
 # Lurkr
 
 **Find what your agent can touch before you deploy it.**
 
-[![PyPI](https://img.shields.io/badge/PyPI-v0.2.7-f97316?logo=pypi&logoColor=white)](https://pypi.org/project/lurkr/)
-[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-v0.2.7-2088FF?logo=githubactions&logoColor=white)](#use-as-a-github-action)
-[![CI](https://github.com/agentveil-protocol/lurkr/actions/workflows/ci.yml/badge.svg)](https://github.com/agentveil-protocol/lurkr/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+Lurkr is a static, local-only scanner for risky AI-agent and GitHub-workflow
+capability surfaces. It runs before deployment, does not execute project code,
+does not make network calls during scan, and redacts sensitive output.
 
-Static, local-only scanner for risky AI-agent and GitHub-workflow capability
-surfaces. No telemetry, no network calls during scan, no project code execution,
-redacted output.
+## GitHub Actions
 
-`lurkr` is a pre-deployment scanner for local review and CI gates. v0.2.7
-includes fourteen high-severity rules across GitHub workflows, agent manifests,
-identity files, and bounded Python agent-source analysis.
+```yaml
+- uses: agentveil-protocol/lurkr@v0.2.7
+  with:
+    path: "."
+    output: lurkr-report.json
+    fail-on: high
+```
 
-[Quick Start](#quick-start) |
+Omit `fail-on` for review-only mode. Use SARIF output with GitHub Code
+Scanning when you want findings in the Security tab.
+
+[Local CLI](#local-cli) |
 [Privacy & data handling](#privacy--data-handling) |
 [What a finding looks like](#what-a-finding-looks-like) |
 [Detection scope](#detection-scope-v027) |
-[GitHub Action](#use-as-a-github-action) |
+[Full Action usage](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
 
 ---
 
-## Quick Start
+## Local CLI
 
 ```bash
 pip install lurkr

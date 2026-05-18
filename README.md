@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <strong>Pre-deploy detection for AI-agent risks, local, MIT.</strong>
+  <strong>Find what your agent can touch before you deploy it.</strong>
 </p>
 
 <p align="center">
@@ -35,7 +35,7 @@ agent-source analysis.
 [Quick Start](#quick-start) |
 [Privacy & data handling](#privacy--data-handling) |
 [What a finding looks like](#what-a-finding-looks-like) |
-[Detection scope](#detection-scope-v023) |
+[Detection scope](#detection-scope-v025) |
 [GitHub Action](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
 
@@ -144,7 +144,7 @@ The goal: find high-severity capabilities worth controlling before they become p
 | Most scanners | Lurkr |
 |---|---|
 | MCP servers / installed components | Repo surfaces about to be deployed |
-| Prompt injection / vulnerabilities | Risky agent capabilities |
+| Prompt injection / prompt risk | Risky agent capabilities |
 | Long lists of potential issues | Conservative high-severity rules |
 | API tokens / cloud calls | Local, offline, no telemetry |
 | Generic secrets | Agent-relevant credentials and bypass paths |

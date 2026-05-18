@@ -1,41 +1,24 @@
-<p align="center">
-  <img src="docs/lurkr-logo.png" alt="Lurkr logo" width="180">
-</p>
+# Lurkr
 
-<h1 align="center">Lurkr</h1>
+**Find what your agent can touch before you deploy it.**
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
-  <a href="https://pypi.org/project/lurkr/"><img src="https://img.shields.io/pypi/v/lurkr?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI"></a>
-  <a href="https://github.com/agentveil-protocol/lurkr/actions/workflows/posture-self-test.yml"><img src="https://github.com/agentveil-protocol/lurkr/actions/workflows/posture-self-test.yml/badge.svg" alt="Self Test"></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+"></a>
-  <a href="https://github.com/agentveil-protocol/lurkr/stargazers"><img src="https://img.shields.io/github/stars/agentveil-protocol/lurkr?style=for-the-badge&logo=github&color=gold" alt="GitHub stars"></a>
-  <a href="#use-as-a-github-action"><img src="https://img.shields.io/badge/GitHub-Action_ready-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Action"></a>
-  <a href="#hard-constraints"><img src="https://img.shields.io/badge/scanner-read--only-10b981?style=for-the-badge" alt="Lurkr: read-only"></a>
-  <a href="#privacy--data-handling"><img src="https://img.shields.io/badge/no_telemetry-local_only-10b981?style=for-the-badge" alt="No telemetry"></a>
-  <a href="https://asciinema.org/a/fWtgojrBf8gEJBak"><img src="https://img.shields.io/badge/demo-asciinema-8854d0?style=for-the-badge&logo=asciinema&logoColor=white" alt="Demo"></a>
-</p>
+[![PyPI](https://img.shields.io/badge/PyPI-v0.2.7-f97316?logo=pypi&logoColor=white)](https://pypi.org/project/lurkr/)
+[![GitHub Action](https://img.shields.io/badge/GitHub%20Action-v0.2.7-2088FF?logo=githubactions&logoColor=white)](#use-as-a-github-action)
+[![CI](https://github.com/agentveil-protocol/lurkr/actions/workflows/ci.yml/badge.svg)](https://github.com/agentveil-protocol/lurkr/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-<p align="center">
-  <strong>Find what your agent can touch before you deploy it.</strong>
-</p>
+Static, local-only scanner for risky AI-agent and GitHub-workflow capability
+surfaces. No telemetry, no network calls during scan, no project code execution,
+redacted output.
 
-<p align="center">
-  <a href="https://asciinema.org/a/fWtgojrBf8gEJBak"><img src="docs/lurkr-demo.gif" alt="Lurkr scan demo: 8 high-severity AI-agent capability surfaces across 6 distinct rules (shadow capabilities, credential-to-LLM leak, eval-in-tool, subprocess-in-tool, tool-without-approval, unverified MCP endpoint), each paired with actionable remediation" width="820"></a>
-</p>
-
-Static, local-only scanner for risky AI agent capabilities. No telemetry, no code execution, redacted output.
-
-`lurkr` is a pre-deployment, static, local-only scanner that flags risky
-AI-agent and GitHub-workflow capability issues. No telemetry, no network
-calls, no project code execution. v0.2.7 includes fourteen high-severity rules across
-GitHub workflows, agent manifests, identity files, and bounded Python
-agent-source analysis.
+`lurkr` is a pre-deployment scanner for local review and CI gates. v0.2.7
+includes fourteen high-severity rules across GitHub workflows, agent manifests,
+identity files, and bounded Python agent-source analysis.
 
 [Quick Start](#quick-start) |
 [Privacy & data handling](#privacy--data-handling) |
 [What a finding looks like](#what-a-finding-looks-like) |
-[Detection scope](#detection-scope-v025) |
+[Detection scope](#detection-scope-v027) |
 [GitHub Action](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
 

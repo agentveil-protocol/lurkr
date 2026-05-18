@@ -1,4 +1,4 @@
-name: Lurkr
+name: Lurkr Agent Capability Scanner
 description: Find risky AI agent capabilities before deployment.
 branding:
   icon: shield

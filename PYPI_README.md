@@ -372,7 +372,7 @@ For teams that want to attach Lurkr coverage to existing security and compliance
 - [Baseline mode](https://github.com/agentveil-protocol/lurkr/blob/main/docs/BASELINE.md) — adopt Lurkr in CI while grandfathering current findings.
 - [Static analysis limits](https://github.com/agentveil-protocol/lurkr/blob/main/docs/LURKR_LIMITATIONS.md) — Rice's theorem and the sound-by-design framing.
 
-Casual users do not need any of these to run `lurkr scan`. The Quick Start above is sufficient.
+Most users can start with the Local CLI section above.
 
 ## Community
 

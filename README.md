@@ -405,7 +405,7 @@ For teams that want to attach Lurkr coverage to existing security and compliance
 - [Benchmark](docs/LURKR_BENCHMARK.md) — empirical coverage on curated public AI-agent template corpus.
 - [Static analysis limits](docs/LURKR_LIMITATIONS.md) — Rice's theorem and the sound-by-design framing.
 
-Casual users do not need any of these to run `lurkr scan`. The Quick Start above is sufficient.
+Most users can start with the Local CLI section above.
 
 ## License
 

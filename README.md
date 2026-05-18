@@ -2,9 +2,9 @@
   <img src="docs/lurkr-logo.png" alt="Lurkr logo" width="96">
 </p>
 
-# Lurkr
+<h1 align="center">Lurkr</h1>
 
-**Find what your agent can touch before you deploy it.**
+<p align="center"><strong>Find what your agent can touch before you deploy it.</strong></p>
 
 Lurkr is a static, local-only scanner for risky AI-agent and GitHub-workflow
 capability surfaces. It runs before deployment, does not execute project code,

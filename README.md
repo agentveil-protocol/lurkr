@@ -13,7 +13,7 @@ does not make network calls during scan, and redacts sensitive output.
 ## GitHub Actions
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.8
+- uses: agentveil-protocol/lurkr@v0.2.7
   with:
     path: "."
     output: lurkr-report.json
@@ -26,7 +26,7 @@ Scanning when you want findings in the Security tab.
 [Local CLI](#local-cli) |
 [Privacy & data handling](#privacy--data-handling) |
 [What a finding looks like](#what-a-finding-looks-like) |
-[Detection scope](#detection-scope-v028) |
+[Detection scope](#detection-scope-v027) |
 [Full Action usage](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
 
@@ -43,9 +43,7 @@ cat report.json
 That is the whole flow. The scanner is read-only: it does not modify your
 files, run your code, or send data over the network.
 
-Python agent detection is enabled for bounded `.py` source analysis. Lurkr
-also performs bounded TypeScript/JavaScript MCP `registerTool(...)` analysis
-for declared-vs-code capability mismatch.
+Python agent detection is enabled for bounded `.py` source analysis.
 
 To fail CI when findings meet a threshold, add `--fail-on`:
 
@@ -94,7 +92,7 @@ Every finding contains rule ID, severity, repository-relative file path, line
 number when available, redacted message, and remediation pointer. Raw secrets,
 command bodies, and key material never appear in the report.
 
-## Detection Scope (v0.2.8)
+## Detection Scope (v0.2.7)
 
 All current rules are reported as `high` severity.
 
@@ -106,7 +104,7 @@ All current rules are reported as `high` severity.
 | [`tool.shell_without_approval`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/tool.shell_without_approval.md) | Agent tool manifests that enable shell execution without an approval flag | MCP/CrewAI-style manifests |
 | [`identity.private_key_unencrypted`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/identity.private_key_unencrypted.md) | Unencrypted PEM private key files committed to the repo | Repository files |
 | [`agent.credential_to_llm_context`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.credential_to_llm_context.md) | Credential-bearing values passed into LLM completion context | OpenAI, Anthropic, Gemini, LangChain direct call sites |
-| [`agent.declared_vs_imported_delta`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.declared_vs_imported_delta.md) | Python and TypeScript/JavaScript tool registrations not declared in agent manifest files | MCP, CrewAI, AutoGen, LangChain manifests + supported Python tool registrations + bounded TS/JS MCP `registerTool(...)` registrations |
+| [`agent.declared_vs_imported_delta`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.declared_vs_imported_delta.md) | Python tool registrations not declared in agent manifest files | MCP, CrewAI, AutoGen, LangChain manifests + supported Python tool registrations |
 | [`agent.dynamic_prompt_from_user_input`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.dynamic_prompt_from_user_input.md) | Prompt templates directly interpolating function parameters | Prompt-shaped Python assignments and common template helpers |
 | [`agent.python_api_key_hardcoded`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_api_key_hardcoded.md) | API-key-shaped string literals in Python source | Module-wide; Anthropic, OpenAI, GitHub PAT, HuggingFace |
 | [`agent.python_eval_exec_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_eval_exec_in_tool.md) | `eval`/`exec`-style dynamic execution inside Python tool functions | Supported Python tool functions |
@@ -129,7 +127,6 @@ It scans the repo surfaces that turn an agent into an actor:
 - GitHub workflows that can deploy or expose secrets
 - Agent manifests that expose shell-capable tools
 - Python agent code that wires tools to subprocess, file writes, eval/exec, direct tokens, LLM context, prompts, or external MCP endpoints
-- TypeScript/JavaScript MCP server code that registers undeclared tools through the canonical `registerTool(...)` pattern
 
 Static. Local-only. Offline. Redacted by default.
 
@@ -147,12 +144,12 @@ The goal: find high-severity capabilities worth controlling before they become p
 
 ## Roadmap
 
-### Available now (v0.2.8)
+### Available now (v0.2.7)
 
 14 high-severity rules across:
 - GitHub workflows + agent manifests + identity files
 - Python agent code: LangChain / LangGraph, CrewAI, MCP (FastMCP and Server-style), OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini
-- Declared-vs-imported capability delta checks across MCP/CrewAI/AutoGen/LangChain manifests, Python tool registrations, and bounded TypeScript/JavaScript MCP `registerTool(...)` registrations
+- Declared-vs-imported capability delta checks across MCP/CrewAI/AutoGen/LangChain manifests and Python tool registrations
 - AI-specific static checks for credential flow into LLM context, direct prompt interpolation, and external MCP endpoints
 - Baseline mode for CI adoption: save current findings, then fail only on new findings
 
@@ -191,7 +188,7 @@ pip install lurkr
 <summary><b>From GitHub release</b></summary>
 
 ```bash
-pip install git+https://github.com/agentveil-protocol/lurkr@v0.2.8
+pip install git+https://github.com/agentveil-protocol/lurkr@v0.2.7
 ```
 
 </details>
@@ -232,7 +229,7 @@ present.
 Use the action from the same repository:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.8
+- uses: agentveil-protocol/lurkr@v0.2.7
   with:
     path: "."
     output: lurkr-report.json
@@ -246,7 +243,7 @@ path to the `report` output and does not upload data to AgentVeil. Omit
 For existing repositories, commit a baseline and only fail on new findings:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.8
+- uses: agentveil-protocol/lurkr@v0.2.7
   with:
     path: "."
     output: lurkr-report.json
@@ -257,7 +254,7 @@ For existing repositories, commit a baseline and only fail on new findings:
 For GitHub Code Scanning, write SARIF and upload it with CodeQL:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.2.8
+- uses: agentveil-protocol/lurkr@v0.2.7
   with:
     path: "."
     output: lurkr.sarif
@@ -278,7 +275,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/agentveil-protocol/lurkr
-    rev: v0.2.8
+    rev: v0.2.7
     hooks:
       - id: lurkr
         args: ["--fail-on", "high"]

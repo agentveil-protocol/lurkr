@@ -9,6 +9,7 @@ import re
 from typing import Any, Iterable
 from urllib.parse import urlparse
 
+from lurkr.paths import prune_excluded_dirnames
 from lurkr.rules.manifest import is_agent_manifest, load_manifest
 
 
@@ -35,7 +36,8 @@ class McpServer:
 def discover_manifests(scan_root: Path) -> Iterable[Path]:
     """Yield manifest file paths under scan_root per current Lurkr discovery scope."""
     root = scan_root.resolve()
-    for dirpath, _dirnames, filenames in os.walk(str(root), followlinks=False):
+    for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
+        prune_excluded_dirnames(dirnames)
         for filename in sorted(filenames):
             path = Path(dirpath) / filename
             if path.is_symlink() or not path.is_file():

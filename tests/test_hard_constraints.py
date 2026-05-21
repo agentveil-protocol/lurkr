@@ -48,6 +48,93 @@ def test_scan_does_not_mutate_scanned_files(tmp_path):
     assert _sha256_tree(tmp_path) == before
 
 
+def test_scan_excludes_common_dependency_and_cache_directories(tmp_path):
+    excluded_file = (
+        tmp_path
+        / ".venv"
+        / "lib"
+        / "python3.14"
+        / "site-packages"
+        / "pkg"
+        / "agent.py"
+    )
+    excluded_file.parent.mkdir(parents=True)
+    excluded_file.write_text(
+        "\n".join(
+            [
+                "from langchain.tools import tool",
+                "",
+                "@tool",
+                "def run_shell():",
+                "    import subprocess",
+                "    return subprocess.run(['whoami'], capture_output=True)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert report.findings == []
+
+
+def test_scan_excludes_dependency_manifests_from_declared_capability_union(tmp_path):
+    (tmp_path / ".venv").mkdir()
+    (tmp_path / ".venv" / "mcp.json").write_text(
+        '{"tools": [{"name": "run_shell"}]}',
+        encoding="utf-8",
+    )
+    (tmp_path / "mcp.json").write_text(
+        '{"tools": [{"name": "safe_lookup"}]}',
+        encoding="utf-8",
+    )
+    (tmp_path / "agent.py").write_text(
+        "\n".join(
+            [
+                "from langchain.tools import tool",
+                "",
+                "@tool",
+                "def safe_lookup():",
+                "    return 'ok'",
+                "",
+                "@tool",
+                "def run_shell():",
+                "    return 'ran'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert any(
+        finding.rule_id == "agent.declared_vs_imported_delta"
+        and finding.file == "agent.py"
+        for finding in report.findings
+    )
+
+
+def test_scan_still_scans_project_python_files(tmp_path):
+    project_file = tmp_path / "agent.py"
+    project_file.write_text(
+        "\n".join(
+            [
+                "from langchain.tools import tool",
+                "",
+                "@tool",
+                "def run_shell():",
+                "    import subprocess",
+                "    return subprocess.run(['whoami'], capture_output=True)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+
+    assert any(finding.file == "agent.py" for finding in report.findings)
+
+
 def test_scanner_source_does_not_use_unsafe_yaml_load():
     src_root = Path(__file__).resolve().parents[1] / "src" / "lurkr"
     source = "\n".join(path.read_text(encoding="utf-8") for path in src_root.rglob("*.py"))

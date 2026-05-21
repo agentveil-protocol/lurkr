@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from lurkr.paths import prune_excluded_dirnames
 from lurkr.report import Finding, PostureReport, build_report
 from lurkr.rules import (
     is_agent_manifest,
@@ -54,7 +55,8 @@ def scan_path(path: Path) -> PostureReport:
 
 def _iter_regular_files(root: Path) -> list[Path]:
     paths: list[Path] = []
-    for dirpath, _dirnames, filenames in os.walk(str(root), followlinks=False):
+    for dirpath, dirnames, filenames in os.walk(str(root), followlinks=False):
+        prune_excluded_dirnames(dirnames)
         for filename in filenames:
             path = Path(dirpath) / filename
             if path.is_symlink():

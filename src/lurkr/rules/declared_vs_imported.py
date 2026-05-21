@@ -6,6 +6,13 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
+from lurkr.js_ast import (
+    JsAstDocument,
+    iter_nodes as _iter_js_nodes,
+    load_js_ast_document,
+    node_text as _js_node_text,
+    static_string_value as _js_static_string_value,
+)
 from lurkr.manifest import collect_declared, normalize_capability_name
 from lurkr.python_ast import (
     PythonAstDocument,
@@ -39,6 +46,7 @@ PROVIDER_TOOL_CALL_BASENAMES = {
 class ScanContext:
     scan_root: Path
     python_files: tuple[Path, ...]
+    js_files: tuple[Path, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -82,11 +90,49 @@ class DeclaredVsImportedRule:
                         ),
                     )
                 )
+        for js_file in context.js_files:
+            js_document = load_js_ast_document(js_file)
+            if js_document is None:
+                continue
+            if js_document.tree.root_node.has_error:
+                continue
+            server_identifiers = _collect_mcp_server_identifiers(js_document)
+            if not server_identifiers:
+                continue
+            for js_tool in _collect_registered_tools_js(js_document, server_identifiers):
+                normalized = normalize_capability_name(js_tool.name)
+                if not normalized or normalized in declared_set:
+                    continue
+                findings.append(
+                    Finding(
+                        rule_id=self.rule_id,
+                        severity=self.severity,
+                        file=js_file.relative_to(context.scan_root).as_posix(),
+                        line=js_tool.line,
+                        message=(
+                            f"Tool '{js_tool.name}' is registered in TypeScript/JavaScript code but "
+                            "not declared in any agent manifest."
+                        ),
+                        remediation=(
+                            f"Add '{js_tool.name}' to your agent manifest declared tools, "
+                            "or remove the TypeScript/JavaScript tool registration if the capability "
+                            "is not intended to be exposed."
+                        ),
+                    )
+                )
         return _dedupe_findings(findings)
 
 
-def scan_declared_vs_imported_delta(root: Path, python_files: list[Path]) -> list[Finding]:
-    context = ScanContext(scan_root=root, python_files=tuple(python_files))
+def scan_declared_vs_imported_delta(
+    root: Path,
+    python_files: list[Path],
+    js_files: list[Path] | None = None,
+) -> list[Finding]:
+    context = ScanContext(
+        scan_root=root,
+        python_files=tuple(python_files),
+        js_files=tuple(js_files or ()),
+    )
     return DeclaredVsImportedRule().evaluate(context)
 
 
@@ -335,3 +381,106 @@ def _dedupe_findings(findings: list[Finding]) -> list[Finding]:
         seen.add(key)
         deduped.append(finding)
     return deduped
+
+
+@dataclass(frozen=True)
+class _JsRegisteredTool:
+    name: str
+    line: int
+
+
+def _collect_mcp_server_identifiers(document: JsAstDocument) -> set[str]:
+    """Return the set of local variable names bound to `new McpServer(...)` in
+    this file.
+
+    Bounded static signal: only direct `<id> = new McpServer(...)` or
+    `<id> = new <ns>.McpServer(...)` bindings are tracked. Cross-file
+    references, factory functions, and dynamic constructor patterns are
+    intentionally not resolved.
+    """
+    identifiers: set[str] = set()
+    for node in _iter_js_nodes(document.tree):
+        if node.type == "variable_declarator":
+            name_node = node.child_by_field_name("name")
+            value_node = node.child_by_field_name("value")
+            if name_node is None or value_node is None:
+                continue
+            if name_node.type != "identifier":
+                continue
+            if not _is_mcp_server_new_expression(value_node, document.source):
+                continue
+            identifiers.add(_js_node_text(name_node, document.source))
+        elif node.type == "assignment_expression":
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            if left is None or right is None:
+                continue
+            if left.type != "identifier":
+                continue
+            if not _is_mcp_server_new_expression(right, document.source):
+                continue
+            identifiers.add(_js_node_text(left, document.source))
+    return identifiers
+
+
+def _is_mcp_server_new_expression(node, source: bytes) -> bool:
+    """Return True if node is `new McpServer(...)` or `new <ns>.McpServer(...)`."""
+    if node.type != "new_expression":
+        return False
+    constructor = node.child_by_field_name("constructor")
+    if constructor is None:
+        return False
+    if constructor.type == "identifier":
+        return _js_node_text(constructor, source) == "McpServer"
+    if constructor.type == "member_expression":
+        prop = constructor.child_by_field_name("property")
+        if prop is not None and _js_node_text(prop, source) == "McpServer":
+            return True
+    return False
+
+
+def _collect_registered_tools_js(
+    document: JsAstDocument,
+    server_identifiers: set[str],
+) -> list[_JsRegisteredTool]:
+    """Collect static-named `<server_id>.registerTool('name', ...)` calls.
+
+    Only call sites where the receiver identifier is in `server_identifiers`
+    (the set of locally-bound McpServer instances) are accepted. Tool name
+    must be a static string literal; dynamic names are skipped silently.
+    Bounded static signal — does not resolve cross-file references.
+    """
+    if not server_identifiers:
+        return []
+    tools: list[_JsRegisteredTool] = []
+    seen: set[tuple[str, int]] = set()
+    for node in _iter_js_nodes(document.tree):
+        if node.type != "call_expression":
+            continue
+        fn = node.child_by_field_name("function")
+        if fn is None or fn.type != "member_expression":
+            continue
+        obj = fn.child_by_field_name("object")
+        if obj is None or obj.type != "identifier":
+            continue
+        if _js_node_text(obj, document.source) not in server_identifiers:
+            continue
+        prop = fn.child_by_field_name("property")
+        if prop is None or _js_node_text(prop, document.source) != "registerTool":
+            continue
+        args = node.child_by_field_name("arguments")
+        if args is None:
+            continue
+        arg_nodes = [c for c in args.children if c.type not in ("(", ")", ",")]
+        if not arg_nodes:
+            continue
+        name = _js_static_string_value(arg_nodes[0], document.source)
+        if name is None:
+            continue
+        line = node.start_point[0] + 1
+        key = (name, line)
+        if key in seen:
+            continue
+        seen.add(key)
+        tools.append(_JsRegisteredTool(name=name, line=line))
+    return tools

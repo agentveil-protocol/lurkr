@@ -69,7 +69,7 @@ RULE_DESCRIPTORS = {
     },
     "agent.declared_vs_imported_delta": {
         "short": "Declared-vs-imported agent capability delta",
-        "full": "Flags Python tool registrations that are not declared in agent manifest files.",
+        "full": "Flags Python and TypeScript/JavaScript tool registrations that are not declared in agent manifest files.",
         "help": _rule_doc_url("agent.declared_vs_imported_delta"),
     },
     "agent.credential_to_llm_context": {

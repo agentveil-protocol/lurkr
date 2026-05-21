@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from lurkr.js_ast import is_js_or_ts_source
 from lurkr.paths import prune_excluded_dirnames
 from lurkr.report import Finding, PostureReport, build_report
 from lurkr.rules import (
@@ -34,6 +35,7 @@ def scan_path(path: Path) -> PostureReport:
 
     findings: list[Finding] = []
     python_files: list[Path] = []
+    js_files: list[Path] = []
     for candidate in _iter_regular_files(root):
         finding = scan_identity_private_key_unencrypted(root, candidate)
         if finding is not None:
@@ -48,7 +50,9 @@ def scan_path(path: Path) -> PostureReport:
             findings.extend(scan_python_agent_rules(root, candidate))
             findings.extend(scan_credential_to_llm_context(root, candidate))
             findings.extend(scan_dynamic_prompt_from_user_input(root, candidate))
-    findings.extend(scan_declared_vs_imported_delta(root, python_files))
+        if is_js_or_ts_source(candidate):
+            js_files.append(candidate)
+    findings.extend(scan_declared_vs_imported_delta(root, python_files, js_files))
 
     return build_report(str(root), findings)
 

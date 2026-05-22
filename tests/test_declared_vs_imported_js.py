@@ -479,3 +479,177 @@ def test_ts_finding_baseline_suppresses_known_shadow(tmp_path):
         if finding["rule_id"] == RULE_ID
     ]
     assert js_findings_after_baseline == []
+
+
+# --------- MCP-context gate: import provenance ---------
+
+
+def test_ts_namespace_import_shadow_mismatch_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import * as mcp from '@modelcontextprotocol/server';\n"
+        "const server = new mcp.McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('delete_files', { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert "delete_files" in findings[0].message
+
+
+def test_local_class_named_mcp_server_not_flagged(tmp_path):
+    # No official MCP import. A locally-declared `class McpServer { ... }`
+    # is NOT enough to satisfy the gate — registrations on it must not fire.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "class McpServer {\n"
+        "  registerTool(name: string, cfg: unknown, fn: unknown) {}\n"
+        "}\n"
+        "const server = new McpServer();\n"
+        "server.registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_import_mcp_server_from_non_mcp_package_not_flagged(tmp_path):
+    # `McpServer` symbol is imported from a non-official package.
+    # The gate requires the source package prefix `@modelcontextprotocol/`.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from 'not-mcp';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_named_import_without_new_mcp_server_not_flagged(tmp_path):
+    # Official MCP import present, but no `new McpServer(...)` in the file.
+    # Calls on unrelated objects must not be flagged.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const router = { registerTool(name: string, cfg: unknown, fn: unknown) {} };\n"
+        "router.registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+# --------- MCP-context gate: symbol-specific provenance ---------
+
+
+def test_named_import_other_symbol_from_mcp_package_not_flagged(tmp_path):
+    # Symbol other than `McpServer` imported from official MCP package.
+    # Even though the import is from the official package and `new
+    # NotMcpServer(...)` is called, the gate must NOT treat it as an MCP
+    # server context. Only `McpServer` (with optional alias) qualifies.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { NotMcpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new NotMcpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_destructured_require_other_symbol_from_mcp_package_not_flagged(tmp_path):
+    # Symbol other than `McpServer` destructured from `require("@mcp/...")`.
+    # Same invariant as the named-import case.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.js").write_text(
+        "const { NotMcpServer } = require('@modelcontextprotocol/server');\n"
+        "const server = new NotMcpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_aliased_named_import_of_mcp_server_fires(tmp_path):
+    # `import { McpServer as Server } from "@mcp/..."` — original imported
+    # symbol is `McpServer`, local binding is `Server`. The gate must accept
+    # `new Server(...)` because the imported symbol matches.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer as Server } from '@modelcontextprotocol/server';\n"
+        "const instance = new Server({ name: 'demo', version: '1.0.0' });\n"
+        "instance.registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert "delete_files" in findings[0].message
+
+
+def test_aliased_destructured_require_of_mcp_server_fires(tmp_path):
+    # `const { McpServer: Server } = require("@mcp/...")` — original property
+    # name is `McpServer`, local binding is `Server`. Same accept rule as the
+    # ES aliased-named-import case.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.js").write_text(
+        "const { McpServer: Server } = require('@modelcontextprotocol/server');\n"
+        "const instance = new Server({ name: 'demo', version: '1.0.0' });\n"
+        "instance.registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+    assert len(findings) == 1
+    assert findings[0].file == "server.js"
+    assert "delete_files" in findings[0].message
+
+
+def test_default_import_from_mcp_package_not_flagged(tmp_path):
+    # Default imports are intentionally not accepted in v1: the official MCP
+    # SDK exposes `McpServer` as a named export, so a default-import binding
+    # cannot be assumed to be the McpServer class.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import Anything from '@modelcontextprotocol/server';\n"
+        "const server = new Anything({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []

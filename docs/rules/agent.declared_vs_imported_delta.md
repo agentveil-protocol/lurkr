@@ -44,13 +44,49 @@ and `.cts` sources covers a single supported pattern:
 
 `<server>.registerTool("static_name", config, handler)`
 
-where `<server>` is a local identifier bound to `new McpServer(...)` in the
-same file. This corresponds to the canonical Model Context Protocol
-TypeScript SDK tool registration API.
+where `<server>` is a local identifier bound to `new McpServer(...)` whose
+constructor resolves through an official `@modelcontextprotocol/*` import or
+`require(...)` in the same file. This corresponds to the canonical Model
+Context Protocol TypeScript SDK tool registration API.
 
-Only static string tool names are extracted. Calls where the receiver is not
-a locally-bound McpServer instance are not matched, even when the file
-imports an official MCP package.
+The gate accepts these forms of bringing `McpServer` into local scope:
+
+- Named ES import: `import { McpServer } from "@modelcontextprotocol/server"`
+- Aliased named ES import:
+  `import { McpServer as Server } from "@modelcontextprotocol/server"`
+- Destructured CommonJS require:
+  `const { McpServer } = require("@modelcontextprotocol/server")`
+- Aliased destructured require:
+  `const { McpServer: Server } = require("@modelcontextprotocol/server")`
+- Namespace ES import paired with qualified construction:
+  `import * as mcp from "@modelcontextprotocol/server"`
+  then `new mcp.McpServer(...)`
+- Namespace CommonJS require paired with qualified construction:
+  `const mcp = require("@modelcontextprotocol/server")`
+  then `new mcp.McpServer(...)`
+
+The gate does NOT match in any of the following cases:
+
+- A locally declared `class McpServer { ... }` with no official MCP import
+- `import { McpServer } from "not-mcp"` (non-MCP package)
+- `import { NotMcpServer } from "@modelcontextprotocol/server"` (other symbol)
+- Default import from the MCP package
+  (`import Anything from "@modelcontextprotocol/server"`)
+- An official MCP import is present but the file has no local
+  `new McpServer(...)` binding
+- `<server>.tool("name", ...)` shorthand
+- `<server>.setRequestHandler("tools/call", ...)` low-level API
+- Dynamic / computed tool names (template literals, variable references,
+  function-call results)
+- Wrapped or factory registrations that hide the receiver or tool name from
+  the static call site, such as helper functions that receive the name as a
+  variable (direct `<server>.registerTool("static_name", ...)` calls are still
+  matched even when placed inside helper functions)
+- Chained construction `new McpServer({...}).registerTool(...)` without an
+  intermediate identifier
+
+Only static string tool names are extracted. The rule is a bounded static
+signal and does not resolve cross-file references.
 
 ## Why It Matters
 
@@ -186,8 +222,10 @@ The single reachable tool is declared, so this rule does not fire.
   in the same file. The `server.tool(...)` shorthand and the low-level
   `server.setRequestHandler("tools/call", ...)` API are intentionally not
   flagged in this version.
-- TypeScript / JavaScript: wrapped registrations (calls to `registerTool`
-  inside helper functions or factories) and chained constructions such as
+- TypeScript / JavaScript: wrapper or factory patterns are out of scope when
+  they hide the receiver or tool name from the static call site. Direct
+  `<server>.registerTool("static_name", ...)` calls are still matched even
+  inside helper functions. Chained constructions such as
   `new McpServer({...}).registerTool(...)` without an intermediate identifier
   are out of scope.
 - TypeScript / JavaScript: malformed sources (tree-sitter reports an error on

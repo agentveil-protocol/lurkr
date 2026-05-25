@@ -62,6 +62,11 @@ The handler argument is resolved in priority order:
    supported. Aliased exports (`export { foo as runTool }`) are supported
    when the local symbol resolves to a function or const arrow / function
    in the same target file.
+4. Identifier bound by a default import from a same-repo relative path
+   (`import handler from "./tools"`) where the target file's
+   `export default` is a function declaration or an arrow / function
+   expression. Default exports of classes, objects, literals, or a bare
+   identifier (`export default runTool`) are intentionally not v1.
 
 When the resolved body lives in a different file, the handler is analysed
 in that target file's context: the call-site walk uses the target file's
@@ -111,7 +116,8 @@ a name shadowed only in a nested inner scope can still be flagged.
 - Package imports (`import { x } from "@pkg/name"`) for handler resolution
 - tsconfig path aliases (`@/lib/x`, etc.)
 - Barrel re-exports (`export { x } from "./y"`)
-- Default exports (`export default ...`)
+- Default exports of class / object / literal / bare-identifier shapes
+  (function-like default exports ARE resolved; see Handler Resolution)
 - Namespace imports from local files (`import * as t from "./tools"`)
 - Cross-package monorepo resolution
 - Dataflow or reachability analysis beyond bounded same-file AST in the

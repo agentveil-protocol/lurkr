@@ -64,6 +64,11 @@ The handler argument is resolved in priority order:
    as a `function` declaration or a `const` arrow / function expression.
    Aliased named imports and aliased exports are supported through the
    same shared logic as the other JS/TS MCP rules.
+4. Identifier bound by a default import from a same-repo relative path
+   (`import handler from "./tools"`) where the target file's
+   `export default` is a function declaration or an arrow / function
+   expression. Default exports of classes, objects, literals, or a bare
+   identifier (`export default runTool`) are intentionally not v1.
 
 When the resolved body lives in a different file, the network call walk
 runs in the target file's source. The target file's own network imports

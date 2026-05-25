@@ -65,6 +65,11 @@ The handler argument is resolved in priority order:
    as a `function` declaration or a `const` arrow / function expression.
    Aliased named imports and aliased exports are supported through the
    same shared logic as the `child_process` and `fs` rules.
+4. Identifier bound by a default import from a same-repo relative path
+   (`import handler from "./tools"`) where the target file's
+   `export default` is a function declaration or an arrow / function
+   expression. Default exports of classes, objects, literals, or a bare
+   identifier (`export default runTool`) are intentionally not v1.
 
 When the resolved body lives in a different file, the env access walk runs
 in the target file's source and the finding's file path and line number
@@ -115,7 +120,8 @@ function, method, or class scopes is intentionally not v1.
 - Package imports for handler resolution
 - tsconfig path aliases
 - Barrel re-exports
-- Default exports
+- Default exports of class / object / literal / bare-identifier shapes
+  (function-like default exports ARE resolved; see Handler Resolution)
 - Namespace imports from local files
 - Cross-package monorepo resolution
 - Dataflow or reachability analysis beyond bounded same-file AST in the

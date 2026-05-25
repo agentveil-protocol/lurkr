@@ -387,10 +387,11 @@ def test_namespace_local_import_handler_not_resolved(tmp_path):
     assert _cp_findings(tmp_path) == []
 
 
-def test_default_export_handler_not_resolved(tmp_path):
-    # Default-export resolution is intentionally not v1. Even though the
-    # importer's identifier `runTool` would point at the default export here,
-    # the resolver does not match it.
+def test_default_import_handler_resolves_function_declaration(tmp_path):
+    # The importer's default identifier ``runTool`` resolves to the
+    # ``export default async function runTool() {...}`` shape in the target
+    # file. Cross-file resolution then walks the function body and the cp
+    # rule fires at the ``exec('ls')`` line.
     (tmp_path / "server.ts").write_text(
         "import { McpServer } from '@modelcontextprotocol/server';\n"
         "import runTool from './tools';\n"
@@ -406,7 +407,11 @@ def test_default_export_handler_not_resolved(tmp_path):
         encoding="utf-8",
     )
 
-    assert _cp_findings(tmp_path) == []
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
 
 
 def test_missing_local_target_file_does_not_crash(tmp_path):
@@ -2494,5 +2499,253 @@ def test_directory_index_outside_scan_root_is_not_parsed(tmp_path, monkeypatch):
     outside_resolved = outside_target.resolve()
     assert outside_resolved not in parsed_paths, (
         "outside directory/index target was parsed despite being outside "
+        f"scan root: parsed={parsed_paths}"
+    )
+
+
+# --------- C1: default-export handler resolution ---------
+
+
+def test_default_import_anonymous_function_resolves(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default async function () {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_default_import_arrow_function_resolves(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default async () => {\n"
+        "  exec('ls');\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_default_import_directory_index_resolves(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "index.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools/index.ts"
+    assert findings[0].line == 3
+
+
+def test_default_import_with_named_imports_alongside_resolves(tmp_path):
+    # ``import handler, { other } from "./tools"`` — default + named in the
+    # same import statement. The default binding should resolve, named
+    # bindings stay independent.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool, { other } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n"
+        "export const other = 1;\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_default_import_package_does_not_resolve(tmp_path):
+    # `import x from "@some/pkg"` is a package import (no relative prefix),
+    # so cross-file resolution is silently skipped.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from '@some/pkg';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_default_export_object_does_not_resolve(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default {\n"
+        "  run() { exec('ls'); },\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_default_export_class_does_not_resolve(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import RunTool from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, RunTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default class RunTool {\n"
+        "  run() { exec('ls'); }\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_default_export_identifier_does_not_resolve(tmp_path):
+    # `export default runTool;` (bare identifier) — v1 does NOT resolve
+    # this. Per operator's contract, only function-like default exports
+    # are matched, to avoid the second-level local-binding lookup.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n"
+        "export default runTool;\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_default_import_missing_local_target_does_not_crash(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from './missing';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_default_import_malformed_target_does_not_crash(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default async function () {\n"
+        "  exec('ls'\nincomplete syntax here\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_default_import_outside_scan_root_is_not_parsed(tmp_path, monkeypatch):
+    scan_root = tmp_path / "scan"
+    scan_root.mkdir()
+    outside_target = tmp_path / "outside.ts"
+    outside_target.write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default async function () {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    (scan_root / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from '../outside';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+
+    from lurkr.rules import js_agent as js_agent_mod
+
+    parsed_paths: list[Path] = []
+    original_load = js_agent_mod.load_js_ast_document
+
+    def tracking_load(path, *args, **kwargs):
+        try:
+            parsed_paths.append(Path(path).resolve())
+        except OSError:
+            parsed_paths.append(Path(path))
+        return original_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(js_agent_mod, "load_js_ast_document", tracking_load)
+
+    findings = _cp_findings(scan_root)
+
+    assert findings == []
+    outside_resolved = outside_target.resolve()
+    assert outside_resolved not in parsed_paths, (
+        "outside default-import target was parsed despite being outside "
         f"scan root: parsed={parsed_paths}"
     )

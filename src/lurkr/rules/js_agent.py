@@ -1031,15 +1031,25 @@ def _iter_within_scope(node: Any) -> Iterator[Any]:
 def _collect_relative_import_bindings(
     document: JsAstDocument, scan_path: Path, scan_root: Path
 ) -> dict[str, _ImportBinding]:
-    """Map local binding name -> ``_ImportBinding`` for named imports whose
-    source path starts with ``./`` or ``../`` and resolves to a same-repo
-    JS/TS source file inside ``scan_root``.
+    """Map local binding name -> ``_ImportBinding`` for relative-path imports
+    whose source path starts with ``./`` or ``../`` and resolves to a
+    same-repo JS/TS source file inside ``scan_root``.
+
+    Supported import shapes:
+
+    - Named imports / aliased named imports
+      (``import { foo } from "./x"`` / ``import { foo as bar } from "./x"``).
+      ``imported_name`` is the original symbol; ``local_name`` is the local
+      binding.
+    - Default imports (``import foo from "./x"``). ``imported_name`` is the
+      sentinel string ``"default"``; ``local_name`` is the local binding.
 
     Bindings whose target does not resolve (missing file, non-JS suffix,
     OS error) are silently dropped. Bindings whose resolved target falls
     outside ``scan_root`` are also dropped here, BEFORE any target file is
     parsed — Lurkr must not read files outside the scan path. Namespace
-    imports, default imports, and dynamic imports are not collected.
+    imports, dynamic imports, and CommonJS ``module.exports`` shapes are
+    intentionally not v1.
     """
     bindings: dict[str, _ImportBinding] = {}
     base_dir = scan_path.parent
@@ -1063,27 +1073,34 @@ def _collect_relative_import_bindings(
             if clause.type != "import_clause":
                 continue
             for sub in clause.children:
-                if sub.type != "named_imports":
-                    continue
-                for spec_node in sub.children:
-                    if spec_node.type != "import_specifier":
-                        continue
-                    name_node = spec_node.child_by_field_name("name")
-                    if name_node is None or name_node.type != "identifier":
-                        continue
-                    alias_node = spec_node.child_by_field_name("alias")
-                    local_node = (
-                        alias_node if alias_node is not None else name_node
-                    )
-                    if local_node.type != "identifier":
-                        continue
-                    local_name = node_text(local_node, document.source)
-                    imported = node_text(name_node, document.source)
+                if sub.type == "identifier":
+                    # Default import: `import foo from "./x"`.
+                    local_name = node_text(sub, document.source)
                     bindings[local_name] = _ImportBinding(
                         local_name=local_name,
-                        imported_name=imported,
+                        imported_name="default",
                         source=target,
                     )
+                elif sub.type == "named_imports":
+                    for spec_node in sub.children:
+                        if spec_node.type != "import_specifier":
+                            continue
+                        name_node = spec_node.child_by_field_name("name")
+                        if name_node is None or name_node.type != "identifier":
+                            continue
+                        alias_node = spec_node.child_by_field_name("alias")
+                        local_node = (
+                            alias_node if alias_node is not None else name_node
+                        )
+                        if local_node.type != "identifier":
+                            continue
+                        local_name = node_text(local_node, document.source)
+                        imported = node_text(name_node, document.source)
+                        bindings[local_name] = _ImportBinding(
+                            local_name=local_name,
+                            imported_name=imported,
+                            source=target,
+                        )
     return bindings
 
 
@@ -1162,9 +1179,21 @@ def _find_exported_binding(document: JsAstDocument, name: str) -> Any | None:
     ``export async function name`` / ``export const name = arrow`` /
     ``export const name = function``) and clauseless ``export { name }`` /
     ``export { local as name }`` that route back to a same-file function or
-    const arrow/function declaration. Re-exports (``export {} from './y'``),
-    default exports, and namespace re-exports are intentionally not v1.
+    const arrow/function declaration.
+
+    When ``name`` is the sentinel string ``"default"``, delegates to
+    :func:`_find_default_export_function_body` which only resolves
+    function-like default exports (``export default function``,
+    ``export default async function``, ``export default async () => ...``,
+    anonymous variants). Default exports of classes, objects, literals, or
+    bare identifiers are intentionally not v1.
+
+    Re-exports (``export {} from './y'``) and namespace re-exports remain
+    out of v1.
     """
+    if name == "default":
+        return _find_default_export_function_body(document)
+
     local_decls: dict[str, Any] = {}
     local_lex: dict[str, Any] = {}
     for node in iter_nodes(document.tree):
@@ -1220,6 +1249,41 @@ def _find_exported_binding(document: JsAstDocument, name: str) -> Any | None:
                     return local_decls[local]
                 if local in local_lex:
                     return local_lex[local]
+    return None
+
+
+def _find_default_export_function_body(document: JsAstDocument) -> Any | None:
+    """Locate the function-like body of a default export in ``document``.
+
+    Matches the following shapes:
+
+    - ``export default function name() { ... }`` (named function declaration
+      as default export — ``declaration`` field is a ``function_declaration``)
+    - ``export default async function name() { ... }`` (same, async modifier
+      lives inside the function_declaration)
+    - ``export default function () { ... }`` (anonymous function expression —
+      ``value`` field is a ``function_expression``)
+    - ``export default async () => { ... }`` (arrow — ``value`` field is an
+      ``arrow_function``)
+
+    Returns ``None`` for default exports of class declarations, object
+    literals, primitive literals, or bare identifiers (``export default
+    runTool``). Re-exports (``export default ... from './y'``) are also
+    skipped here, matching the broader cross-file resolution boundary.
+    """
+    for node in iter_nodes(document.tree):
+        if node.type != "export_statement":
+            continue
+        if node.child_by_field_name("source") is not None:
+            continue
+        if not any(child.type == "default" for child in node.children):
+            continue
+        declaration = node.child_by_field_name("declaration")
+        if declaration is not None and declaration.type == "function_declaration":
+            return declaration
+        value = node.child_by_field_name("value")
+        if value is not None and value.type in _HANDLER_INLINE_TYPES:
+            return value
     return None
 
 

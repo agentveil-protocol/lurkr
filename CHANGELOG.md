@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## v0.3.0 — 2026-05-25
+
 **Bounded TypeScript / JavaScript MCP coverage.** Lurkr now flags risky
 operations inside canonical Model Context Protocol `registerTool`
 handlers in TypeScript / JavaScript source. Four new high-severity rules

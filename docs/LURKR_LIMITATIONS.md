@@ -1,9 +1,11 @@
 # Static Analysis Limits
 
-Lurkr is a sound-by-design static scanner, not a complete model of
-all possible agent behavior. It flags a bounded set of risky capability
-patterns that can be identified from repository files without executing code,
-calling the network, or collecting telemetry.
+Lurkr is an agent / MCP posture scanner, not a general JS/TS or Python
+SAST. It is a sound-by-design static analyzer targeting risky agent and
+Model Context Protocol capability surfaces; it is not a complete model
+of all possible agent behavior. It flags a bounded set of risky
+capability patterns that can be identified from repository files
+without executing code, calling the network, or collecting telemetry.
 
 False negatives are expected by design. A finding that Lurkr does not report
 is not a proof that a repository has no risky capability surface; it means the
@@ -77,6 +79,26 @@ https://www.di.ens.fr/~cousot/COUSOTpapers/POPL77.shtml
 - `tool.shell_without_approval` inspects pinned manifest formats and exact
   shell-capable tool names. Tools hidden behind project-specific names or
   constructed at runtime are outside v0.2 scope.
+- TypeScript / JavaScript MCP coverage is bounded to canonical Model
+  Context Protocol `registerTool` registration patterns. Supported
+  shapes today: identifier-bound (`const server = new McpServer(...);
+  server.registerTool(...)`), direct chained construction
+  (`new McpServer(...).registerTool(...)` plus the parenthesised
+  variant), namespace-qualified construction
+  (`new <ns>.McpServer(...).registerTool(...)`), and typed
+  helper-wrapper parameters (`(server: McpServer) =>
+  server.registerTool(...)`). Static tool names may be resolved through
+  same-file top-level `const NAME = "literal"` bindings; dynamic / template
+  / call-result names remain skipped. Cross-file handler resolution is
+  restricted to relative-path imports inside the scan root: named
+  imports, default imports of function-like exports, namespace local
+  imports (`tools.runTool` member access), and directory/index probing.
+  Untyped JS helper wrappers, wrapper-name heuristics, tool arrays /
+  forEach loops, `setRequestHandler("tools/call", ...)`, CommonJS
+  `module.exports` shapes, barrel re-exports, tsconfig path aliases,
+  package imports for handler resolution, and dataflow / reachability
+  analysis beyond bounded same-file AST in the target file are all
+  outside v0.2 scope. Lurkr is not a general JS/TS scanner.
 - Oversized, unreadable, malformed, alias-heavy, deeply nested, binary, or
   undecodable files may be skipped before parsing to preserve scanner safety.
 - Symlinks are skipped. Lurkr does not follow links inside or outside the

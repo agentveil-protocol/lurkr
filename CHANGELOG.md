@@ -7,6 +7,66 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+**Bounded TypeScript / JavaScript MCP coverage.** Lurkr now flags risky
+operations inside canonical Model Context Protocol `registerTool`
+handlers in TypeScript / JavaScript source. Four new high-severity rules
+join the existing fourteen:
+
+- `agent.javascript_child_process_in_tool` — Node.js `child_process`
+  commands inside MCP tool handlers.
+- `agent.javascript_file_mutation_in_tool` — Node.js `fs` /
+  `fs/promises` write / delete calls inside MCP tool handlers.
+- `agent.javascript_env_secret_access_in_tool` — secret-like
+  `process.env.<NAME>` reads inside MCP tool handlers (case-sensitive
+  allowlist plus `_KEY` / `_TOKEN` / `_SECRET` / `_PASSWORD` suffixes;
+  benign reads such as `process.env.NODE_ENV` are not flagged).
+- `agent.javascript_network_call_in_tool` — outbound network calls
+  inside MCP tool handlers (`fetch`, `axios`, `got`, `undici`, `http`,
+  `https`). Static localhost URLs (`http://localhost`, `http://127.0.0.1`,
+  `http://[::1]`) are intentionally skipped.
+
+`agent.declared_vs_imported_delta` is extended to detect TS/JS MCP
+`registerTool` registrations as shadow capabilities alongside Python tool
+registrations.
+
+TS/JS coverage is bounded to canonical MCP `registerTool` registration
+patterns:
+
+- Identifier-bound: `const server = new McpServer(...); server.registerTool(...)`
+- Direct chained construction: `new McpServer(...).registerTool(...)`
+- Parenthesised chained construction: `(new McpServer(...)).registerTool(...)`
+- Namespace-qualified construction:
+  `new mcp.McpServer(...).registerTool(...)`
+- Typed helper-wrapper parameter: `(server: McpServer) => server.registerTool(...)`
+
+Tool names accept static string literals AND same-file top-level
+`const NAME = "literal"` bindings (with local-scope shadow guard).
+
+Cross-file handler resolution is restricted to relative-path imports
+inside the scan root:
+
+- Named imports (`import { x } from "./tools"`), with aliased forms.
+- Default imports (`import x from "./tools"`) for function-like
+  `export default` shapes (declarations, anonymous functions, arrow
+  functions). Bare-identifier `export default x` is not resolved.
+- Namespace local imports (`import * as t from "./tools"; t.runTool`).
+  Nested or dynamic member access is not resolved.
+- Directory / `index` file probing (`./tools` → `./tools/index.ts` etc.)
+  with sibling-file precedence preserved.
+
+Scan-root boundary is enforced before any target file is parsed; targets
+outside the scan root are silently dropped.
+
+Out of scope (not detected): untyped JS helper wrappers, wrapper-name
+heuristics, tool arrays / `forEach` loops, `setRequestHandler("tools/call",
+...)`, CommonJS `module.exports` shapes, barrel re-exports, tsconfig
+path aliases, package imports for handler resolution, and dataflow /
+reachability analysis beyond bounded same-file AST in the target file.
+Lurkr remains a bounded agent / MCP posture scanner — not a general
+JavaScript or TypeScript SAST.
+
+Backward-compatible. Existing reports and rule IDs unchanged.
+
 ## v0.2.5 — 2026-05-14
 
 **Version-sync bug fix.** `SCANNER_VERSION` in `report.py` and

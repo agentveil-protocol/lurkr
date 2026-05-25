@@ -2,9 +2,11 @@
 
 **Find what your agent can touch before you deploy it.**
 
-Lurkr is a static, local-only scanner for risky AI-agent and GitHub-workflow
-capability surfaces. It runs before deployment, does not execute project code,
-does not make network calls during scan, and redacts sensitive output.
+Lurkr is a static, local-only AI-agent and MCP posture scanner — not a
+general JS/TS or Python SAST. It targets risky capability surfaces in
+agent code, MCP tool handlers, and GitHub workflows. It runs before
+deployment, does not execute project code, does not make network calls
+during scan, and redacts sensitive output.
 
 ## Local CLI
 
@@ -18,6 +20,10 @@ That is the whole flow. The scanner is read-only: it does not modify your
 files, run your code, or send data over the network.
 
 Python agent detection is enabled for bounded `.py` source analysis.
+Bounded TypeScript / JavaScript MCP analysis is enabled for canonical
+Model Context Protocol `registerTool` handler shapes — not a general
+JS/TS scanner; see [Detection scope](#detection-scope) for the exact
+patterns covered.
 
 To fail CI when findings meet a threshold, add `--fail-on`:
 
@@ -45,7 +51,7 @@ Use the GitHub Action when you want the same check in CI:
 
 [Source repository](https://github.com/agentveil-protocol/lurkr) |
 [Privacy & data handling](#privacy--data-handling) |
-[Detection scope](#detection-scope-v027) |
+[Detection scope](#detection-scope) |
 [GitHub Action](#use-as-a-github-action) |
 [Why this exists](#why-this-exists)
 
@@ -84,7 +90,7 @@ Every finding contains rule ID, severity, repository-relative file path, line
 number when available, redacted message, and remediation pointer. Raw secrets,
 command bodies, and key material never appear in the report.
 
-## Detection Scope (v0.2.7)
+## Detection Scope
 
 All current rules are reported as `high` severity.
 
@@ -96,7 +102,7 @@ All current rules are reported as `high` severity.
 | [`tool.shell_without_approval`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/tool.shell_without_approval.md) | Agent tool manifests that enable shell execution without an approval flag | MCP/CrewAI-style manifests |
 | [`identity.private_key_unencrypted`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/identity.private_key_unencrypted.md) | Unencrypted PEM private key files committed to the repo | Repository files |
 | [`agent.credential_to_llm_context`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.credential_to_llm_context.md) | Credential-bearing values passed into LLM completion context | OpenAI, Anthropic, Gemini, LangChain direct call sites |
-| [`agent.declared_vs_imported_delta`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.declared_vs_imported_delta.md) | Python tool registrations not declared in agent manifest files | MCP, CrewAI, AutoGen, LangChain manifests + supported Python tool registrations |
+| [`agent.declared_vs_imported_delta`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.declared_vs_imported_delta.md) | Python AND TypeScript/JavaScript MCP tool registrations not declared in agent manifest files | MCP, CrewAI, AutoGen, LangChain manifests + supported Python tool registrations + bounded TS/JS MCP `registerTool` shapes |
 | [`agent.dynamic_prompt_from_user_input`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.dynamic_prompt_from_user_input.md) | Prompt templates directly interpolating function parameters | Prompt-shaped Python assignments and common template helpers |
 | [`agent.python_api_key_hardcoded`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_api_key_hardcoded.md) | API-key-shaped string literals in Python source | Module-wide; Anthropic, OpenAI, GitHub PAT, HuggingFace |
 | [`agent.python_eval_exec_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_eval_exec_in_tool.md) | `eval`/`exec`-style dynamic execution inside Python tool functions | Supported Python tool functions |
@@ -104,6 +110,17 @@ All current rules are reported as `high` severity.
 | [`agent.python_tool_without_approval`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_tool_without_approval.md) | Python agent tool declarations without an approval marker | LangChain, LangGraph, CrewAI, MCP, OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini |
 | [`agent.python_unrestricted_file_access`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_unrestricted_file_access.md) | File write or delete calls inside Python tool functions | Supported Python tool functions |
 | [`agent.unverified_mcp_endpoint`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.unverified_mcp_endpoint.md) | MCP server URLs pointing to non-allowlisted external hosts | MCP manifests |
+| [`agent.javascript_child_process_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.javascript_child_process_in_tool.md) | Node.js `child_process` commands inside canonical MCP `registerTool` handlers (TS/JS) | Canonical MCP `registerTool` handlers in TS/JS |
+| [`agent.javascript_file_mutation_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.javascript_file_mutation_in_tool.md) | Node.js `fs` / `fs/promises` write/delete calls inside canonical MCP `registerTool` handlers (TS/JS) | Canonical MCP `registerTool` handlers in TS/JS |
+| [`agent.javascript_env_secret_access_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.javascript_env_secret_access_in_tool.md) | Secret-like `process.env.<NAME>` reads inside canonical MCP `registerTool` handlers (TS/JS) | Canonical MCP `registerTool` handlers in TS/JS |
+| [`agent.javascript_network_call_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.javascript_network_call_in_tool.md) | Outbound network calls (fetch / axios / got / undici / http(s)) inside canonical MCP `registerTool` handlers (TS/JS) | Canonical MCP `registerTool` handlers in TS/JS |
+
+TS/JS coverage is bounded to canonical Model Context Protocol
+`registerTool` registration patterns (identifier-bound, chained, typed
+helper-wrapper parameters, namespace-qualified, parenthesized) reached
+through bounded same-file AST analysis and relative-path cross-file
+handler resolution. Lurkr is not a general JavaScript or TypeScript
+scanner — see the per-rule docs for each rule's exact gate.
 
 Deployment checks include common CLI deploy, release, registry push, and
 infrastructure apply commands. Build, plan, dry-run, and package-only commands
@@ -119,6 +136,7 @@ It scans the repo surfaces that turn an agent into an actor:
 - GitHub workflows that can deploy or expose secrets
 - Agent manifests that expose shell-capable tools
 - Python agent code that wires tools to subprocess, file writes, eval/exec, direct tokens, LLM context, prompts, or external MCP endpoints
+- Bounded TypeScript / JavaScript MCP tool handlers that reach `child_process`, file mutation, secret-like `process.env`, or outbound network calls
 
 Static. Local-only. Offline. Redacted by default.
 
@@ -136,12 +154,13 @@ The goal: find high-severity capabilities worth controlling before they become p
 
 ## Roadmap
 
-### Available now (v0.2.7)
+### Available now
 
-14 high-severity rules across:
+18 high-severity rules across:
 - GitHub workflows + agent manifests + identity files
 - Python agent code: LangChain / LangGraph, CrewAI, MCP (FastMCP and Server-style), OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini
-- Declared-vs-imported capability delta checks across MCP/CrewAI/AutoGen/LangChain manifests and Python tool registrations
+- Bounded TypeScript / JavaScript MCP tool handlers: `child_process`, `fs` / `fs/promises` mutation, secret-like `process.env`, and outbound network calls (`fetch` / `axios` / `got` / `undici` / `http(s)`). Coverage is limited to canonical Model Context Protocol `registerTool` registration shapes and bounded same-file + relative-import handler resolution
+- Declared-vs-imported capability delta across MCP/CrewAI/AutoGen/LangChain manifests, Python tool registrations, AND bounded TS/JS MCP `registerTool` extraction (identifier-bound, chained, typed helper-wrapper parameters, namespace-qualified, parenthesized, with same-file top-level `const` name resolution)
 - AI-specific static checks for credential flow into LLM context, direct prompt interpolation, and external MCP endpoints
 - Baseline mode for CI adoption: save current findings, then fail only on new findings
 
@@ -352,7 +371,9 @@ Runtime dependencies are intentionally minimal:
 
 ## Known Limitations
 
-`lurkr` v0.2 is a bounded static scanner, not an exhaustive security audit.
+`lurkr` v0.2 is a bounded static scanner targeted at agent / MCP
+capability surfaces, not a general JS/TS or Python SAST and not an
+exhaustive security audit.
 
 - Some rules may produce false positives or false negatives.
 - Oversized, unreadable, or malformed inputs may be skipped without per-file
@@ -361,6 +382,16 @@ Runtime dependencies are intentionally minimal:
   limit can still consume parser memory.
 - Python analysis is bounded to `.py` files. Stub files and cross-file Python
   call resolution are out of scope for this release.
+- TypeScript / JavaScript analysis is bounded to canonical Model Context
+  Protocol `registerTool` registration patterns and a small set of
+  cross-file handler resolution shapes (named imports, default imports,
+  namespace local imports, directory/index probing — all restricted to
+  relative paths within the scan root). Untyped JS wrappers, tool arrays
+  / forEach loops, `setRequestHandler("tools/call", ...)`, CommonJS
+  `module.exports` shapes, barrel re-exports, tsconfig path aliases,
+  package imports for handler resolution, and dataflow / reachability
+  analysis beyond bounded same-file AST in the target file remain out of
+  scope. Lurkr is not a general JS/TS scanner.
 
 ## Further reading
 

@@ -14,6 +14,7 @@ from lurkr.rules import (
     scan_declared_vs_imported_delta,
     scan_dynamic_prompt_from_user_input,
     scan_identity_private_key_unencrypted,
+    scan_js_agent_rules,
     scan_manifest_rules,
     scan_python_agent_rules,
     scan_unverified_mcp_endpoint,
@@ -52,6 +53,7 @@ def scan_path(path: Path) -> PostureReport:
             findings.extend(scan_dynamic_prompt_from_user_input(root, candidate))
         if is_js_or_ts_source(candidate):
             js_files.append(candidate)
+            findings.extend(scan_js_agent_rules(root, candidate))
     findings.extend(scan_declared_vs_imported_delta(root, python_files, js_files))
 
     return build_report(str(root), findings)

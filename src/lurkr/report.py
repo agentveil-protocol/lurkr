@@ -92,6 +92,11 @@ RULE_DESCRIPTORS = {
         "full": "Flags subprocess or shell calls inside Python agent tool functions.",
         "help": _rule_doc_url("agent.python_subprocess_in_tool"),
     },
+    "agent.javascript_child_process_in_tool": {
+        "short": "TypeScript/JavaScript MCP tool handler child_process use",
+        "full": "Flags Node.js child_process calls inside canonical MCP tool handlers in TypeScript or JavaScript.",
+        "help": _rule_doc_url("agent.javascript_child_process_in_tool"),
+    },
     "agent.python_eval_exec_in_tool": {
         "short": "Python agent tool dynamic execution",
         "full": "Flags eval, exec, compile, or dynamic import calls inside Python agent tool functions.",

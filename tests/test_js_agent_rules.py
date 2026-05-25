@@ -222,23 +222,238 @@ def test_set_request_handler_does_not_fire(tmp_path):
     assert _cp_findings(tmp_path) == []
 
 
-def test_imported_handler_reference_from_another_file_does_not_fire(tmp_path):
-    # Handler is an imported identifier — cross-file resolution is intentionally
-    # out of scope. There is no same-file `function runTool() {}` or `const
-    # runTool = ...` to walk, so the handler body is not reachable.
+# --------- cross-file: bounded relative-import handler resolution ---------
+
+
+def test_imported_function_handler_with_child_process_exec_fires(tmp_path):
     (tmp_path / "server.ts").write_text(
         "import { McpServer } from '@modelcontextprotocol/server';\n"
-        "import { exec } from 'node:child_process';\n"
-        "import { runTool } from './tool';\n"
+        "import { runTool } from './tools';\n"
         "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
-        "server.registerTool('run', {}, runTool);\n",
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
         encoding="utf-8",
     )
-    # Bystander file with the body — must not be cross-file resolved.
-    (tmp_path / "tool.ts").write_text(
+    (tmp_path / "tools.ts").write_text(
         "import { exec } from 'node:child_process';\n"
         "export async function runTool() {\n"
         "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.file == "tools.ts"
+    assert finding.line == 3
+    assert finding.severity == "high"
+    assert "TypeScript/JavaScript" in finding.message
+
+
+def test_imported_const_arrow_handler_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export const runTool = async () => {\n"
+        "  exec('ls');\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_aliased_import_handler_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool as handler } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, handler);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_aliased_export_clause_resolves_through_local_function(tmp_path):
+    # `export { runTool as handler }` — importer asks for `handler`; resolver
+    # routes back to the local same-file `function runTool` in the target file.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { handler } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, handler);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n"
+        "export { runTool as handler };\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_package_import_handler_not_resolved(tmp_path):
+    # `@some/package` is a package import, not a relative path. The handler is
+    # not resolved through cross-file lookup, so no finding is emitted even if
+    # a file named `some-package.ts` happens to exist alongside.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from '@some/package';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_namespace_local_import_handler_not_resolved(tmp_path):
+    # `import * as tools from "./tools"; ...registerTool(_, _, tools.runTool)`
+    # is a namespace-from-local form; v1 does not resolve the member access.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_default_export_handler_not_resolved(tmp_path):
+    # Default-export resolution is intentionally not v1. Even though the
+    # importer's identifier `runTool` would point at the default export here,
+    # the resolver does not match it.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import runTool from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export default async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_missing_local_target_file_does_not_crash(tmp_path):
+    # The scanning file imports from a relative path that does not exist on
+    # disk. Resolution must silently produce no handler body and no crash.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './missing';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_barrel_re_export_not_resolved_in_v1(tmp_path):
+    # `export { runTool } from './deep'` is a re-export with a source clause.
+    # The resolver intentionally does not traverse this in v1, so the handler
+    # body in `./deep.ts` is unreachable through `./tools`.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "export { runTool } from './deep';\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "deep.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_malformed_imported_target_does_not_crash(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls'\nincomplete syntax here\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_imported_handler_parameter_shadow_in_target_does_not_fire(tmp_path):
+    # The handler-scope shadow rule must apply in the TARGET file's context:
+    # an `exec` parameter in the imported function declaration shadows the
+    # target file's imported `exec`. No finding should be emitted.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool(exec) {\n"
+        "  exec('safe local');\n"
         "}\n",
         encoding="utf-8",
     )
@@ -470,5 +685,71 @@ def test_handler_param_shadows_direct_name_for_function_declaration_handler(tmp_
         "server.registerTool('run', { description: 'd' }, runTool);\n",
         encoding="utf-8",
     )
+
+    assert _cp_findings(tmp_path) == []
+
+
+# --------- cross-file: scan-root boundary and fail-closed regressions ---------
+
+
+def test_relative_import_outside_scan_root_is_not_parsed(tmp_path, monkeypatch):
+    # A scanned repo can syntactically reference ``../outside.ts``. Lurkr must
+    # NOT read or parse files outside the requested scan root, no matter
+    # whether the resulting handler resolution would emit a finding. The
+    # boundary check has to run BEFORE the target file is parsed.
+    scan_root = tmp_path / "scan"
+    scan_root.mkdir()
+    outside_target = tmp_path / "outside.ts"
+    outside_target.write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    (scan_root / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from '../outside';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+
+    from lurkr.rules import js_agent as js_agent_mod
+
+    parsed_paths: list[Path] = []
+    original_load = js_agent_mod.load_js_ast_document
+
+    def tracking_load(path, *args, **kwargs):
+        try:
+            parsed_paths.append(Path(path).resolve())
+        except OSError:
+            parsed_paths.append(Path(path))
+        return original_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(js_agent_mod, "load_js_ast_document", tracking_load)
+
+    findings = _cp_findings(scan_root)
+
+    assert findings == []
+    outside_resolved = outside_target.resolve()
+    assert outside_resolved not in parsed_paths, (
+        "outside target was parsed despite being outside scan root: "
+        f"parsed={parsed_paths}"
+    )
+
+
+def test_oversized_imported_target_does_not_crash(tmp_path):
+    # An imported relative target exceeding the JS/TS source byte cap must
+    # cause cross-file resolution to fail closed: no crash, no finding.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    # ~1.4 MB > MAX_SOURCE_BYTES (1 MB).
+    (tmp_path / "tools.ts").write_text("// pad\n" * 200_000, encoding="utf-8")
 
     assert _cp_findings(tmp_path) == []

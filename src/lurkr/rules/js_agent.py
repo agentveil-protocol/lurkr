@@ -5,7 +5,8 @@ v1 rule:
 - ``agent.javascript_child_process_in_tool`` — flag Node.js ``child_process``
   command execution inside a canonical MCP ``registerTool`` handler.
 
-Detection is bounded same-file static analysis:
+Detection is bounded static analysis over either the scanned file or a
+relative-imported same-repo file:
 
 - The MCP server context gate (`new McpServer(...)` reached through an official
   `@modelcontextprotocol/*` import) is reused from
@@ -13,10 +14,21 @@ Detection is bounded same-file static analysis:
 - Only ``server.registerTool("static_name", config, handler)`` calls are
   considered. Dynamic tool names, ``server.tool(...)``, and
   ``setRequestHandler(...)`` are intentionally out of scope.
-- Handler resolution covers (a) an inline arrow or function expression as the
-  third argument, or (b) an identifier reference to a same-file
-  ``function`` declaration or ``const`` arrow / function expression. Imported
-  handler references are intentionally not resolved across files.
+- Handler resolution covers, in priority order: (a) an inline arrow or
+  function expression as the third argument, (b) an identifier reference to
+  a same-file ``function`` declaration or ``const`` arrow / function
+  expression, or (c) an identifier bound by a named import from a same-repo
+  relative path (``./tools``, ``../lib/x``) where the target file exports
+  the named symbol as a ``function`` declaration or a ``const`` arrow /
+  function expression. Package imports, tsconfig path aliases, namespace
+  local imports, dynamic imports, barrel re-exports
+  (``export { x } from './y'``), and default exports are intentionally not
+  resolved.
+- For cross-file resolution the rule analyses the handler in the TARGET
+  file's context: the call-site walk uses the target file's
+  ``child_process`` imports, the handler's parameter / same-scope bindings
+  in the target file, and the target file's source for line numbers. The
+  emitted finding points at the target file relative to the scan root.
 - Shell APIs from ``child_process`` or ``node:child_process`` are recognised
   through named imports (with optional alias), namespace imports, default
   imports, destructured requires (with optional alias), and namespace-bound
@@ -27,6 +39,9 @@ Detection is bounded same-file static analysis:
   same-scope ``function`` declaration), calls through that name within the
   handler are not flagged. Shadowing introduced inside nested function or
   class scopes is intentionally not v1.
+- Cross-file resolution fails closed: missing target files, oversized
+  target files, target files with parse errors, and target files outside
+  the scan root all cause the handler to silently not resolve.
 """
 
 from __future__ import annotations
@@ -37,6 +52,7 @@ from typing import Any, Iterator
 
 from lurkr.js_ast import (
     JsAstDocument,
+    is_js_or_ts_source,
     iter_nodes,
     load_js_ast_document,
     node_text,
@@ -77,6 +93,41 @@ _SCOPE_BARRIER_TYPES = _FUNCTION_LIKE_TYPES | frozenset(
     {"method_definition", "class_declaration", "class_body"}
 )
 
+_RELATIVE_PATH_PREFIXES = ("./", "../")
+_RESOLUTION_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs")
+
+
+@dataclass(frozen=True)
+class _ImportBinding:
+    """A named import bound from a same-repo relative path.
+
+    ``local_name`` — identifier visible in the scanning file.
+    ``imported_name`` — original symbol name in the target file (before any
+    alias rebinding).
+    ``source`` — resolved absolute path to the target ``.ts`` / ``.tsx`` /
+    ``.js`` / ``.mjs`` / ``.cjs`` / ``.mts`` / ``.cts`` file.
+    """
+
+    local_name: str
+    imported_name: str
+    source: Path
+
+
+@dataclass(frozen=True)
+class _HandlerLocation:
+    """Resolved handler body plus the analysis context it should be walked in.
+
+    For same-file handlers, ``source`` / ``file_path`` / ``cp_imports`` match
+    the scanning file. For cross-file handlers, they reflect the target file
+    so that call-site resolution and line numbers come from the file where
+    the body actually lives.
+    """
+
+    body: Any
+    source: bytes
+    file_path: Path
+    cp_imports: "ChildProcessImports"
+
 
 @dataclass(frozen=True)
 class ChildProcessImports:
@@ -103,7 +154,14 @@ class ChildProcessImports:
 
 
 def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
-    """Return TypeScript/JavaScript agent rule findings for one file."""
+    """Return TypeScript/JavaScript agent rule findings for one file.
+
+    Handlers reachable from this file's MCP ``registerTool`` call sites are
+    analysed in the file where their body actually lives — that may be the
+    scanning file (same-file resolution) or a relative-imported same-repo
+    target file (cross-file resolution). Findings are reported relative to
+    the scan root using the body's file path.
+    """
     document = load_js_ast_document(path)
     if document is None:
         return []
@@ -114,32 +172,57 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
     if not server_identifiers:
         return []
 
-    cp_imports = _collect_child_process_imports(document)
-    if cp_imports.empty:
+    scan_cp_imports = _collect_child_process_imports(document)
+    import_bindings = _collect_relative_import_bindings(document, path, root)
+
+    if scan_cp_imports.empty and not import_bindings:
         return []
 
     declarations, lex_handlers = _collect_handler_bindings(document)
-    file_rel = path.relative_to(root).as_posix()
+
+    parsed_cache: dict[Path, JsAstDocument | None] = {path: document}
+    cp_imports_cache: dict[Path, ChildProcessImports] = {path: scan_cp_imports}
 
     findings: list[Finding] = []
-    seen_lines: set[int] = set()
+    seen_locations: set[tuple[str, int]] = set()
+
     for tool in collect_registered_tools_js(document, server_identifiers):
-        body = _resolve_handler_body(
-            tool.handler, document.source, declarations, lex_handlers
+        location = _resolve_handler_location(
+            handler_node=tool.handler,
+            scan_document=document,
+            scan_path=path,
+            scan_cp_imports=scan_cp_imports,
+            same_file_declarations=declarations,
+            same_file_lex_handlers=lex_handlers,
+            import_bindings=import_bindings,
+            parsed_cache=parsed_cache,
+            cp_imports_cache=cp_imports_cache,
         )
-        if body is None:
+        if location is None:
             continue
-        handler_locals = _handler_local_names(body, document.source)
+        if location.cp_imports.empty:
+            continue
+
+        try:
+            file_rel = location.file_path.relative_to(root).as_posix()
+        except ValueError:
+            continue
+
+        handler_locals = _handler_local_names(location.body, location.source)
         effective_imports = ChildProcessImports(
-            direct_names=cp_imports.direct_names - handler_locals,
-            namespace_aliases=cp_imports.namespace_aliases - handler_locals,
+            direct_names=location.cp_imports.direct_names - handler_locals,
+            namespace_aliases=location.cp_imports.namespace_aliases - handler_locals,
         )
         if effective_imports.empty:
             continue
-        for line in _child_process_call_lines(body, effective_imports, document.source):
-            if line in seen_lines:
+
+        for line in _child_process_call_lines(
+            location.body, effective_imports, location.source
+        ):
+            key = (file_rel, line)
+            if key in seen_locations:
                 continue
-            seen_lines.add(line)
+            seen_locations.add(key)
             findings.append(
                 Finding(
                     rule_id="agent.javascript_child_process_in_tool",
@@ -280,20 +363,80 @@ def _collect_handler_bindings(
     return declarations, lex_handlers
 
 
-def _resolve_handler_body(
+def _resolve_handler_location(
+    *,
     handler_node: Any,
-    source: bytes,
-    declarations: dict[str, Any],
-    lex_handlers: dict[str, Any],
-) -> Any | None:
+    scan_document: JsAstDocument,
+    scan_path: Path,
+    scan_cp_imports: ChildProcessImports,
+    same_file_declarations: dict[str, Any],
+    same_file_lex_handlers: dict[str, Any],
+    import_bindings: dict[str, _ImportBinding],
+    parsed_cache: dict[Path, JsAstDocument | None],
+    cp_imports_cache: dict[Path, ChildProcessImports],
+) -> _HandlerLocation | None:
+    """Resolve a registerTool ``handler`` argument to the function/arrow node
+    plus the analysis context for the file the body lives in.
+
+    Priority order:
+
+    1. Inline ``arrow_function`` / ``function_expression`` → scanning-file
+       context.
+    2. Identifier matching a same-file ``function`` declaration or
+       ``const`` arrow / function expression → scanning-file context.
+    3. Identifier matching a relative-import binding whose target file
+       exists, parses cleanly, and exports the symbol as a function /
+       const arrow / const function expression → target-file context.
+
+    Returns None when none of the above produces a body.
+    """
     if handler_node is None:
         return None
     if handler_node.type in _HANDLER_INLINE_TYPES:
-        return handler_node
-    if handler_node.type == "identifier":
-        name = node_text(handler_node, source)
-        return declarations.get(name) or lex_handlers.get(name)
-    return None
+        return _HandlerLocation(
+            body=handler_node,
+            source=scan_document.source,
+            file_path=scan_path,
+            cp_imports=scan_cp_imports,
+        )
+    if handler_node.type != "identifier":
+        return None
+
+    name = node_text(handler_node, scan_document.source)
+    same_file_body = same_file_declarations.get(name) or same_file_lex_handlers.get(
+        name
+    )
+    if same_file_body is not None:
+        return _HandlerLocation(
+            body=same_file_body,
+            source=scan_document.source,
+            file_path=scan_path,
+            cp_imports=scan_cp_imports,
+        )
+
+    binding = import_bindings.get(name)
+    if binding is None:
+        return None
+
+    target_document = _get_parsed_document(binding.source, parsed_cache)
+    if target_document is None:
+        return None
+
+    target_body = _find_exported_binding(target_document, binding.imported_name)
+    if target_body is None:
+        return None
+
+    target_cp_imports = cp_imports_cache.get(binding.source)
+    if target_cp_imports is None:
+        target_cp_imports = _collect_child_process_imports(target_document)
+        cp_imports_cache[binding.source] = target_cp_imports
+
+    return _HandlerLocation(
+        body=target_body,
+        source=target_document.source,
+        file_path=binding.source,
+        cp_imports=target_cp_imports,
+    )
 
 
 def _child_process_call_lines(
@@ -442,3 +585,206 @@ def _iter_within_scope(node: Any) -> Iterator[Any]:
         yield current
         if current.type not in _SCOPE_BARRIER_TYPES:
             stack.extend(reversed(current.children))
+
+
+def _collect_relative_import_bindings(
+    document: JsAstDocument, scan_path: Path, scan_root: Path
+) -> dict[str, _ImportBinding]:
+    """Map local binding name -> ``_ImportBinding`` for named imports whose
+    source path starts with ``./`` or ``../`` and resolves to a same-repo
+    JS/TS source file inside ``scan_root``.
+
+    Bindings whose target does not resolve (missing file, non-JS suffix,
+    OS error) are silently dropped. Bindings whose resolved target falls
+    outside ``scan_root`` are also dropped here, BEFORE any target file is
+    parsed — Lurkr must not read files outside the scan path. Namespace
+    imports, default imports, and dynamic imports are not collected.
+    """
+    bindings: dict[str, _ImportBinding] = {}
+    base_dir = scan_path.parent
+    for node in iter_nodes(document.tree):
+        if node.type != "import_statement":
+            continue
+        source_node = node.child_by_field_name("source")
+        if source_node is None:
+            continue
+        spec = static_string_value(source_node, document.source)
+        if spec is None or not spec.startswith(_RELATIVE_PATH_PREFIXES):
+            continue
+        target = _resolve_relative_module(base_dir, spec)
+        if target is None:
+            continue
+        try:
+            target.relative_to(scan_root)
+        except ValueError:
+            continue
+        for clause in node.children:
+            if clause.type != "import_clause":
+                continue
+            for sub in clause.children:
+                if sub.type != "named_imports":
+                    continue
+                for spec_node in sub.children:
+                    if spec_node.type != "import_specifier":
+                        continue
+                    name_node = spec_node.child_by_field_name("name")
+                    if name_node is None or name_node.type != "identifier":
+                        continue
+                    alias_node = spec_node.child_by_field_name("alias")
+                    local_node = (
+                        alias_node if alias_node is not None else name_node
+                    )
+                    if local_node.type != "identifier":
+                        continue
+                    local_name = node_text(local_node, document.source)
+                    imported = node_text(name_node, document.source)
+                    bindings[local_name] = _ImportBinding(
+                        local_name=local_name,
+                        imported_name=imported,
+                        source=target,
+                    )
+    return bindings
+
+
+def _resolve_relative_module(base_dir: Path, spec: str) -> Path | None:
+    """Resolve a relative module spec to a same-repo JS/TS source file path.
+
+    Tries the spec as-is when it carries a recognised JS/TS suffix; otherwise
+    appends each candidate suffix in
+    ``.ts, .tsx, .mts, .cts, .js, .mjs, .cjs`` order until a file exists.
+    Directory / ``index`` files, tsconfig path mappings, and package imports
+    are intentionally not handled.
+    """
+    try:
+        base = (base_dir / spec).resolve(strict=False)
+    except (OSError, RuntimeError):
+        return None
+    try:
+        if base.suffix and is_js_or_ts_source(base) and base.is_file():
+            return base
+    except OSError:
+        return None
+    base_str = str(base)
+    for suffix in _RESOLUTION_SUFFIXES:
+        candidate = Path(base_str + suffix)
+        try:
+            if candidate.is_file():
+                return candidate
+        except OSError:
+            continue
+    return None
+
+
+def _get_parsed_document(
+    path: Path, parsed_cache: dict[Path, JsAstDocument | None]
+) -> JsAstDocument | None:
+    """Return a parsed AST document for ``path``, caching None on failure.
+
+    Treats trees with parse errors the same as parse failure so that
+    downstream cross-file resolution fails closed on malformed targets.
+    """
+    if path in parsed_cache:
+        return parsed_cache[path]
+    document = load_js_ast_document(path)
+    if document is not None and document.tree.root_node.has_error:
+        document = None
+    parsed_cache[path] = document
+    return document
+
+
+def _find_exported_binding(document: JsAstDocument, name: str) -> Any | None:
+    """Locate the function/arrow node exported under ``name`` in ``document``.
+
+    Supports direct declaration exports (``export function name`` /
+    ``export async function name`` / ``export const name = arrow`` /
+    ``export const name = function``) and clauseless ``export { name }`` /
+    ``export { local as name }`` that route back to a same-file function or
+    const arrow/function declaration. Re-exports (``export {} from './y'``),
+    default exports, and namespace re-exports are intentionally not v1.
+    """
+    local_decls: dict[str, Any] = {}
+    local_lex: dict[str, Any] = {}
+    for node in iter_nodes(document.tree):
+        if node.type == "function_declaration":
+            name_node = node.child_by_field_name("name")
+            if name_node is not None and name_node.type == "identifier":
+                local_decls[node_text(name_node, document.source)] = node
+        elif node.type == "variable_declarator":
+            name_node = node.child_by_field_name("name")
+            value_node = node.child_by_field_name("value")
+            if (
+                name_node is not None
+                and value_node is not None
+                and name_node.type == "identifier"
+                and value_node.type in _HANDLER_INLINE_TYPES
+            ):
+                local_lex[node_text(name_node, document.source)] = value_node
+
+    for node in iter_nodes(document.tree):
+        if node.type != "export_statement":
+            continue
+        if node.child_by_field_name("source") is not None:
+            continue
+        if any(child.type == "default" for child in node.children):
+            continue
+
+        declaration = node.child_by_field_name("declaration")
+        if declaration is not None:
+            body = _exported_declaration_body(declaration, name, document.source)
+            if body is not None:
+                return body
+            continue
+
+        for child in node.children:
+            if child.type != "export_clause":
+                continue
+            for spec in child.children:
+                if spec.type != "export_specifier":
+                    continue
+                spec_name = spec.child_by_field_name("name")
+                if spec_name is None or spec_name.type != "identifier":
+                    continue
+                spec_alias = spec.child_by_field_name("alias")
+                exported_as = (
+                    node_text(spec_alias, document.source)
+                    if spec_alias is not None and spec_alias.type == "identifier"
+                    else node_text(spec_name, document.source)
+                )
+                if exported_as != name:
+                    continue
+                local = node_text(spec_name, document.source)
+                if local in local_decls:
+                    return local_decls[local]
+                if local in local_lex:
+                    return local_lex[local]
+    return None
+
+
+def _exported_declaration_body(
+    declaration: Any, name: str, source: bytes
+) -> Any | None:
+    if declaration.type == "function_declaration":
+        name_node = declaration.child_by_field_name("name")
+        if (
+            name_node is not None
+            and name_node.type == "identifier"
+            and node_text(name_node, source) == name
+        ):
+            return declaration
+        return None
+    if declaration.type in {"lexical_declaration", "variable_declaration"}:
+        for decl_child in declaration.children:
+            if decl_child.type != "variable_declarator":
+                continue
+            name_node = decl_child.child_by_field_name("name")
+            value_node = decl_child.child_by_field_name("value")
+            if (
+                name_node is not None
+                and value_node is not None
+                and name_node.type == "identifier"
+                and value_node.type in _HANDLER_INLINE_TYPES
+                and node_text(name_node, source) == name
+            ):
+                return value_node
+        return None
+    return None

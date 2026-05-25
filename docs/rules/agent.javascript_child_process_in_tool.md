@@ -37,7 +37,7 @@ server.registerTool("status", { description: "d" }, async () => {
 
 ## MCP Context Gate
 
-The rule only fires when both of the following hold in the same file:
+The rule only fires when both of the following hold in the scanning file:
 
 - An import or `require` of an official `@modelcontextprotocol/*` package
   binds the `McpServer` symbol locally, and the server instance is created
@@ -48,10 +48,28 @@ The rule only fires when both of the following hold in the same file:
   names, `server.tool(...)`, and `server.setRequestHandler(...)` are out of
   scope.
 
-The handler argument is resolved within the same file as an inline arrow or
-function expression, or as an identifier reference to a same-file `function`
-declaration or `const` arrow / function expression. Handlers imported from
-other files are intentionally not resolved.
+## Handler Resolution
+
+The handler argument is resolved in priority order:
+
+1. Inline arrow or function expression in the third position.
+2. Identifier reference to a same-file `function` declaration or `const`
+   arrow / function expression.
+3. Identifier bound by a named import from a same-repo relative path
+   (`./tools`, `../lib/x`) where the target file exports the same symbol
+   as a `function` declaration or a `const` arrow / function expression.
+   Aliased named imports (`import { foo as handler } from "./x"`) are
+   supported. Aliased exports (`export { foo as runTool }`) are supported
+   when the local symbol resolves to a function or const arrow / function
+   in the same target file.
+
+When the resolved body lives in a different file, the handler is analysed
+in that target file's context: the call-site walk uses the target file's
+`child_process` imports, the handler's own scope shadow set is computed
+in the target file, and the finding's file path and line number point at
+the target file (relative to the scan root). Cross-file resolution fails
+closed on missing, oversized, or malformed target files, and on targets
+outside the scan root.
 
 ## Supported child_process Forms
 
@@ -89,7 +107,14 @@ a name shadowed only in a nested inner scope can still be flagged.
 
 - Bun / Deno shell APIs
 - Third-party shell wrappers (`execa`, `shelljs`, `zx`, etc.)
-- Dynamic `import("node:child_process")`
-- Imported handler bodies from other files
-- Dataflow or reachability analysis beyond bounded same-file AST
+- Dynamic `import("node:child_process")` / dynamic handler imports
+- Package imports (`import { x } from "@pkg/name"`) for handler resolution
+- tsconfig path aliases (`@/lib/x`, etc.)
+- Barrel re-exports (`export { x } from "./y"`)
+- Default exports (`export default ...`)
+- Namespace imports from local files (`import * as t from "./tools"`)
+- Directory / `index` file resolution (`./tools` → `./tools/index.ts`)
+- Cross-package monorepo resolution
+- Dataflow or reachability analysis beyond bounded same-file AST in the
+  target file
 - Shadowing introduced in nested function / method / class scopes

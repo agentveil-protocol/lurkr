@@ -219,9 +219,13 @@ def is_mcp_server_new_expression(
     """Return True if node is a `new <X>(...)` whose constructor resolves to
     the official MCP server class through the file's MCP imports.
 
-    A locally-defined class named `McpServer` that is NOT imported from an
+    Strips one or more enclosing ``parenthesized_expression`` layers from
+    ``node`` so the parenthesised form (``(new McpServer(...))``) is
+    recognised on equal footing with the bare ``new_expression``. A
+    locally-defined class named `McpServer` that is NOT imported from an
     official `@modelcontextprotocol/*` package does not satisfy the gate.
     """
+    node = _unwrap_parentheses(node)
     if node.type != "new_expression":
         return False
     constructor = node.child_by_field_name("constructor")
@@ -328,14 +332,16 @@ def _is_chained_register_tool_call(
     node, source: bytes, mcp_imports: McpImports
 ) -> bool:
     """Return True if ``node`` is the direct chained shape
-    ``new <McpServer>(...).registerTool(...)``.
+    ``new <McpServer>(...).registerTool(...)`` (or the parenthesised
+    variant ``(new <McpServer>(...)).registerTool(...)``).
 
     Walks one level: the call's function field must be a member_expression
     whose property is ``registerTool`` and whose object is a
-    ``new_expression`` whose constructor resolves to the official MCP
-    server through ``mcp_imports``. Deeper indirections (parenthesised
-    expressions, intermediate property access, second-level chained
-    ``registerTool`` calls) are intentionally not v1.
+    ``new_expression`` (possibly wrapped in one or more
+    ``parenthesized_expression`` layers) whose constructor resolves to the
+    official MCP server through ``mcp_imports``. Intermediate property
+    access and second-level chained ``registerTool`` calls are
+    intentionally not v1.
     """
     fn = node.child_by_field_name("function")
     if fn is None or fn.type != "member_expression":
@@ -346,9 +352,34 @@ def _is_chained_register_tool_call(
     if node_text(prop, source) != "registerTool":
         return False
     obj = fn.child_by_field_name("object")
-    if obj is None or obj.type != "new_expression":
+    if obj is None:
         return False
-    return is_mcp_server_new_expression(obj, source, mcp_imports)
+    unwrapped = _unwrap_parentheses(obj)
+    if unwrapped.type != "new_expression":
+        return False
+    return is_mcp_server_new_expression(unwrapped, source, mcp_imports)
+
+
+def _unwrap_parentheses(node):
+    """Strip one or more enclosing ``parenthesized_expression`` layers.
+
+    Tree-sitter for JS/TS exposes ``parenthesized_expression`` with three
+    direct children: ``(``, the inner expression, ``)``. The inner
+    expression is not exposed through a field name, so this helper picks
+    the first non-punctuation child. Returns the input node unchanged if
+    it is not parenthesised.
+    """
+    while node is not None and node.type == "parenthesized_expression":
+        inner = None
+        for child in node.children:
+            if child.type in ("(", ")"):
+                continue
+            inner = child
+            break
+        if inner is None:
+            break
+        node = inner
+    return node
 
 
 def _mcp_typed_parameter_names(
@@ -470,7 +501,10 @@ def _collect_typed_wrapper_registered_tools(
             if call_fn is None or call_fn.type != "member_expression":
                 continue
             obj = call_fn.child_by_field_name("object")
-            if obj is None or obj.type != "identifier":
+            if obj is None:
+                continue
+            obj = _unwrap_parentheses(obj)
+            if obj.type != "identifier":
                 continue
             if node_text(obj, document.source) not in typed_param_names:
                 continue
@@ -548,6 +582,7 @@ def collect_registered_tools_js(
         obj = fn.child_by_field_name("object")
         if obj is None:
             continue
+        obj = _unwrap_parentheses(obj)
         if obj.type == "identifier":
             if node_text(obj, document.source) not in server_identifiers:
                 continue

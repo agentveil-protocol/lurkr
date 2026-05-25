@@ -113,7 +113,6 @@ a name shadowed only in a nested inner scope can still be flagged.
 - Barrel re-exports (`export { x } from "./y"`)
 - Default exports (`export default ...`)
 - Namespace imports from local files (`import * as t from "./tools"`)
-- Directory / `index` file resolution (`./tools` → `./tools/index.ts`)
 - Cross-package monorepo resolution
 - Dataflow or reachability analysis beyond bounded same-file AST in the
   target file

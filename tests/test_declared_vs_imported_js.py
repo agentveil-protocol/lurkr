@@ -1108,3 +1108,140 @@ def test_local_const_shadows_top_level_const_identifier_bound_no_fire(tmp_path):
     )
 
     assert _delta_findings(tmp_path) == []
+
+
+# --------- B1: parenthesized chained construction ---------
+
+
+def test_parenthesized_chained_construction_shadow_mismatch_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "(new McpServer({ name: 'demo', version: '1.0.0' }))"
+        ".registerTool('delete_files', { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 2
+    assert "delete_files" in findings[0].message
+    assert "TypeScript/JavaScript" in findings[0].message
+
+
+def test_parenthesized_chained_namespace_construction_shadow_mismatch_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import * as mcp from '@modelcontextprotocol/server';\n"
+        "(new mcp.McpServer({ name: 'demo', version: '1.0.0' }))"
+        ".registerTool('delete_files', { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 2
+
+
+def test_parenthesized_chained_local_class_mcp_server_not_flagged(tmp_path):
+    # Parenthesized chained construction over a locally-declared `McpServer`
+    # class (no official MCP import) must NOT satisfy the gate.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "class McpServer {\n"
+        "  registerTool(name: string, cfg: unknown, fn: unknown) {}\n"
+        "}\n"
+        "(new McpServer()).registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+# --------- B2: directory / index relative-import resolution ---------
+
+
+def test_directory_index_imported_handler_shadow_mismatch_fires(tmp_path):
+    # Server imports a handler from a relative DIRECTORY path; the resolver
+    # must probe ``<dir>/index.<suffix>`` after the file-with-suffix probes
+    # fail. Used to verify declared_vs_imported_delta picks up the register
+    # call at the importer site (declared_vs_imported does not depend on
+    # cross-file handler walks — it just needs the registration to be
+    # collected, which it already is).
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('delete_files', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "index.ts").write_text(
+        "export async function runTool() {\n"
+        "  return { ok: true };\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+    assert "delete_files" in findings[0].message
+
+
+def test_directory_index_resolution_does_not_shadow_sibling_file(tmp_path):
+    # Both ``./tools.ts`` AND ``./tools/index.ts`` exist. Node-style
+    # precedence: the sibling file wins over the directory index. This
+    # mirrors Node's resolver and prevents an existing file-based test
+    # from regressing when the directory-index probe is added.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('delete_files', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    # Sibling file form — wins resolution.
+    (tmp_path / "tools.ts").write_text(
+        "export async function runTool() { return { ok: true }; }\n",
+        encoding="utf-8",
+    )
+    # Directory/index form — should NOT win.
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "index.ts").write_text(
+        "export async function runTool() { return { other: true }; }\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    # declared_vs_imported_delta fires at the importer site regardless of
+    # which file resolves the handler — the test mainly verifies that
+    # adding the directory-index probe didn't break the file-precedence
+    # resolution order.
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4

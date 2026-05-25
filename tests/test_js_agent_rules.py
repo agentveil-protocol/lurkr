@@ -2237,3 +2237,262 @@ def test_sibling_scope_const_does_not_shadow_top_level(tmp_path):
     assert len(findings) == 1
     assert findings[0].file == "server.ts"
     assert findings[0].line == 7  # exec line
+
+
+# --------- B1: parenthesized chained construction ---------
+
+
+def test_parenthesized_chained_construction_cp_exec_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "(new McpServer({ name: 'demo', version: '1.0.0' }))"
+        ".registerTool('run', { description: 'd' }, async () => {\n"
+        "  exec('ls');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+
+
+def test_parenthesized_chained_construction_network_fetch_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "(new McpServer({ name: 'demo', version: '1.0.0' }))"
+        ".registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3
+
+
+def test_parenthesized_chained_local_class_does_not_fire(tmp_path):
+    # Parenthesized chained construction over a locally-declared `McpServer`
+    # class (no official MCP import) must NOT satisfy the gate.
+    (tmp_path / "server.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "class McpServer {\n"
+        "  registerTool(name: string, cfg: unknown, fn: unknown) {}\n"
+        "}\n"
+        "(new McpServer()).registerTool('run', {}, async () => {\n"
+        "  exec('ls');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_parenthesized_identifier_bound_registerTool_fires(tmp_path):
+    # Side benefit of the same `_unwrap_parentheses` helper: identifier-bound
+    # ``(server).registerTool(...)`` (paren around the receiver identifier)
+    # is also recognised through the same code path.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "(server).registerTool('run', { description: 'd' }, async () => {\n"
+        "  exec('ls');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+# --------- B2: directory / index relative-import resolution ---------
+
+
+def test_imported_handler_from_directory_index_cp_fires(tmp_path):
+    # `import { runTool } from './tools'` resolves to `./tools/index.ts`.
+    # The cross-file handler resolution must reach into that index file
+    # and the cp rule must fire on the handler body's exec call.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "index.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools/index.ts"
+    assert findings[0].line == 3
+
+
+def test_imported_handler_from_directory_index_js_extension_cp_fires(tmp_path):
+    # Same as above but the target is `./tools/index.js`.
+    (tmp_path / "server.js").write_text(
+        "const { McpServer } = require('@modelcontextprotocol/server');\n"
+        "const { runTool } = require('./tools');\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "index.js").write_text(
+        "const { exec } = require('node:child_process');\n"
+        "exports.runTool = async function runTool() {\n"
+        "  exec('ls');\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    # NB: CommonJS `exports.runTool = ...` is NOT one of the supported export
+    # shapes (only `export function` / `export const arrow`), so the handler
+    # body cannot be reached even though the directory/index resolution
+    # itself succeeded. The negative assertion here pins that v1 limitation:
+    # directory/index resolution lands the right file but ES-module export
+    # shapes are still required for body walking.
+    assert _cp_findings(tmp_path) == []
+
+
+def test_imported_handler_from_directory_index_tsx_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "index.tsx").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools/index.tsx"
+    assert findings[0].line == 3
+
+
+def test_imported_handler_directory_index_missing_does_not_crash(tmp_path):
+    # `./tools` exists as a directory but has no `index.<suffix>`. Resolution
+    # must fall through to None, the binding is dropped silently, and no
+    # findings appear.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "not-index.ts").write_text(
+        "export async function runTool() {}\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_sibling_file_wins_over_directory_index(tmp_path):
+    # Both `./tools.ts` AND `./tools/index.ts` exist; the file probe wins
+    # per Node-style resolution precedence. The handler body in
+    # `tools.ts` (not the directory's) must be walked.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('file');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "index.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('directory-index');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_directory_index_outside_scan_root_is_not_parsed(tmp_path, monkeypatch):
+    # The scan-root boundary check applies equally to directory/index
+    # resolution: if `../outside/index.ts` resolves outside the scan root,
+    # the binding is dropped BEFORE any parse occurs.
+    scan_root = tmp_path / "scan"
+    scan_root.mkdir()
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    outside_target = outside_dir / "index.ts"
+    outside_target.write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    (scan_root / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from '../outside';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+
+    from lurkr.rules import js_agent as js_agent_mod
+
+    parsed_paths: list[Path] = []
+    original_load = js_agent_mod.load_js_ast_document
+
+    def tracking_load(path, *args, **kwargs):
+        try:
+            parsed_paths.append(Path(path).resolve())
+        except OSError:
+            parsed_paths.append(Path(path))
+        return original_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(js_agent_mod, "load_js_ast_document", tracking_load)
+
+    findings = _cp_findings(scan_root)
+
+    assert findings == []
+    outside_resolved = outside_target.resolve()
+    assert outside_resolved not in parsed_paths, (
+        "outside directory/index target was parsed despite being outside "
+        f"scan root: parsed={parsed_paths}"
+    )

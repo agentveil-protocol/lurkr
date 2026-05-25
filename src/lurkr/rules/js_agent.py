@@ -1090,11 +1090,26 @@ def _collect_relative_import_bindings(
 def _resolve_relative_module(base_dir: Path, spec: str) -> Path | None:
     """Resolve a relative module spec to a same-repo JS/TS source file path.
 
-    Tries the spec as-is when it carries a recognised JS/TS suffix; otherwise
-    appends each candidate suffix in
-    ``.ts, .tsx, .mts, .cts, .js, .mjs, .cjs`` order until a file exists.
-    Directory / ``index`` files, tsconfig path mappings, and package imports
-    are intentionally not handled.
+    Probes in three stages, returning the first match:
+
+    1. Spec as-is, when it carries a recognised JS/TS suffix and the file
+       exists.
+    2. Spec with each candidate suffix appended (file form
+       ``<spec>.<suffix>``).
+    3. Spec as a directory containing an ``index`` file
+       (``<spec>/index.<suffix>``).
+
+    Suffix order matches :data:`_RESOLUTION_SUFFIXES`
+    (``.ts, .tsx, .mts, .cts, .js, .mjs, .cjs``) for both stage 2 and
+    stage 3. File-form probes win over directory/index probes, mirroring
+    the Node.js resolution precedence where a sibling ``<x>.<ext>`` file
+    shadows an ``<x>/index.<ext>`` directory.
+
+    tsconfig path mappings and package imports are still intentionally not
+    handled. The scan-root boundary check stays in the caller
+    (``_collect_relative_import_bindings``) — this helper only resolves
+    the file path; the caller drops resolved paths that fall outside the
+    scan root before any parse occurs.
     """
     try:
         base = (base_dir / spec).resolve(strict=False)
@@ -1108,6 +1123,13 @@ def _resolve_relative_module(base_dir: Path, spec: str) -> Path | None:
     base_str = str(base)
     for suffix in _RESOLUTION_SUFFIXES:
         candidate = Path(base_str + suffix)
+        try:
+            if candidate.is_file():
+                return candidate
+        except OSError:
+            continue
+    for suffix in _RESOLUTION_SUFFIXES:
+        candidate = Path(base_str) / f"index{suffix}"
         try:
             if candidate.is_file():
                 return candidate

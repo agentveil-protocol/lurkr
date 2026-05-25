@@ -117,7 +117,6 @@ function, method, or class scopes is intentionally not v1.
 - Barrel re-exports
 - Default exports
 - Namespace imports from local files
-- Directory / `index` file resolution
 - Cross-package monorepo resolution
 - Dataflow or reachability analysis beyond bounded same-file AST in the
   target file

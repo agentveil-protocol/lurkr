@@ -69,6 +69,14 @@ The handler argument is resolved in priority order:
    `export default` is a function declaration or an arrow / function
    expression. Default exports of classes, objects, literals, or a bare
    identifier (`export default runTool`) are intentionally not v1.
+5. Member expression `<ns>.<name>` where `<ns>` is a local namespace
+   alias bound by `import * as <ns> from "./x"` and `<name>` is a named
+   export of the target file resolvable through the existing
+   named-export logic (function declaration, const arrow / function
+   expression, or aliased export clause). Nested member access
+   (`<ns>.<group>.<name>`) and dynamic member access (`<ns>[<expr>]`)
+   are intentionally not v1; package-namespace imports are not
+   resolved.
 
 When the resolved body lives in a different file, the network call walk
 runs in the target file's source. The target file's own network imports
@@ -130,8 +138,12 @@ method, or class scopes is intentionally not v1.
   `Deno.fetch`, `Bun.fetch`)
 - Streams-only `https.get(url).on(...)` style chains where the URL is
   obscured behind chained instance calls
-- Package imports / tsconfig path aliases / barrel re-exports / default
-  exports / namespace imports from local files for handler resolution
+- Package imports / tsconfig path aliases / barrel re-exports for
+  handler resolution. Default-export and local-namespace handler
+  resolution are now supported under bounded shapes — see Handler
+  Resolution.
+- Nested or dynamic namespace member access (`<ns>.<group>.<name>`,
+  `<ns>[<expr>]`)
 - Dataflow or reachability analysis beyond bounded same-file AST in the
   target file
 - An allowlist / config system for what counts as a "safe" host

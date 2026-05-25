@@ -33,13 +33,22 @@ relative-imported same-repo file:
 - Handler resolution covers, in priority order: (a) an inline arrow or
   function expression as the third argument, (b) an identifier reference to
   a same-file ``function`` declaration or ``const`` arrow / function
-  expression, or (c) an identifier bound by a named import from a same-repo
+  expression, (c) an identifier bound by a named import from a same-repo
   relative path (``./tools``, ``../lib/x``) where the target file exports
   the named symbol as a ``function`` declaration or a ``const`` arrow /
-  function expression. Package imports, tsconfig path aliases, namespace
-  local imports, dynamic imports, barrel re-exports
-  (``export { x } from './y'``), and default exports are intentionally not
-  resolved.
+  function expression, (d) an identifier bound by a default import from a
+  same-repo relative path
+  (``import handler from "./tools"``) whose target file's
+  ``export default`` is a function declaration or an arrow / function
+  expression (bare-identifier ``export default runTool`` is intentionally
+  not resolved), or (e) a member expression ``<ns>.<name>`` where
+  ``<ns>`` is a local namespace alias from
+  ``import * as <ns> from "./x"`` and ``<name>`` is a named export of the
+  target file resolvable through the same logic as (c). Package imports,
+  tsconfig path aliases, dynamic imports, barrel re-exports
+  (``export { x } from './y'``), namespace member chains
+  (``<ns>.<group>.<name>``), and dynamic member access
+  (``<ns>[<expr>]``) are intentionally not resolved.
 - For cross-file resolution the rule analyses the handler in the TARGET
   file's context: the call-site walk uses the target file's risky imports,
   the handler's parameter / same-scope bindings in the target file, and the
@@ -211,6 +220,15 @@ _SCOPE_BARRIER_TYPES = _FUNCTION_LIKE_TYPES | frozenset(
 
 _RELATIVE_PATH_PREFIXES = ("./", "../")
 _RESOLUTION_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs")
+
+# Sentinel used as ``_ImportBinding.imported_name`` for local namespace
+# imports (``import * as ns from "./mod"``). Angle brackets cannot appear
+# in JavaScript identifiers, so this value is guaranteed not to collide
+# with a real symbol name. The marker is consumed only by
+# ``_resolve_handler_location``'s member-expression branch, where the
+# property name supplied at the call site is the actual export name to
+# resolve.
+_NAMESPACE_IMPORT_MARKER = "<namespace>"
 
 
 @dataclass(frozen=True)
@@ -761,6 +779,13 @@ def _resolve_handler_location(
     3. Identifier matching a relative-import binding whose target file
        exists, parses cleanly, and exports the symbol as a function /
        const arrow / const function expression → target-file context.
+       Default imports (``import foo from "./x"``) match function-like
+       ``export default`` shapes in the target.
+    4. Member expression ``<ns>.<name>`` where ``<ns>`` is a local
+       namespace alias from ``import * as ns from "./x"`` and ``<name>``
+       resolves through the target file's named-export logic → target-file
+       context. Nested members (``ns.group.name``) and dynamic member
+       access (``ns[name]``) are intentionally not v1.
 
     Returns None when none of the above produces a body.
     """
@@ -774,6 +799,16 @@ def _resolve_handler_location(
             cp_imports=scan_cp_imports,
             fs_imports=scan_fs_imports,
             network_imports=scan_network_imports,
+        )
+    if handler_node.type == "member_expression":
+        return _resolve_namespace_member_handler_location(
+            handler_node=handler_node,
+            scan_document=scan_document,
+            import_bindings=import_bindings,
+            parsed_cache=parsed_cache,
+            cp_imports_cache=cp_imports_cache,
+            fs_imports_cache=fs_imports_cache,
+            network_imports_cache=network_imports_cache,
         )
     if handler_node.type != "identifier":
         return None
@@ -801,6 +836,71 @@ def _resolve_handler_location(
         return None
 
     target_body = _find_exported_binding(target_document, binding.imported_name)
+    if target_body is None:
+        return None
+
+    target_cp_imports = cp_imports_cache.get(binding.source)
+    if target_cp_imports is None:
+        target_cp_imports = _collect_child_process_imports(target_document)
+        cp_imports_cache[binding.source] = target_cp_imports
+    target_fs_imports = fs_imports_cache.get(binding.source)
+    if target_fs_imports is None:
+        target_fs_imports = _collect_file_system_imports(target_document)
+        fs_imports_cache[binding.source] = target_fs_imports
+    target_network_imports = network_imports_cache.get(binding.source)
+    if target_network_imports is None:
+        target_network_imports = _collect_network_imports(target_document)
+        network_imports_cache[binding.source] = target_network_imports
+
+    return _HandlerLocation(
+        body=target_body,
+        source=target_document.source,
+        file_path=binding.source,
+        cp_imports=target_cp_imports,
+        fs_imports=target_fs_imports,
+        network_imports=target_network_imports,
+    )
+
+
+def _resolve_namespace_member_handler_location(
+    *,
+    handler_node: Any,
+    scan_document: JsAstDocument,
+    import_bindings: dict[str, _ImportBinding],
+    parsed_cache: dict[Path, JsAstDocument | None],
+    cp_imports_cache: dict[Path, ChildProcessImports],
+    fs_imports_cache: dict[Path, FileSystemImports],
+    network_imports_cache: dict[Path, NetworkImports],
+) -> _HandlerLocation | None:
+    """Resolve a member-expression handler ``<ns>.<name>`` where ``<ns>``
+    is a local namespace import (``import * as ns from "./x"``) and
+    ``<name>`` is a named export of the target file.
+
+    Two-level chains (``ns.group.name``), dynamic members (``ns[name]``),
+    namespaces from package imports, namespaces imported from outside the
+    scan root, and CommonJS namespace-require shapes all return ``None``.
+    The target file's named-export resolution reuses
+    :func:`_find_exported_binding`, so aliased exports
+    (``export { foo as runTool }``) are picked up through the same logic
+    used by the named-import branch.
+    """
+    obj = handler_node.child_by_field_name("object")
+    prop = handler_node.child_by_field_name("property")
+    if obj is None or prop is None:
+        return None
+    if obj.type != "identifier" or prop.type != "property_identifier":
+        return None
+    namespace_local = node_text(obj, scan_document.source)
+    binding = import_bindings.get(namespace_local)
+    if binding is None or binding.imported_name != _NAMESPACE_IMPORT_MARKER:
+        return None
+
+    target_document = _get_parsed_document(binding.source, parsed_cache)
+    if target_document is None:
+        return None
+
+    exported_name = node_text(prop, scan_document.source)
+    target_body = _find_exported_binding(target_document, exported_name)
     if target_body is None:
         return None
 
@@ -1043,13 +1143,19 @@ def _collect_relative_import_bindings(
       binding.
     - Default imports (``import foo from "./x"``). ``imported_name`` is the
       sentinel string ``"default"``; ``local_name`` is the local binding.
+    - Namespace imports (``import * as ns from "./x"``). ``imported_name``
+      is the sentinel :data:`_NAMESPACE_IMPORT_MARKER`; ``local_name`` is
+      the namespace alias. The actual export to resolve is supplied at the
+      handler call site (the property of the ``<ns>.<name>``
+      member-expression), so the binding here is just a marker linking the
+      alias to the target file.
 
     Bindings whose target does not resolve (missing file, non-JS suffix,
     OS error) are silently dropped. Bindings whose resolved target falls
     outside ``scan_root`` are also dropped here, BEFORE any target file is
-    parsed — Lurkr must not read files outside the scan path. Namespace
-    imports, dynamic imports, and CommonJS ``module.exports`` shapes are
-    intentionally not v1.
+    parsed — Lurkr must not read files outside the scan path. Dynamic
+    imports and CommonJS ``module.exports`` shapes are intentionally not
+    v1.
     """
     bindings: dict[str, _ImportBinding] = {}
     base_dir = scan_path.parent
@@ -1081,6 +1187,17 @@ def _collect_relative_import_bindings(
                         imported_name="default",
                         source=target,
                     )
+                elif sub.type == "namespace_import":
+                    # Namespace import: `import * as ns from "./x"`.
+                    for ns_child in sub.children:
+                        if ns_child.type != "identifier":
+                            continue
+                        local_name = node_text(ns_child, document.source)
+                        bindings[local_name] = _ImportBinding(
+                            local_name=local_name,
+                            imported_name=_NAMESPACE_IMPORT_MARKER,
+                            source=target,
+                        )
                 elif sub.type == "named_imports":
                     for spec_node in sub.children:
                         if spec_node.type != "import_specifier":

@@ -366,9 +366,11 @@ def test_package_import_handler_not_resolved(tmp_path):
     assert _cp_findings(tmp_path) == []
 
 
-def test_namespace_local_import_handler_not_resolved(tmp_path):
+def test_namespace_local_import_handler_resolves_named_export(tmp_path):
     # `import * as tools from "./tools"; ...registerTool(_, _, tools.runTool)`
-    # is a namespace-from-local form; v1 does not resolve the member access.
+    # — the handler is a member access on a local namespace alias. The
+    # resolver matches `tools` to a local namespace binding, then resolves
+    # `runTool` through the target file's named-export logic.
     (tmp_path / "server.ts").write_text(
         "import { McpServer } from '@modelcontextprotocol/server';\n"
         "import * as tools from './tools';\n"
@@ -384,7 +386,11 @@ def test_namespace_local_import_handler_not_resolved(tmp_path):
         encoding="utf-8",
     )
 
-    assert _cp_findings(tmp_path) == []
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
 
 
 def test_default_import_handler_resolves_function_declaration(tmp_path):
@@ -2749,3 +2755,257 @@ def test_default_import_outside_scan_root_is_not_parsed(tmp_path, monkeypatch):
         "outside default-import target was parsed despite being outside "
         f"scan root: parsed={parsed_paths}"
     )
+
+
+# --------- C2: namespace-local-import handler resolution ---------
+
+
+def test_namespace_local_import_const_arrow_export_resolves(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export const runTool = async () => {\n"
+        "  exec('ls');\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_namespace_local_import_directory_index_resolves(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "index.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools/index.ts"
+    assert findings[0].line == 3
+
+
+def test_namespace_local_import_aliased_export_clause_resolves(tmp_path):
+    # The target file uses `export { real as runTool }`. The existing
+    # `_find_exported_binding` code routes the exported name to a same-file
+    # function declaration. Reused through the namespace branch.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "async function real() {\n"
+        "  exec('ls');\n"
+        "}\n"
+        "export { real as runTool };\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_namespace_local_import_package_does_not_resolve(tmp_path):
+    # `import * as tools from "@pkg/tools"` is a package import; cross-file
+    # resolution is silently skipped.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from '@pkg/tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_namespace_local_import_dynamic_member_does_not_resolve(tmp_path):
+    # `tools[name]` is a subscript_expression — not a member_expression
+    # — so the namespace resolver does not match.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './tools';\n"
+        "const name = 'runTool';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools[name]);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_namespace_local_import_nested_member_does_not_resolve(tmp_path):
+    # `tools.group.runTool` — the outer member expression has
+    # `object.type == "member_expression"`, not `"identifier"`. The
+    # resolver bails out. Nested namespace member access is not v1.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.group.runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export const group = {\n"
+        "  runTool: async () => { exec('ls'); },\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_namespace_local_import_missing_target_does_not_crash(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './missing';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_namespace_local_import_malformed_target_does_not_crash(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls'\nincomplete syntax here\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_namespace_local_import_export_not_in_target_does_not_resolve(tmp_path):
+    # The target file resolves, but `runTool` is not exported there. The
+    # `_find_exported_binding` lookup returns None; no findings.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function somethingElse() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_namespace_local_import_outside_scan_root_is_not_parsed(tmp_path, monkeypatch):
+    scan_root = tmp_path / "scan"
+    scan_root.mkdir()
+    outside_target = tmp_path / "outside.ts"
+    outside_target.write_text(
+        "import { exec } from 'node:child_process';\n"
+        "export async function runTool() {\n"
+        "  exec('ls');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    (scan_root / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as tools from '../outside';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, tools.runTool);\n",
+        encoding="utf-8",
+    )
+
+    from lurkr.rules import js_agent as js_agent_mod
+
+    parsed_paths: list[Path] = []
+    original_load = js_agent_mod.load_js_ast_document
+
+    def tracking_load(path, *args, **kwargs):
+        try:
+            parsed_paths.append(Path(path).resolve())
+        except OSError:
+            parsed_paths.append(Path(path))
+        return original_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(js_agent_mod, "load_js_ast_document", tracking_load)
+
+    findings = _cp_findings(scan_root)
+
+    assert findings == []
+    outside_resolved = outside_target.resolve()
+    assert outside_resolved not in parsed_paths, (
+        "outside namespace-import target was parsed despite being outside "
+        f"scan root: parsed={parsed_paths}"
+    )
+
+
+def test_namespace_local_import_does_not_leak_into_handler_body_walks(tmp_path):
+    # `import * as cp from "./helpers"` registers `cp` as a *local* namespace.
+    # The cp rule still works because the cp rule's namespace_aliases come
+    # from `child_process` package imports, not from local namespaces. This
+    # is a sanity check that the new namespace-binding capture in
+    # `_collect_relative_import_bindings` does not pollute the per-rule
+    # namespace-alias detection (which lives in `_collect_child_process_imports`
+    # and friends).
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as cp from './helpers';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('run', { description: 'd' }, cp.runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "helpers.ts").write_text(
+        "export const runTool = async () => {\n"
+        "  return { ok: true };\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []

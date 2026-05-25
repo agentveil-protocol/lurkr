@@ -70,6 +70,14 @@ The handler argument is resolved in priority order:
    `export default` is a function declaration or an arrow / function
    expression. Default exports of classes, objects, literals, or a bare
    identifier (`export default runTool`) are intentionally not v1.
+5. Member expression `<ns>.<name>` where `<ns>` is a local namespace
+   alias bound by `import * as <ns> from "./x"` and `<name>` is a named
+   export of the target file resolvable through the existing
+   named-export logic (function declaration, const arrow / function
+   expression, or aliased export clause). Nested member access
+   (`<ns>.<group>.<name>`) and dynamic member access (`<ns>[<expr>]`)
+   are intentionally not v1; package-namespace imports are not
+   resolved.
 
 When the resolved body lives in a different file, the env access walk runs
 in the target file's source and the finding's file path and line number
@@ -122,7 +130,10 @@ function, method, or class scopes is intentionally not v1.
 - Barrel re-exports
 - Default exports of class / object / literal / bare-identifier shapes
   (function-like default exports ARE resolved; see Handler Resolution)
-- Namespace imports from local files
+- Package-source namespace imports (local-source namespace imports
+  (`import * as t from "./tools"`) ARE resolved; see Handler Resolution)
+- Nested or dynamic namespace member access (`t.group.runTool`,
+  `t[name]`)
 - Cross-package monorepo resolution
 - Dataflow or reachability analysis beyond bounded same-file AST in the
   target file

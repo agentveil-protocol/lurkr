@@ -2,11 +2,9 @@
 
 **Find what your agent can touch before you deploy it.**
 
-Lurkr is a static, local-only AI-agent and MCP posture scanner — not a
-general JS/TS or Python SAST. It targets risky capability surfaces in
-agent code, MCP tool handlers, and GitHub workflows. It runs before
-deployment, does not execute project code, does not make network calls
-during scan, and redacts sensitive output.
+Lurkr is a static, local-only scanner for risky AI-agent and GitHub-workflow
+capability surfaces. It runs before deployment, does not execute project code,
+does not make network calls during scan, and redacts sensitive output.
 
 ## Local CLI
 
@@ -21,9 +19,8 @@ files, run your code, or send data over the network.
 
 Python agent detection is enabled for bounded `.py` source analysis.
 Bounded TypeScript / JavaScript MCP analysis is enabled for canonical
-Model Context Protocol `registerTool` handler shapes — not a general
-JS/TS scanner; see [Detection scope](#detection-scope) for the exact
-patterns covered.
+Model Context Protocol `registerTool` handler shapes; see
+[Detection scope](#detection-scope) for the exact patterns covered.
 
 To fail CI when findings meet a threshold, add `--fail-on`:
 
@@ -119,8 +116,7 @@ TS/JS coverage is bounded to canonical Model Context Protocol
 `registerTool` registration patterns (identifier-bound, chained, typed
 helper-wrapper parameters, namespace-qualified, parenthesized) reached
 through bounded same-file AST analysis and relative-path cross-file
-handler resolution. Lurkr is not a general JavaScript or TypeScript
-scanner — see the per-rule docs for each rule's exact gate.
+handler resolution. See the per-rule docs for each rule's exact gate.
 
 Deployment checks include common CLI deploy, release, registry push, and
 infrastructure apply commands. Build, plan, dry-run, and package-only commands
@@ -371,9 +367,7 @@ Runtime dependencies are intentionally minimal:
 
 ## Known Limitations
 
-`lurkr` v0.2 is a bounded static scanner targeted at agent / MCP
-capability surfaces, not a general JS/TS or Python SAST and not an
-exhaustive security audit.
+`lurkr` v0.3 is a bounded static scanner, not an exhaustive security audit.
 
 - Some rules may produce false positives or false negatives.
 - Oversized, unreadable, or malformed inputs may be skipped without per-file
@@ -391,7 +385,7 @@ exhaustive security audit.
   `module.exports` shapes, barrel re-exports, tsconfig path aliases,
   package imports for handler resolution, and dataflow / reachability
   analysis beyond bounded same-file AST in the target file remain out of
-  scope. Lurkr is not a general JS/TS scanner.
+  scope.
 
 ## Further reading
 

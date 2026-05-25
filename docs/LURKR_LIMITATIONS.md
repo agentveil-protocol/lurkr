@@ -1,11 +1,9 @@
 # Static Analysis Limits
 
-Lurkr is an agent / MCP posture scanner, not a general JS/TS or Python
-SAST. It is a sound-by-design static analyzer targeting risky agent and
-Model Context Protocol capability surfaces; it is not a complete model
-of all possible agent behavior. It flags a bounded set of risky
-capability patterns that can be identified from repository files
-without executing code, calling the network, or collecting telemetry.
+Lurkr is a sound-by-design static scanner, not a complete model of
+all possible agent behavior. It flags a bounded set of risky capability
+patterns that can be identified from repository files without executing code,
+calling the network, or collecting telemetry.
 
 False negatives are expected by design. A finding that Lurkr does not report
 is not a proof that a repository has no risky capability surface; it means the
@@ -98,7 +96,7 @@ https://www.di.ens.fr/~cousot/COUSOTpapers/POPL77.shtml
   `module.exports` shapes, barrel re-exports, tsconfig path aliases,
   package imports for handler resolution, and dataflow / reachability
   analysis beyond bounded same-file AST in the target file are all
-  outside v0.2 scope. Lurkr is not a general JS/TS scanner.
+  outside v0.3 scope.
 - Oversized, unreadable, malformed, alias-heavy, deeply nested, binary, or
   undecodable files may be skipped before parsing to preserve scanner safety.
 - Symlinks are skipped. Lurkr does not follow links inside or outside the

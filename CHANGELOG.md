@@ -64,8 +64,6 @@ heuristics, tool arrays / `forEach` loops, `setRequestHandler("tools/call",
 ...)`, CommonJS `module.exports` shapes, barrel re-exports, tsconfig
 path aliases, package imports for handler resolution, and dataflow /
 reachability analysis beyond bounded same-file AST in the target file.
-Lurkr remains a bounded agent / MCP posture scanner — not a general
-JavaScript or TypeScript SAST.
 
 Backward-compatible. Existing reports and rule IDs unchanged.
 

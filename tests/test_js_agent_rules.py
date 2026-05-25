@@ -6,6 +6,8 @@ Covers:
   execution inside canonical MCP ``registerTool`` handlers.
 - ``agent.javascript_file_mutation_in_tool`` — Node.js ``fs`` / ``fs/promises``
   file mutation inside canonical MCP ``registerTool`` handlers.
+- ``agent.javascript_env_secret_access_in_tool`` — secret-like ``process.env``
+  reads inside canonical MCP ``registerTool`` handlers.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from lurkr.scanner import scan_path
 
 RULE_ID = "agent.javascript_child_process_in_tool"
 FS_RULE_ID = "agent.javascript_file_mutation_in_tool"
+ENV_RULE_ID = "agent.javascript_env_secret_access_in_tool"
 
 
 def _cp_findings(path: Path):
@@ -27,6 +30,11 @@ def _cp_findings(path: Path):
 def _fs_findings(path: Path):
     report = scan_path(path)
     return [finding for finding in report.findings if finding.rule_id == FS_RULE_ID]
+
+
+def _env_findings(path: Path):
+    report = scan_path(path)
+    return [finding for finding in report.findings if finding.rule_id == ENV_RULE_ID]
 
 
 # --------- positive cases: handler resolution × child_process import form ---------
@@ -981,3 +989,216 @@ def test_sarif_includes_js_file_mutation_finding(tmp_path):
     physical_location = result["locations"][0]["physicalLocation"]
     assert physical_location["artifactLocation"]["uri"] == "server.ts"
     assert physical_location["region"]["startLine"] == 5
+
+
+# --------- env-secret rule: secret-like process.env access inside handlers ---------
+
+
+def test_inline_arrow_process_env_openai_api_key_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  const key = process.env.OPENAI_API_KEY;\n"
+        "  return { key };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.rule_id == ENV_RULE_ID
+    assert finding.severity == "high"
+    assert finding.file == "server.ts"
+    assert finding.line == 4
+    assert "secret-like" in finding.message
+    assert "process.env" in finding.remediation
+    assert "approval" in finding.remediation
+
+
+def test_bracket_access_process_env_github_token_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  const token = process.env[\"GITHUB_TOKEN\"];\n"
+        "  return { token };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+
+
+def test_suffix_secret_name_custom_secret_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  const value = process.env.CUSTOM_SECRET;\n"
+        "  return { value };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 4
+
+
+def test_suffix_secret_name_my_token_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  return process.env.MY_TOKEN;\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 4
+
+
+def test_suffix_secret_name_db_password_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  return process.env.DB_PASSWORD;\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 4
+
+
+def test_imported_handler_with_process_env_secret_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "export async function runTool() {\n"
+        "  const key = process.env.ANTHROPIC_API_KEY;\n"
+        "  return { key };\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 2
+
+
+def test_process_env_node_env_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  const env = process.env.NODE_ENV;\n"
+        "  return { env };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _env_findings(tmp_path) == []
+
+
+def test_process_env_secret_outside_handler_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "const k = process.env.OPENAI_API_KEY;\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _env_findings(tmp_path) == []
+
+
+def test_non_mcp_register_tool_process_env_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "const router = { registerTool(name: string, cfg: unknown, fn: unknown) {} };\n"
+        "router.registerTool('lookup', {}, async () => {\n"
+        "  const key = process.env.OPENAI_API_KEY;\n"
+        "  return { key };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _env_findings(tmp_path) == []
+
+
+def test_handler_parameter_shadows_process_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async (process) => {\n"
+        "  const key = process.env.OPENAI_API_KEY;\n"
+        "  return { key };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _env_findings(tmp_path) == []
+
+
+def test_nested_process_env_member_chain_does_not_fire(tmp_path):
+    # `process.env.A.OPENAI_API_KEY` is not a direct `process.env.<NAME>`
+    # access; v1 deliberately restricts to one level of property access.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  return (process.env as any).A.OPENAI_API_KEY;\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _env_findings(tmp_path) == []
+
+
+def test_sarif_includes_js_env_secret_finding(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  const key = process.env.OPENAI_API_KEY;\n"
+        "  return { key };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+    findings = [f for f in report.findings if f.rule_id == ENV_RULE_ID]
+    assert len(findings) == 1
+
+    sarif = report.to_sarif()
+    rule_ids = {rule["id"] for rule in sarif["runs"][0]["tool"]["driver"]["rules"]}
+    assert ENV_RULE_ID in rule_ids
+
+    results = [r for r in sarif["runs"][0]["results"] if r["ruleId"] == ENV_RULE_ID]
+    assert len(results) == 1
+    result = results[0]
+    assert result["level"] == "error"
+    physical_location = result["locations"][0]["physicalLocation"]
+    assert physical_location["artifactLocation"]["uri"] == "server.ts"
+    assert physical_location["region"]["startLine"] == 4

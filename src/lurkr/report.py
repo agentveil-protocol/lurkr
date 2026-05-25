@@ -102,6 +102,11 @@ RULE_DESCRIPTORS = {
         "full": "Flags Node.js fs write or delete calls inside canonical MCP tool handlers in TypeScript or JavaScript.",
         "help": _rule_doc_url("agent.javascript_file_mutation_in_tool"),
     },
+    "agent.javascript_env_secret_access_in_tool": {
+        "short": "TypeScript/JavaScript MCP tool handler secret env access",
+        "full": "Flags secret-like process.env reads inside canonical MCP tool handlers in TypeScript or JavaScript.",
+        "help": _rule_doc_url("agent.javascript_env_secret_access_in_tool"),
+    },
     "agent.python_eval_exec_in_tool": {
         "short": "Python agent tool dynamic execution",
         "full": "Flags eval, exec, compile, or dynamic import calls inside Python agent tool functions.",

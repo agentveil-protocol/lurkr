@@ -7,6 +7,12 @@ Rules:
 - ``agent.javascript_file_mutation_in_tool`` — flag Node.js ``fs`` /
   ``fs/promises`` file write/delete-style APIs inside a canonical MCP
   ``registerTool`` handler.
+- ``agent.javascript_env_secret_access_in_tool`` — flag direct or
+  bracket-indexed access to secret-like ``process.env`` entries inside a
+  canonical MCP ``registerTool`` handler. Only secret-shaped names (an
+  explicit allowlist plus the suffixes ``_KEY`` / ``_TOKEN`` / ``_SECRET``
+  / ``_PASSWORD``) are flagged; benign reads such as ``process.env.NODE_ENV``
+  are not.
 
 Detection is bounded static analysis over either the scanned file or a
 relative-imported same-repo file:
@@ -99,6 +105,17 @@ FILE_MUTATION_APIS = frozenset(
         "mkdir",
         "mkdirSync",
         "createWriteStream",
+    }
+)
+
+SECRET_ENV_SUFFIXES = frozenset({"_KEY", "_TOKEN", "_SECRET", "_PASSWORD"})
+SECRET_ENV_EXACT_NAMES = frozenset(
+    {
+        "PASSWORD",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GITHUB_TOKEN",
+        "NPM_TOKEN",
     }
 )
 
@@ -225,9 +242,10 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
     scan_fs_imports = _collect_file_system_imports(document)
     import_bindings = _collect_relative_import_bindings(document, path, root)
 
-    if scan_cp_imports.empty and scan_fs_imports.empty and not import_bindings:
-        return []
-
+    # No risky-import-based fast path: the env-secret rule is triggered by a
+    # ``process.env.<NAME>`` access inside a handler regardless of any module
+    # import in the scanning file, so the loop must always run once the MCP
+    # gate has been satisfied above.
     declarations, lex_handlers = _collect_handler_bindings(document)
 
     parsed_cache: dict[Path, JsAstDocument | None] = {path: document}
@@ -320,6 +338,36 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
                             "Restrict file-write/delete access to explicit safe "
                             "paths and require approval for destructive file "
                             "operations."
+                        ),
+                    )
+                )
+
+        if "process" not in handler_locals:
+            for line in _env_secret_access_lines(
+                location.body, location.source
+            ):
+                key = (
+                    "agent.javascript_env_secret_access_in_tool",
+                    file_rel,
+                    line,
+                )
+                if key in seen_locations:
+                    continue
+                seen_locations.add(key)
+                findings.append(
+                    Finding(
+                        rule_id="agent.javascript_env_secret_access_in_tool",
+                        severity="high",
+                        file=file_rel,
+                        line=line,
+                        message=(
+                            "TypeScript/JavaScript MCP tool handler appears to "
+                            "access secret-like environment variables."
+                        ),
+                        remediation=(
+                            "Pass scoped credentials explicitly to the handler, "
+                            "avoid broad process.env access, and require approval "
+                            "before exposing sensitive secrets to MCP tool calls."
                         ),
                     )
                 )
@@ -994,6 +1042,82 @@ def _find_exported_binding(document: JsAstDocument, name: str) -> Any | None:
                 if local in local_lex:
                     return local_lex[local]
     return None
+
+
+def _env_secret_access_lines(handler_body: Any, source: bytes) -> Iterator[int]:
+    """Yield the start line of every secret-like ``process.env`` access in the
+    handler subtree.
+
+    Handles both dotted (``process.env.OPENAI_API_KEY``) and bracket-indexed
+    (``process.env["GITHUB_TOKEN"]``) forms. Bracket indices that are dynamic
+    (variables, templates with interpolation, computed expressions) are
+    silently skipped.
+    """
+    for node in _iter_subtree(handler_body):
+        access = _secret_env_property(node, source)
+        if access is None:
+            continue
+        yield access[1]
+
+
+def _secret_env_property(node: Any, source: bytes) -> tuple[str, int] | None:
+    """Return ``(secret_name, line)`` if ``node`` is a secret-like
+    ``process.env`` access, else ``None``.
+
+    Only the direct shapes ``process.env.NAME`` and ``process.env["NAME"]``
+    are recognised; nested accesses such as ``process.env.A.B`` are
+    intentionally not flagged.
+    """
+    if node.type == "member_expression":
+        obj = node.child_by_field_name("object")
+        prop = node.child_by_field_name("property")
+        if obj is None or prop is None or prop.type != "property_identifier":
+            return None
+        if not _is_process_env(obj, source):
+            return None
+        name = node_text(prop, source)
+        if not _is_secret_env_name(name):
+            return None
+        return name, node.start_point[0] + 1
+    if node.type == "subscript_expression":
+        obj = node.child_by_field_name("object")
+        index = node.child_by_field_name("index")
+        if obj is None or index is None:
+            return None
+        if not _is_process_env(obj, source):
+            return None
+        name = static_string_value(index, source)
+        if name is None or not _is_secret_env_name(name):
+            return None
+        return name, node.start_point[0] + 1
+    return None
+
+
+def _is_process_env(node: Any, source: bytes) -> bool:
+    """Return True if ``node`` is the bounded ``process.env`` member access."""
+    if node.type != "member_expression":
+        return False
+    obj = node.child_by_field_name("object")
+    prop = node.child_by_field_name("property")
+    if obj is None or prop is None:
+        return False
+    if obj.type != "identifier" or prop.type != "property_identifier":
+        return False
+    return (
+        node_text(obj, source) == "process"
+        and node_text(prop, source) == "env"
+    )
+
+
+def _is_secret_env_name(name: str) -> bool:
+    """Return True for env names this rule treats as secret-shaped.
+
+    Case-sensitive. Real-world Node env vars use UPPER_SNAKE_CASE, and this
+    function matches that convention exactly.
+    """
+    if name in SECRET_ENV_EXACT_NAMES:
+        return True
+    return any(name.endswith(suffix) for suffix in SECRET_ENV_SUFFIXES)
 
 
 def _exported_declaration_body(

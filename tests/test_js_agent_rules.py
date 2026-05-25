@@ -8,6 +8,8 @@ Covers:
   file mutation inside canonical MCP ``registerTool`` handlers.
 - ``agent.javascript_env_secret_access_in_tool`` — secret-like ``process.env``
   reads inside canonical MCP ``registerTool`` handlers.
+- ``agent.javascript_network_call_in_tool`` — outbound network calls inside
+  canonical MCP ``registerTool`` handlers.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from lurkr.scanner import scan_path
 RULE_ID = "agent.javascript_child_process_in_tool"
 FS_RULE_ID = "agent.javascript_file_mutation_in_tool"
 ENV_RULE_ID = "agent.javascript_env_secret_access_in_tool"
+NETWORK_RULE_ID = "agent.javascript_network_call_in_tool"
 
 
 def _cp_findings(path: Path):
@@ -35,6 +38,13 @@ def _fs_findings(path: Path):
 def _env_findings(path: Path):
     report = scan_path(path)
     return [finding for finding in report.findings if finding.rule_id == ENV_RULE_ID]
+
+
+def _network_findings(path: Path):
+    report = scan_path(path)
+    return [
+        finding for finding in report.findings if finding.rule_id == NETWORK_RULE_ID
+    ]
 
 
 # --------- positive cases: handler resolution × child_process import form ---------
@@ -1202,3 +1212,470 @@ def test_sarif_includes_js_env_secret_finding(tmp_path):
     physical_location = result["locations"][0]["physicalLocation"]
     assert physical_location["artifactLocation"]["uri"] == "server.ts"
     assert physical_location["region"]["startLine"] == 4
+
+
+# --------- network rule: outbound network calls inside MCP handlers ---------
+
+
+def test_global_fetch_https_external_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  const r = await fetch('https://api.example.com');\n"
+        "  return { r };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.rule_id == NETWORK_RULE_ID
+    assert finding.severity == "high"
+    assert finding.file == "server.ts"
+    assert finding.line == 4
+    assert "outbound network calls" in finding.message
+    assert "allowlist" in finding.remediation
+    assert "approval" in finding.remediation
+
+
+def test_axios_default_import_get_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import axios from 'axios';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  const r = await axios.get('https://api.example.com');\n"
+        "  return { r };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+def test_axios_default_import_post_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import axios from 'axios';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return axios.post('https://api.example.com', { a: 1 });\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_axios_default_import_callable_form_fires(tmp_path):
+    # `import axios from "axios"` binds ``axios`` as a callable network
+    # primitive (axios is a callable package). The bare ``axios(...)`` form
+    # must be flagged in addition to the member-style ``axios.get(...)``.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import axios from 'axios';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return axios({ url: 'https://api.example.com' });\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_axios_whole_require_callable_form_fires(tmp_path):
+    (tmp_path / "server.cjs").write_text(
+        "const { McpServer } = require('@modelcontextprotocol/server');\n"
+        "const axios = require('axios');\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return axios({ url: 'https://api.example.com' });\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_axios_namespace_import_callable_form_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as axios from 'axios';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return axios({ url: 'https://api.example.com' });\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_https_request_node_prefix_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import https from 'node:https';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return https.request('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_http_request_namespace_import_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as http from 'http';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return http.request('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_undici_namespace_fetch_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as undici from 'undici';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return undici.fetch('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_undici_named_fetch_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { fetch } from 'undici';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_got_destructured_require_callable_fires(tmp_path):
+    (tmp_path / "server.cjs").write_text(
+        "const { McpServer } = require('@modelcontextprotocol/server');\n"
+        "const { got } = require('got');\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return got('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_got_default_import_callable_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import got from 'got';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return got('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_got_whole_require_callable_fires(tmp_path):
+    (tmp_path / "server.cjs").write_text(
+        "const { McpServer } = require('@modelcontextprotocol/server');\n"
+        "const got = require('got');\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return got('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_destructured_require_fetch_from_undici_fires(tmp_path):
+    (tmp_path / "server.cjs").write_text(
+        "const { McpServer } = require('@modelcontextprotocol/server');\n"
+        "const { fetch } = require('undici');\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 5
+
+
+def test_imported_handler_with_axios_get_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import axios from 'axios';\n"
+        "export async function runTool() {\n"
+        "  return axios.get('https://api.example.com');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_static_localhost_fetch_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('http://localhost:3000/api');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_static_127_0_0_1_fetch_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('http://127.0.0.1:8080');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_static_ipv6_local_fetch_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('http://[::1]/healthz');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_dynamic_url_first_arg_still_fires(tmp_path):
+    # Non-static first arg cannot be checked against the localhost rule, so
+    # the rule errs on the side of flagging. This preserves coverage when the
+    # URL is computed from a variable.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async (url: string) => {\n"
+        "  return fetch(url);\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 4
+
+
+def test_handler_parameter_shadows_fetch_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async (fetch) => {\n"
+        "  return fetch('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_handler_parameter_shadows_axios_namespace_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import axios from 'axios';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async (axios) => {\n"
+        "  return axios.get('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_network_call_outside_handler_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "fetch('https://api.example.com');\n"
+        "server.registerTool('call', { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_non_mcp_register_tool_network_call_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "const router = { registerTool(name: string, cfg: unknown, fn: unknown) {} };\n"
+        "router.registerTool('call', {}, async () => {\n"
+        "  return fetch('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_sarif_includes_js_network_call_finding(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  const r = await fetch('https://api.example.com');\n"
+        "  return { r };\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+    findings = [f for f in report.findings if f.rule_id == NETWORK_RULE_ID]
+    assert len(findings) == 1
+
+    sarif = report.to_sarif()
+    rule_ids = {rule["id"] for rule in sarif["runs"][0]["tool"]["driver"]["rules"]}
+    assert NETWORK_RULE_ID in rule_ids
+
+    results = [r for r in sarif["runs"][0]["results"] if r["ruleId"] == NETWORK_RULE_ID]
+    assert len(results) == 1
+    result = results[0]
+    assert result["level"] == "error"
+    physical_location = result["locations"][0]["physicalLocation"]
+    assert physical_location["artifactLocation"]["uri"] == "server.ts"
+    assert physical_location["region"]["startLine"] == 4
+
+
+# --------- regression: callable-package shadow + scheme-required localhost ---------
+
+
+def test_handler_parameter_shadows_axios_callable_form_does_not_fire(tmp_path):
+    # Shadow handling must work uniformly for the callable form as well as
+    # the member-method form: a handler parameter named ``axios`` must
+    # suppress both ``axios.get(...)`` and ``axios(...)``.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import axios from 'axios';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async (axios) => {\n"
+        "  return axios({ url: 'https://api.example.com' });\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_handler_parameter_shadows_got_callable_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import got from 'got';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async (got) => {\n"
+        "  return got('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _network_findings(tmp_path) == []
+
+
+def test_bare_host_localhost_string_still_fires(tmp_path):
+    # The localhost suppression only matches when the URL carries an
+    # explicit ``http://`` / ``https://`` scheme. A scheme-less
+    # ``localhost:3000`` string is ambiguous (relative path vs host:port),
+    # so the rule errs on the side of flagging.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('localhost:3000/api');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].line == 4

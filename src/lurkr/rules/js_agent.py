@@ -13,6 +13,13 @@ Rules:
   explicit allowlist plus the suffixes ``_KEY`` / ``_TOKEN`` / ``_SECRET``
   / ``_PASSWORD``) are flagged; benign reads such as ``process.env.NODE_ENV``
   are not.
+- ``agent.javascript_network_call_in_tool`` — flag outbound network calls
+  inside a canonical MCP ``registerTool`` handler. Covers the global
+  ``fetch(...)``, plus ``axios``, ``got``, ``undici``, and Node's ``http``
+  / ``https`` modules (including the ``node:`` prefix variants) reached
+  through default, namespace, named, or destructured-require imports.
+  Static localhost URLs (``localhost`` / ``127.0.0.1`` / ``[::1]``) passed
+  as the first positional string argument are intentionally not flagged.
 
 Detection is bounded static analysis over either the scanned file or a
 relative-imported same-repo file:
@@ -58,6 +65,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any, Iterator
 
 from lurkr.js_ast import (
@@ -119,6 +127,73 @@ SECRET_ENV_EXACT_NAMES = frozenset(
     }
 )
 
+NETWORK_PACKAGES = frozenset(
+    {
+        "axios",
+        "got",
+        "undici",
+        "http",
+        "node:http",
+        "https",
+        "node:https",
+    }
+)
+
+# Subset of network packages whose default export (or whole-module export) is
+# itself a directly-callable network function. A local binding from a default
+# import (``import axios from "axios"``), a namespace import
+# (``import * as got from "got"``), or a whole-module require
+# (``const axios = require("axios")``) of one of these packages is therefore
+# added to ``NetworkImports.direct_names`` in addition to
+# ``NetworkImports.namespace_aliases`` — so the bare ``axios(...)`` /
+# ``got(...)`` call form is detected alongside the member-method form.
+NETWORK_CALLABLE_PACKAGES = frozenset({"axios", "got"})
+
+# Property names that count as network calls when invoked as a member of a
+# locally-bound network namespace alias (e.g. ``axios.get(...)``,
+# ``http.request(...)``, ``undici.fetch(...)``). Over-matching across packages
+# is acceptable because each name in this set IS a real network call when
+# invoked on any of the supported namespaces (e.g. ``http.get`` is Node's
+# shortcut for an HTTP GET request).
+NETWORK_NAMESPACE_METHODS = frozenset(
+    {
+        "get",
+        "post",
+        "put",
+        "delete",
+        "patch",
+        "request",
+        "fetch",
+    }
+)
+
+# Original symbol names that, when destructured / named-imported from a
+# supported network package, become directly-callable network APIs through
+# the local binding (e.g. ``import { fetch } from "undici"``,
+# ``const { request } = require("node:http")``,
+# ``import { get } from "axios"``).
+NETWORK_DIRECT_NAMED_IMPORTS = frozenset(
+    {
+        "fetch",
+        "request",
+        "get",
+        "post",
+        "put",
+        "delete",
+        "patch",
+        "got",
+    }
+)
+
+# Static localhost URL prefixes that should not be flagged when supplied as
+# the first positional string argument. Matched case-insensitively against
+# the scheme and host part; trailing path / port / query / fragment are
+# allowed.
+_LOCAL_URL_RE = re.compile(
+    r"^\s*https?://(?:localhost|127\.0\.0\.1|\[::1\])(?:[:/?#]|$)",
+    re.IGNORECASE,
+)
+
 _HANDLER_INLINE_TYPES = frozenset({"arrow_function", "function_expression"})
 
 _FUNCTION_LIKE_TYPES = frozenset(
@@ -169,6 +244,7 @@ class _HandlerLocation:
     file_path: Path
     cp_imports: "ChildProcessImports"
     fs_imports: "FileSystemImports"
+    network_imports: "NetworkImports"
 
 
 @dataclass(frozen=True)
@@ -219,6 +295,35 @@ class FileSystemImports:
         return not self.direct_names and not self.namespace_aliases
 
 
+@dataclass(frozen=True)
+class NetworkImports:
+    """Local symbols bound to network call APIs in one file.
+
+    ``direct_names`` — local identifiers that are themselves callable network
+    APIs. Always contains the literal ``"fetch"`` (the runtime-global fetch
+    available since Node 18). Also includes the locally-bound name after a
+    named import / destructured require from a supported network package
+    whose original symbol is one of :data:`NETWORK_DIRECT_NAMED_IMPORTS`
+    (e.g. ``fetch`` from ``undici``, ``request`` from ``node:http``,
+    ``get`` / ``post`` / ... from ``axios``, ``got`` from ``got``).
+
+    ``namespace_aliases`` — local identifiers bound to an entire supported
+    network module via default import, namespace import, or whole-module
+    require (e.g. ``import axios from "axios"``,
+    ``import * as undici from "undici"``,
+    ``const http = require("node:http")``). Calls on these identifiers reach
+    the rule as ``<alias>.<method>(...)`` for methods in
+    :data:`NETWORK_NAMESPACE_METHODS`.
+    """
+
+    direct_names: frozenset[str]
+    namespace_aliases: frozenset[str]
+
+    @property
+    def empty(self) -> bool:
+        return not self.direct_names and not self.namespace_aliases
+
+
 def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
     """Return TypeScript/JavaScript agent rule findings for one file.
 
@@ -240,17 +345,22 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
 
     scan_cp_imports = _collect_child_process_imports(document)
     scan_fs_imports = _collect_file_system_imports(document)
+    scan_network_imports = _collect_network_imports(document)
     import_bindings = _collect_relative_import_bindings(document, path, root)
 
-    # No risky-import-based fast path: the env-secret rule is triggered by a
-    # ``process.env.<NAME>`` access inside a handler regardless of any module
-    # import in the scanning file, so the loop must always run once the MCP
-    # gate has been satisfied above.
+    # No risky-import-based fast path: the env-secret and network-call rules
+    # can fire on environment- or globally-provided primitives (``process.env``
+    # and the global ``fetch``) regardless of any module import in the
+    # scanning file, so the loop must always run once the MCP gate has been
+    # satisfied above.
     declarations, lex_handlers = _collect_handler_bindings(document)
 
     parsed_cache: dict[Path, JsAstDocument | None] = {path: document}
     cp_imports_cache: dict[Path, ChildProcessImports] = {path: scan_cp_imports}
     fs_imports_cache: dict[Path, FileSystemImports] = {path: scan_fs_imports}
+    network_imports_cache: dict[Path, NetworkImports] = {
+        path: scan_network_imports
+    }
 
     findings: list[Finding] = []
     seen_locations: set[tuple[str, str, int]] = set()
@@ -262,12 +372,14 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
             scan_path=path,
             scan_cp_imports=scan_cp_imports,
             scan_fs_imports=scan_fs_imports,
+            scan_network_imports=scan_network_imports,
             same_file_declarations=declarations,
             same_file_lex_handlers=lex_handlers,
             import_bindings=import_bindings,
             parsed_cache=parsed_cache,
             cp_imports_cache=cp_imports_cache,
             fs_imports_cache=fs_imports_cache,
+            network_imports_cache=network_imports_cache,
         )
         if location is None:
             continue
@@ -368,6 +480,42 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
                             "Pass scoped credentials explicitly to the handler, "
                             "avoid broad process.env access, and require approval "
                             "before exposing sensitive secrets to MCP tool calls."
+                        ),
+                    )
+                )
+
+        effective_network_imports = NetworkImports(
+            direct_names=location.network_imports.direct_names - handler_locals,
+            namespace_aliases=(
+                location.network_imports.namespace_aliases - handler_locals
+            ),
+        )
+        if not effective_network_imports.empty:
+            for line in _network_call_lines(
+                location.body, effective_network_imports, location.source
+            ):
+                key = (
+                    "agent.javascript_network_call_in_tool",
+                    file_rel,
+                    line,
+                )
+                if key in seen_locations:
+                    continue
+                seen_locations.add(key)
+                findings.append(
+                    Finding(
+                        rule_id="agent.javascript_network_call_in_tool",
+                        severity="high",
+                        file=file_rel,
+                        line=line,
+                        message=(
+                            "TypeScript/JavaScript MCP tool handler appears to "
+                            "make outbound network calls."
+                        ),
+                        remediation=(
+                            "Restrict outbound network access to an explicit "
+                            "allowlist and require approval before MCP tool "
+                            "handlers reach external services."
                         ),
                     )
                 )
@@ -592,12 +740,14 @@ def _resolve_handler_location(
     scan_path: Path,
     scan_cp_imports: ChildProcessImports,
     scan_fs_imports: FileSystemImports,
+    scan_network_imports: NetworkImports,
     same_file_declarations: dict[str, Any],
     same_file_lex_handlers: dict[str, Any],
     import_bindings: dict[str, _ImportBinding],
     parsed_cache: dict[Path, JsAstDocument | None],
     cp_imports_cache: dict[Path, ChildProcessImports],
     fs_imports_cache: dict[Path, FileSystemImports],
+    network_imports_cache: dict[Path, NetworkImports],
 ) -> _HandlerLocation | None:
     """Resolve a registerTool ``handler`` argument to the function/arrow node
     plus the analysis context for the file the body lives in.
@@ -623,6 +773,7 @@ def _resolve_handler_location(
             file_path=scan_path,
             cp_imports=scan_cp_imports,
             fs_imports=scan_fs_imports,
+            network_imports=scan_network_imports,
         )
     if handler_node.type != "identifier":
         return None
@@ -638,6 +789,7 @@ def _resolve_handler_location(
             file_path=scan_path,
             cp_imports=scan_cp_imports,
             fs_imports=scan_fs_imports,
+            network_imports=scan_network_imports,
         )
 
     binding = import_bindings.get(name)
@@ -660,6 +812,10 @@ def _resolve_handler_location(
     if target_fs_imports is None:
         target_fs_imports = _collect_file_system_imports(target_document)
         fs_imports_cache[binding.source] = target_fs_imports
+    target_network_imports = network_imports_cache.get(binding.source)
+    if target_network_imports is None:
+        target_network_imports = _collect_network_imports(target_document)
+        network_imports_cache[binding.source] = target_network_imports
 
     return _HandlerLocation(
         body=target_body,
@@ -667,6 +823,7 @@ def _resolve_handler_location(
         file_path=binding.source,
         cp_imports=target_cp_imports,
         fs_imports=target_fs_imports,
+        network_imports=target_network_imports,
     )
 
 
@@ -1148,3 +1305,178 @@ def _exported_declaration_body(
                 return value_node
         return None
     return None
+
+
+def _collect_network_imports(document: JsAstDocument) -> NetworkImports:
+    """Collect local bindings to supported network packages in one file.
+
+    Always includes the literal ``"fetch"`` in ``direct_names`` to reflect the
+    Node/runtime global. Imports / requires whose source is in
+    :data:`NETWORK_PACKAGES` add: namespace / default / whole-module-require
+    bindings to ``namespace_aliases``; named-import / destructured-require
+    bindings whose original symbol is in
+    :data:`NETWORK_DIRECT_NAMED_IMPORTS` to ``direct_names``.
+    """
+    direct: set[str] = {"fetch"}
+    namespaces: set[str] = set()
+
+    for node in iter_nodes(document.tree):
+        if node.type == "import_statement":
+            source_node = node.child_by_field_name("source")
+            if source_node is None:
+                continue
+            pkg = static_string_value(source_node, document.source)
+            if pkg not in NETWORK_PACKAGES:
+                continue
+            package_is_callable = pkg in NETWORK_CALLABLE_PACKAGES
+            for child in node.children:
+                if child.type != "import_clause":
+                    continue
+                for sub in child.children:
+                    if sub.type == "identifier":
+                        # Default import: `import axios from "axios"`.
+                        local_name = node_text(sub, document.source)
+                        namespaces.add(local_name)
+                        if package_is_callable:
+                            direct.add(local_name)
+                    elif sub.type == "named_imports":
+                        for spec in sub.children:
+                            if spec.type != "import_specifier":
+                                continue
+                            name_node = spec.child_by_field_name("name")
+                            if name_node is None:
+                                continue
+                            original = node_text(name_node, document.source)
+                            if original not in NETWORK_DIRECT_NAMED_IMPORTS:
+                                continue
+                            alias_node = spec.child_by_field_name("alias")
+                            local_node = (
+                                alias_node if alias_node is not None else name_node
+                            )
+                            if local_node.type == "identifier":
+                                direct.add(node_text(local_node, document.source))
+                    elif sub.type == "namespace_import":
+                        for ns_child in sub.children:
+                            if ns_child.type == "identifier":
+                                local_name = node_text(
+                                    ns_child, document.source
+                                )
+                                namespaces.add(local_name)
+                                if package_is_callable:
+                                    direct.add(local_name)
+        elif node.type == "variable_declarator":
+            value_node = node.child_by_field_name("value")
+            if value_node is None or value_node.type != "call_expression":
+                continue
+            call_fn = value_node.child_by_field_name("function")
+            if call_fn is None or node_text(call_fn, document.source) != "require":
+                continue
+            call_args = value_node.child_by_field_name("arguments")
+            if call_args is None:
+                continue
+            arg_children = [
+                c
+                for c in call_args.children
+                if c.type not in ("(", ")", ",", "comment")
+            ]
+            if not arg_children:
+                continue
+            pkg = static_string_value(arg_children[0], document.source)
+            if pkg not in NETWORK_PACKAGES:
+                continue
+            package_is_callable = pkg in NETWORK_CALLABLE_PACKAGES
+            name_node = node.child_by_field_name("name")
+            if name_node is None:
+                continue
+            if name_node.type == "identifier":
+                local_name = node_text(name_node, document.source)
+                namespaces.add(local_name)
+                if package_is_callable:
+                    direct.add(local_name)
+            elif name_node.type == "object_pattern":
+                for prop in name_node.children:
+                    if prop.type == "shorthand_property_identifier_pattern":
+                        name = node_text(prop, document.source)
+                        if name in NETWORK_DIRECT_NAMED_IMPORTS:
+                            direct.add(name)
+                    elif prop.type == "pair_pattern":
+                        key_field = prop.child_by_field_name("key")
+                        value_field = prop.child_by_field_name("value")
+                        if (
+                            key_field is not None
+                            and value_field is not None
+                            and value_field.type == "identifier"
+                            and node_text(key_field, document.source)
+                            in NETWORK_DIRECT_NAMED_IMPORTS
+                        ):
+                            direct.add(node_text(value_field, document.source))
+
+    return NetworkImports(
+        direct_names=frozenset(direct),
+        namespace_aliases=frozenset(namespaces),
+    )
+
+
+def _network_call_lines(
+    handler_body: Any,
+    network_imports: NetworkImports,
+    source: bytes,
+) -> Iterator[int]:
+    """Yield the start line of each outbound network call inside the handler.
+
+    Static-URL suppression: if the call's first positional argument is a
+    string literal whose URL points at ``localhost`` / ``127.0.0.1`` /
+    ``[::1]`` (with optional scheme, port, path, query, fragment), no line
+    is yielded for that call site.
+    """
+    for node in _iter_subtree(handler_body):
+        if node.type != "call_expression":
+            continue
+        fn = node.child_by_field_name("function")
+        if fn is None:
+            continue
+        if fn.type == "identifier":
+            local = node_text(fn, source)
+            if local not in network_imports.direct_names:
+                continue
+            if _has_local_url_first_argument(node, source):
+                continue
+            yield node.start_point[0] + 1
+        elif fn.type == "member_expression":
+            obj = fn.child_by_field_name("object")
+            prop = fn.child_by_field_name("property")
+            if (
+                obj is None
+                or prop is None
+                or obj.type != "identifier"
+                or prop.type != "property_identifier"
+            ):
+                continue
+            if node_text(obj, source) not in network_imports.namespace_aliases:
+                continue
+            if node_text(prop, source) not in NETWORK_NAMESPACE_METHODS:
+                continue
+            if _has_local_url_first_argument(node, source):
+                continue
+            yield node.start_point[0] + 1
+
+
+def _has_local_url_first_argument(call_node: Any, source: bytes) -> bool:
+    """Return True if the call's first positional argument is a static string
+    literal that resolves to a localhost URL.
+
+    Non-string, dynamic, or non-local first arguments return False (the call
+    is NOT suppressed).
+    """
+    args = call_node.child_by_field_name("arguments")
+    if args is None:
+        return False
+    for child in args.children:
+        if child.type in ("(", ")", ",", "comment"):
+            continue
+        # First positional argument only.
+        value = static_string_value(child, source)
+        if value is None:
+            return False
+        return bool(_LOCAL_URL_RE.match(value))
+    return False

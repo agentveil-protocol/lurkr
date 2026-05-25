@@ -107,6 +107,11 @@ RULE_DESCRIPTORS = {
         "full": "Flags secret-like process.env reads inside canonical MCP tool handlers in TypeScript or JavaScript.",
         "help": _rule_doc_url("agent.javascript_env_secret_access_in_tool"),
     },
+    "agent.javascript_network_call_in_tool": {
+        "short": "TypeScript/JavaScript MCP tool handler outbound network call",
+        "full": "Flags outbound network calls (fetch, axios, got, undici, http, https) inside canonical MCP tool handlers in TypeScript or JavaScript.",
+        "help": _rule_doc_url("agent.javascript_network_call_in_tool"),
+    },
     "agent.python_eval_exec_in_tool": {
         "short": "Python agent tool dynamic execution",
         "full": "Flags eval, exec, compile, or dynamic import calls inside Python agent tool functions.",

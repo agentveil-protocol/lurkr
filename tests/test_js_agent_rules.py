@@ -1965,3 +1965,275 @@ def test_typed_wrapper_nested_function_with_typed_param_isolates_scope(tmp_path)
     assert len(findings) == 2
     assert findings[0].line == 5  # outer exec
     assert findings[1].line == 9  # inner exec
+
+
+# --------- same-file const-resolved tool names: per-rule TPs + cleans ---------
+
+
+def test_const_resolved_tool_name_typed_wrapper_cp_fires(tmp_path):
+    # The canonical `modelcontextprotocol/servers/everything/tools/*.ts`
+    # shape: top-level `const name = "literal"` referenced inside a typed
+    # wrapper. The cp rule must fire through the resolved registration.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'run';\n"
+        "const config = { description: 'd' };\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  server.registerTool(name, config, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 7
+
+
+def test_const_resolved_tool_name_typed_wrapper_fs_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { writeFile } from 'node:fs/promises';\n"
+        "const name = 'write';\n"
+        "const config = { description: 'd' };\n"
+        "export const registerWriteTool = (server: McpServer) => {\n"
+        "  server.registerTool(name, config, async () => {\n"
+        "    await writeFile('out.txt', 'body');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 7
+
+
+def test_const_resolved_tool_name_typed_wrapper_env_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const name = 'lookup';\n"
+        "const config = { description: 'd' };\n"
+        "export const registerLookupTool = (server: McpServer) => {\n"
+        "  server.registerTool(name, config, async () => {\n"
+        "    return process.env.OPENAI_API_KEY;\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 6
+
+
+def test_const_resolved_tool_name_typed_wrapper_network_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const name = 'call';\n"
+        "const config = { description: 'd' };\n"
+        "export const registerCallTool = (server: McpServer) => {\n"
+        "  server.registerTool(name, config, async () => {\n"
+        "    return fetch('https://api.example.com');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 6
+
+
+def test_const_resolved_tool_name_helper_wrapper_cp_fires(tmp_path):
+    # Same const-name pattern but the wrapper uses ``function`` declaration
+    # syntax instead of arrow.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'run';\n"
+        "const config = { description: 'd' };\n"
+        "export function registerRunTool(server: McpServer) {\n"
+        "  server.registerTool(name, config, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 7
+
+
+def test_let_tool_name_skipped_in_typed_wrapper(tmp_path):
+    # `let` is not resolved — v1 supports `const` only.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "let name = 'run';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  server.registerTool(name, { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+# --------- shadowing guard for top-level const-name fallback ---------
+
+
+def test_local_const_shadows_top_level_const_in_typed_wrapper_no_fire(tmp_path):
+    # Operator's exact P1 reproducer: top-level `const name = "..."` AND a
+    # local `const name = computeName()` inside the typed wrapper. The
+    # registerTool first arg refers to the LOCAL shadow, so resolution must
+    # fail (not fall through to the top-level binding) and the rule must
+    # emit zero findings.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'top_level_literal';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  const name = computeName();\n"
+        "  server.registerTool(name, { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_local_let_shadows_top_level_const_in_typed_wrapper_no_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'top_level_literal';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  let name = 'reassignable';\n"
+        "  server.registerTool(name, { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_wrapper_parameter_shadows_top_level_const_no_fire(tmp_path):
+    # The typed wrapper's own parameter is named ``name``, which shadows
+    # the top-level ``const name``. The registerTool first arg refers to
+    # the parameter — not statically resolvable to a string.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'top_level_literal';\n"
+        "export const registerRunTool = (server: McpServer, name: string) => {\n"
+        "  server.registerTool(name, { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_local_var_shadows_top_level_const_no_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'top_level_literal';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  var name = 'var_local';\n"
+        "  server.registerTool(name, { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_local_function_decl_shadows_top_level_const_no_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'top_level_literal';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  function name() { return 'fn'; }\n"
+        "  server.registerTool(name, { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_nested_block_const_shadows_top_level_const_no_fire(tmp_path):
+    # Block-level shadow: the registerTool sits inside an ``if`` block whose
+    # body declares its own ``const name``. The walk-up must visit that
+    # block's statement_block as a scope and find the shadow.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'top_level_literal';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  if (true) {\n"
+        "    const name = 'block_local';\n"
+        "    server.registerTool(name, { description: 'd' }, async () => {\n"
+        "      exec('ls');\n"
+        "    });\n"
+        "  }\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+
+
+def test_sibling_scope_const_does_not_shadow_top_level(tmp_path):
+    # Inner handler's body contains its own ``const name``, but it is in a
+    # SIBLING scope to the registerTool call's first argument — the
+    # walk-up from the first arg goes through the wrapper's body, not
+    # through the handler's body. Top-level ``const name`` must still
+    # resolve, and the rule must fire on the handler's exec.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "const name = 'run';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  server.registerTool(name, { description: 'd' }, async () => {\n"
+        "    const name = 'inner_unused';\n"
+        "    exec('ls');\n"
+        "    return name;\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 7  # exec line

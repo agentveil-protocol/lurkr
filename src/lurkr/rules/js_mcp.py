@@ -437,6 +437,7 @@ def _collect_typed_wrapper_registered_tools(
     document: JsAstDocument,
     mcp_imports: McpImports,
     seen: set[tuple[str, int]],
+    const_bindings: dict[str, str],
 ) -> list[JsRegisteredTool]:
     """Yield ``JsRegisteredTool`` for each ``<typed_param>.registerTool(...)``
     inside a typed-wrapper function body.
@@ -446,7 +447,9 @@ def _collect_typed_wrapper_registered_tools(
     descended into here — each nested scope is independently visited by
     the outer ``iter_nodes`` pass and matched against its own typed
     parameters (if any). Calls whose (name, line) key is already in
-    ``seen`` are silently deduped.
+    ``seen`` are silently deduped. The shared ``const_bindings`` map lets
+    Pass B resolve a tool-name identifier (e.g. ``const name = "echo"``)
+    the same way Pass A does.
     """
     tools: list[JsRegisteredTool] = []
     for fn_node in iter_nodes(document.tree):
@@ -480,7 +483,9 @@ def _collect_typed_wrapper_registered_tools(
             arg_nodes = _argument_nodes(args)
             if not arg_nodes:
                 continue
-            name = static_string_value(arg_nodes[0], document.source)
+            name = _resolve_static_string_or_const(
+                arg_nodes[0], document.source, const_bindings
+            )
             if name is None:
                 continue
             line = call_node.start_point[0] + 1
@@ -527,6 +532,7 @@ def collect_registered_tools_js(
         if chained_enabled or typed_wrapper_enabled
         else None
     )
+    const_bindings = _collect_top_level_const_string_bindings(document)
     tools: list[JsRegisteredTool] = []
     seen: set[tuple[str, int]] = set()
     # Pass A: identifier-bound + chained construction (global walk).
@@ -562,7 +568,9 @@ def collect_registered_tools_js(
         arg_nodes = _argument_nodes(args)
         if not arg_nodes:
             continue
-        name = static_string_value(arg_nodes[0], document.source)
+        name = _resolve_static_string_or_const(
+            arg_nodes[0], document.source, const_bindings
+        )
         if name is None:
             continue
         line = node.start_point[0] + 1
@@ -577,7 +585,9 @@ def collect_registered_tools_js(
     # set so identifier-bound matching above never picks it up out of scope.
     if typed_wrapper_enabled and mcp_imports is not None:
         tools.extend(
-            _collect_typed_wrapper_registered_tools(document, mcp_imports, seen)
+            _collect_typed_wrapper_registered_tools(
+                document, mcp_imports, seen, const_bindings
+            )
         )
     return tools
 
@@ -599,3 +609,249 @@ def _argument_nodes(arguments_node) -> list:
         for child in arguments_node.children
         if child.type not in _NON_ARGUMENT_CHILD_TYPES
     ]
+
+
+def _collect_top_level_const_string_bindings(
+    document: JsAstDocument,
+) -> dict[str, str]:
+    """Return a map of ``identifier → static string literal`` for top-level
+    ``const`` declarations in the file.
+
+    Considers only ``lexical_declaration`` nodes whose first child is the
+    ``const`` keyword AND whose parent is either the program root or a
+    top-level ``export_statement`` (i.e. ``const x = "literal"`` and
+    ``export const x = "literal"``). Block-scoped or function-scoped const
+    declarations are intentionally not v1 — this avoids ambiguity when two
+    different scopes bind the same identifier name to different literals.
+
+    Values are only captured when ``static_string_value`` returns a non-None
+    string. ``let``/``var`` declarations, computed initialisers, template
+    literals with interpolation, destructured patterns, and imported
+    bindings are silently dropped.
+    """
+    bindings: dict[str, str] = {}
+    program = document.tree.root_node
+    if program.type != "program":
+        return bindings
+    for child in program.children:
+        lex_decl = child
+        if lex_decl.type == "export_statement":
+            inner = lex_decl.child_by_field_name("declaration")
+            if inner is None:
+                continue
+            lex_decl = inner
+        if lex_decl.type != "lexical_declaration":
+            continue
+        if not lex_decl.children or lex_decl.children[0].type != "const":
+            continue
+        for decl in lex_decl.children:
+            if decl.type != "variable_declarator":
+                continue
+            name_node = decl.child_by_field_name("name")
+            value_node = decl.child_by_field_name("value")
+            if name_node is None or value_node is None:
+                continue
+            if name_node.type != "identifier":
+                continue
+            literal = static_string_value(value_node, document.source)
+            if literal is None:
+                continue
+            bindings[node_text(name_node, document.source)] = literal
+    return bindings
+
+
+def _resolve_static_string_or_const(
+    arg_node, source: bytes, const_bindings: dict[str, str]
+) -> str | None:
+    """Return the static string value of an argument node, falling back to a
+    same-file top-level ``const`` binding when the argument is a bare
+    identifier that is NOT shadowed in any enclosing local scope.
+
+    The shadow check walks upward from ``arg_node`` and stops just before
+    the program root. If any function / arrow / method parameter, or any
+    immediate ``const`` / ``let`` / ``var`` / ``function`` declaration in
+    an enclosing function or block scope binds the identifier name, the
+    bare-identifier reference at the call site is treated as dynamic and
+    the top-level fallback is suppressed (returns ``None``). This keeps
+    block-scoped consts unsupported under v1 while preventing the
+    top-level const map from masking local shadows.
+
+    Returns ``None`` for any value that cannot be statically resolved to a
+    string under the v1 contract: template literals with interpolation,
+    member expressions, calls, destructuring, identifiers shadowed in
+    enclosing local scope, and identifiers without a matching top-level
+    const binding.
+    """
+    direct = static_string_value(arg_node, source)
+    if direct is not None:
+        return direct
+    if arg_node.type != "identifier":
+        return None
+    name = node_text(arg_node, source)
+    if _identifier_shadowed_in_enclosing_local_scope(arg_node, source, name):
+        return None
+    return const_bindings.get(name)
+
+
+def _identifier_shadowed_in_enclosing_local_scope(
+    identifier_node, source: bytes, name: str
+) -> bool:
+    """Return True if any enclosing non-program function / block / class
+    scope binds ``name`` via parameter or immediate local declaration.
+
+    Walks ``identifier_node.parent`` chain until a program-root or sentinel
+    is reached. Each visited node is asked whether it declares ``name`` at
+    its own scope (parameters for function-like nodes; direct
+    ``lexical_declaration`` / ``variable_declaration`` / ``function_declaration``
+    children for block-like and function-like nodes). Top-level (program)
+    declarations are intentionally NOT counted as shadows — that case is
+    exactly what the top-level const map exists to resolve.
+    """
+    parent = identifier_node.parent
+    while parent is not None and parent.type != "program":
+        if _scope_declares_name(parent, source, name):
+            return True
+        parent = parent.parent
+    return False
+
+
+def _scope_declares_name(scope_node, source: bytes, name: str) -> bool:
+    """Return True if ``scope_node`` itself binds ``name`` at its own scope.
+
+    For function-like nodes (``arrow_function``, ``function_expression``,
+    ``function_declaration``, ``generator_function_declaration``,
+    ``method_definition``), checks formal parameters AND the body's
+    immediate declarations. For ``statement_block``, ``class_body``, and
+    similar block scopes, checks the block's immediate declarations only.
+    Returns False for other node types (they are not binding scopes for
+    our purposes).
+    """
+    scope_type = scope_node.type
+    if scope_type in _TYPED_WRAPPER_FUNCTION_TYPES or scope_type in (
+        "generator_function_declaration",
+        "method_definition",
+    ):
+        if _function_parameters_declare_name(scope_node, source, name):
+            return True
+        body = scope_node.child_by_field_name("body")
+        if body is not None and _block_immediately_declares_name(
+            body, source, name
+        ):
+            return True
+        return False
+    if scope_type in ("statement_block", "class_body"):
+        return _block_immediately_declares_name(scope_node, source, name)
+    return False
+
+
+def _function_parameters_declare_name(
+    fn_node, source: bytes, name: str
+) -> bool:
+    """Return True if the function-like node's formal parameters bind ``name``.
+
+    Handles arrow functions with a single unparenthesised parameter
+    (``parameter`` field) and regular ``formal_parameters``. Walks
+    ``required_parameter`` / ``optional_parameter`` wrappers and the
+    common destructuring patterns enough to detect identifier-shaped
+    bindings.
+    """
+    single = fn_node.child_by_field_name("parameter")
+    if single is not None and _pattern_binds_name(single, source, name):
+        return True
+    params = fn_node.child_by_field_name("parameters")
+    if params is None:
+        return False
+    for child in params.children:
+        if child.type in ("required_parameter", "optional_parameter"):
+            pattern = child.child_by_field_name("pattern")
+            if pattern is not None and _pattern_binds_name(
+                pattern, source, name
+            ):
+                return True
+        elif _pattern_binds_name(child, source, name):
+            return True
+    return False
+
+
+def _pattern_binds_name(node, source: bytes, name: str) -> bool:
+    """Return True if a parameter / binding pattern node binds ``name``.
+
+    Walks ``identifier``, ``assignment_pattern`` (default values),
+    ``rest_pattern``, ``object_pattern`` (with shorthand and pair
+    sub-patterns), and ``array_pattern`` shapes. Anything else returns
+    False.
+    """
+    if node is None:
+        return False
+    t = node.type
+    if t == "identifier":
+        return node_text(node, source) == name
+    if t == "assignment_pattern":
+        left = node.child_by_field_name("left")
+        return _pattern_binds_name(left, source, name)
+    if t == "rest_pattern":
+        for child in node.children:
+            if child.type != "..." and _pattern_binds_name(child, source, name):
+                return True
+        return False
+    if t == "object_pattern":
+        for child in node.children:
+            if child.type == "shorthand_property_identifier_pattern":
+                if node_text(child, source) == name:
+                    return True
+            elif child.type == "pair_pattern":
+                value_field = child.child_by_field_name("value")
+                if _pattern_binds_name(value_field, source, name):
+                    return True
+            elif child.type == "rest_pattern":
+                if _pattern_binds_name(child, source, name):
+                    return True
+            elif child.type == "object_assignment_pattern":
+                left = child.child_by_field_name("left")
+                if _pattern_binds_name(left, source, name):
+                    return True
+        return False
+    if t == "array_pattern":
+        for child in node.children:
+            if child.type in (
+                "identifier",
+                "assignment_pattern",
+                "rest_pattern",
+                "object_pattern",
+                "array_pattern",
+            ) and _pattern_binds_name(child, source, name):
+                return True
+        return False
+    return False
+
+
+def _block_immediately_declares_name(
+    block_node, source: bytes, name: str
+) -> bool:
+    """Return True if a direct child of ``block_node`` is a
+    ``lexical_declaration`` / ``variable_declaration`` / ``function_declaration``
+    that binds ``name`` at the block's own scope.
+
+    Nested declarations inside inner blocks or inner functions are NOT
+    counted here — the outer ``_identifier_shadowed_in_enclosing_local_scope``
+    walks parent by parent, so each scope is visited at its own level.
+    """
+    for child in block_node.children:
+        if child.type in ("lexical_declaration", "variable_declaration"):
+            for decl in child.children:
+                if decl.type != "variable_declarator":
+                    continue
+                name_node = decl.child_by_field_name("name")
+                if name_node is None:
+                    continue
+                if _pattern_binds_name(name_node, source, name):
+                    return True
+        elif child.type == "function_declaration":
+            name_node = child.child_by_field_name("name")
+            if (
+                name_node is not None
+                and name_node.type == "identifier"
+                and node_text(name_node, source) == name
+            ):
+                return True
+    return False

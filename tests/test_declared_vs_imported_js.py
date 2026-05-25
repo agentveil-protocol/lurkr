@@ -193,6 +193,9 @@ def test_set_request_handler_does_not_fire(tmp_path):
 
 
 def test_dynamic_tool_name_skipped_silently(tmp_path):
+    # Truly-dynamic first arguments (template literal with interpolation,
+    # call expression) cannot be statically resolved to a string and must
+    # be silently skipped by all three collection passes.
     (tmp_path / "mcp.json").write_text(
         json.dumps({"tools": [{"name": "search_docs"}]}),
         encoding="utf-8",
@@ -200,9 +203,8 @@ def test_dynamic_tool_name_skipped_silently(tmp_path):
     (tmp_path / "server.ts").write_text(
         "import { McpServer } from '@modelcontextprotocol/server';\n"
         "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
-        "const name = 'delete_files';\n"
-        "server.registerTool(name, {}, () => ({}));\n"
-        "server.registerTool(`tool_${name}`, {}, () => ({}));\n"
+        "const prefix = 'tool';\n"
+        "server.registerTool(`${prefix}_dynamic`, {}, () => ({}));\n"
         "server.registerTool(getName(), {}, () => ({}));\n",
         encoding="utf-8",
     )
@@ -737,15 +739,15 @@ def test_chained_construction_default_mcp_import_not_flagged(tmp_path):
 
 
 def test_chained_construction_dynamic_tool_name_skipped(tmp_path):
+    # Truly-dynamic first arguments on the chained shape are still skipped.
     (tmp_path / "mcp.json").write_text(
         json.dumps({"tools": [{"name": "search_docs"}]}),
         encoding="utf-8",
     )
     (tmp_path / "server.ts").write_text(
         "import { McpServer } from '@modelcontextprotocol/server';\n"
-        "const name = 'delete_files';\n"
         "new McpServer({ name: 'demo', version: '1.0.0' })"
-        ".registerTool(name, {}, () => ({}));\n",
+        ".registerTool(getName(), {}, () => ({}));\n",
         encoding="utf-8",
     )
 
@@ -895,3 +897,214 @@ def test_typed_wrapper_aliased_named_import_shadow_mismatch_fires(tmp_path):
     assert len(findings) == 1
     assert findings[0].file == "server.ts"
     assert findings[0].line == 3
+
+
+# --------- same-file const-resolved tool names ---------
+
+
+def test_const_resolved_tool_name_identifier_bound_fires(tmp_path):
+    # `const name = "delete_files"; server.registerTool(name, ...)` — same-file
+    # top-level const string binding is resolved.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "const name = 'delete_files';\n"
+        "server.registerTool(name, { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+    assert "delete_files" in findings[0].message
+
+
+def test_const_resolved_tool_name_chained_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const name = 'delete_files';\n"
+        "new McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool(name, { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3
+    assert "delete_files" in findings[0].message
+
+
+def test_const_resolved_tool_name_typed_wrapper_fires(tmp_path):
+    # Real-world ``everything/tools/*.ts`` shape: top-level
+    # ``const name = "literal"; const config = {...}; export const registerXTool = ...``.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const name = 'delete_files';\n"
+        "const config = { description: 'd' };\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  server.registerTool(name, config, async () => ({}));\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+    assert "delete_files" in findings[0].message
+
+
+def test_const_resolved_tool_name_exported_const_fires(tmp_path):
+    # ``export const name = "delete_files"`` should be resolvable the same as
+    # a plain top-level const.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "export const name = 'delete_files';\n"
+        "server.registerTool(name, { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+
+
+def test_let_tool_name_not_resolved(tmp_path):
+    # ``let name = "x"`` must not be resolved — v1 supports ``const`` only.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "let name = 'delete_files';\n"
+        "server.registerTool(name, {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_const_call_result_tool_name_not_resolved(tmp_path):
+    # ``const name = someCall()`` cannot be statically resolved.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "const name = computeName();\n"
+        "server.registerTool(name, {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_imported_tool_name_not_resolved(tmp_path):
+    # ``import { name } from "./other"`` does NOT add a same-file binding —
+    # cross-file constant resolution is out of v1.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { name } from './other';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool(name, {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "other.ts").write_text(
+        "export const name = 'delete_files';\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_const_template_with_interpolation_not_resolved(tmp_path):
+    # ``const name = `tool_${...}` `` is a template with substitution — not
+    # statically resolvable.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "const prefix = 'delete';\n"
+        "const name = `${prefix}_files`;\n"
+        "server.registerTool(name, {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_block_scoped_const_not_resolved(tmp_path):
+    # A const declared inside a function body is NOT a top-level binding —
+    # v1 only collects top-level (and ``export``-wrapped top-level) consts.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  const name = 'delete_files';\n"
+        "  server.registerTool(name, { description: 'd' }, async () => ({}));\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_local_const_shadows_top_level_const_identifier_bound_no_fire(tmp_path):
+    # Operator's P1 shape applied to the identifier-bound collection path:
+    # top-level ``const name = "delete_files"`` could resolve `name`, but a
+    # local ``const name = computeName()`` inside the enclosing function
+    # shadows it, so resolution must fail.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "const name = 'delete_files';\n"
+        "function wrap() {\n"
+        "  const name = computeName();\n"
+        "  server.registerTool(name, {}, () => ({}));\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []

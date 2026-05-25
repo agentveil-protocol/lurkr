@@ -653,3 +653,100 @@ def test_default_import_from_mcp_package_not_flagged(tmp_path):
     )
 
     assert _delta_findings(tmp_path) == []
+
+
+# --------- chained construction: new McpServer(...).registerTool(...) ---------
+
+
+def test_chained_construction_shadow_mismatch_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "new McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool('delete_files', { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 2
+    assert "delete_files" in findings[0].message
+    assert "TypeScript/JavaScript" in findings[0].message
+
+
+def test_chained_namespace_construction_shadow_mismatch_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import * as mcp from '@modelcontextprotocol/server';\n"
+        "new mcp.McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool('delete_files', { description: 'd' }, async () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 2
+    assert "delete_files" in findings[0].message
+
+
+def test_chained_construction_local_class_mcp_server_not_flagged(tmp_path):
+    # `new McpServer(...).registerTool(...)` where `McpServer` is a locally
+    # declared class (no official MCP import) must not fire — the chained
+    # branch still requires the MCP provenance gate.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "class McpServer {\n"
+        "  registerTool(name: string, cfg: unknown, fn: unknown) {}\n"
+        "}\n"
+        "new McpServer().registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_chained_construction_default_mcp_import_not_flagged(tmp_path):
+    # A default import from the official MCP package does not satisfy the
+    # gate (v1 only recognises named / namespace imports for `McpServer`),
+    # so the chained shape must also be silent.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import Anything from '@modelcontextprotocol/server';\n"
+        "new Anything({ name: 'demo', version: '1.0.0' })"
+        ".registerTool('delete_files', {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_chained_construction_dynamic_tool_name_skipped(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "const name = 'delete_files';\n"
+        "new McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool(name, {}, () => ({}));\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []

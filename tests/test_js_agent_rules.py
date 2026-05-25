@@ -1679,3 +1679,115 @@ def test_bare_host_localhost_string_still_fires(tmp_path):
 
     assert len(findings) == 1
     assert findings[0].line == 4
+
+
+# --------- chained construction: new McpServer(...).registerTool(...) ---------
+
+
+def test_chained_construction_cp_exec_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "new McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool('run', { description: 'd' }, async () => {\n"
+        "  exec('ls');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+
+
+def test_chained_construction_fs_writefile_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { writeFile } from 'node:fs/promises';\n"
+        "new McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool('write', { description: 'd' }, async () => {\n"
+        "  await writeFile('out.txt', 'body');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+
+
+def test_chained_construction_env_secret_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "new McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool('lookup', { description: 'd' }, async () => {\n"
+        "  return process.env.OPENAI_API_KEY;\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3
+
+
+def test_chained_construction_network_fetch_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "new McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3
+
+
+def test_chained_construction_namespace_network_fetch_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import * as mcp from '@modelcontextprotocol/server';\n"
+        "new mcp.McpServer({ name: 'demo', version: '1.0.0' })"
+        ".registerTool('call', { description: 'd' }, async () => {\n"
+        "  return fetch('https://api.example.com');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3
+
+
+def test_chained_construction_local_class_does_not_fire(tmp_path):
+    # `new McpServer(...).registerTool(...)` with a locally-declared
+    # ``McpServer`` class and no official MCP import must not produce any
+    # risk-rule findings — the MCP gate is still required for chained
+    # registrations.
+    (tmp_path / "server.ts").write_text(
+        "import { exec } from 'node:child_process';\n"
+        "class McpServer {\n"
+        "  registerTool(name: string, cfg: unknown, fn: unknown) {}\n"
+        "}\n"
+        "new McpServer().registerTool('run', {}, async () => {\n"
+        "  exec('ls');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+    assert _fs_findings(tmp_path) == []
+    assert _env_findings(tmp_path) == []
+    assert _network_findings(tmp_path) == []

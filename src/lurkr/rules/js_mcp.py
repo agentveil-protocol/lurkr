@@ -4,17 +4,24 @@ This module owns the bounded static analysis of:
 
 - Official `@modelcontextprotocol/*` import / require bindings in one file
 - Local `new McpServer(...)` constructor identifier collection
-- Canonical `<server>.registerTool("static_name", config, handler)` call sites
+- Canonical `<server>.registerTool("static_name", config, handler)` call
+  sites, in two registration shapes:
+  - Identifier-bound:
+    `const server = new McpServer(...); server.registerTool("name", ...)`
+  - Direct chained construction:
+    `new McpServer(...).registerTool("name", ...)` (and the namespace import
+    equivalent ``new mcp.McpServer(...).registerTool("name", ...)``)
 
-Helpers exposed here are intended to be reused by `lurkr.rules` modules that
-need to reason about the same MCP context boundary. Today the only consumer
-is `lurkr.rules.declared_vs_imported`; future TS/JS rules (e.g., handler-body
-risk rules) are expected to reuse the same gate without duplicating logic.
-
-No behavior change: this module moves logic from
-`lurkr.rules.declared_vs_imported` without altering the gate or any rule
-output. All identifiers, patterns, and bounded-static guarantees match the
-prior in-place implementation.
+Helpers exposed here are reused by `lurkr.rules` modules that need to reason
+about the same MCP context boundary (today: `lurkr.rules.declared_vs_imported`
+and `lurkr.rules.js_agent`). The chained-construction extension keeps the
+function signatures of `collect_mcp_server_identifiers` and
+`collect_registered_tools_js` stable: an internal sentinel is added to the
+identifier set when chained sites exist, so callers that gate on
+``if not server_identifiers: skip`` continue to see a truthy set in
+chained-only files, and the receiver-matching branch in
+`collect_registered_tools_js` walks both identifier-bound and chained call
+sites.
 """
 
 from __future__ import annotations
@@ -31,6 +38,18 @@ from lurkr.js_ast import (
 
 
 MCP_PACKAGE_PREFIX = "@modelcontextprotocol/"
+
+# Internal sentinel added to the set returned by
+# :func:`collect_mcp_server_identifiers` whenever the file contains at least
+# one direct chained ``new McpServer(...).registerTool(...)`` call. Angle
+# brackets cannot appear in JavaScript identifiers, so this value is
+# guaranteed not to collide with any real identifier text returned by
+# ``node_text``. The sentinel keeps callers that gate on "is there MCP
+# context in this file?" via ``if not server_identifiers: skip`` working in
+# chained-only files; it is never matched against actual receiver text in
+# :func:`collect_registered_tools_js`, which validates chained sites
+# directly through :func:`is_mcp_server_new_expression`.
+_CHAINED_MCP_SENTINEL = "<lurkr:chained-mcp-server>"
 
 
 @dataclass(frozen=True)
@@ -186,25 +205,39 @@ def is_mcp_server_new_expression(
 
 def collect_mcp_server_identifiers(document: JsAstDocument) -> set[str]:
     """Return the set of local variable names bound to an official MCP server
-    instance in this file.
+    instance in this file, plus an internal sentinel when chained MCP
+    construction is present.
 
-    The gate requires both:
+    The gate requires an import or ``require(...)`` of
+    ``@modelcontextprotocol/*`` that binds a direct name or namespace alias
+    locally. Two registration shapes are then recognised:
 
-    1. An import or `require(...)` of `@modelcontextprotocol/*` that binds a
-       direct name or namespace alias locally, AND
-    2. A `<id> = new <symbol>(...)` (or `<id> = new <ns>.McpServer(...)`)
-       expression where `<symbol>` / `<ns>` resolves through (1).
+    1. Identifier-bound: ``<id> = new <symbol>(...)`` (or
+       ``<id> = new <ns>.McpServer(...)``) where ``<symbol>`` / ``<ns>``
+       resolves through the MCP imports. The local identifier name is
+       included in the returned set.
+    2. Direct chained construction: at least one
+       ``new McpServer(...).registerTool(...)`` (or namespace equivalent)
+       call site. When present, the internal :data:`_CHAINED_MCP_SENTINEL`
+       string is added to the returned set so callers gating on
+       ``if not server_identifiers: skip`` continue to see MCP context.
+       The sentinel itself is never compared against real receiver text in
+       :func:`collect_registered_tools_js`.
 
     Bounded static signal: cross-file references, factory functions, and
     dynamic constructor patterns are intentionally not resolved. A locally
-    declared `class McpServer { ... }` without an MCP import does NOT
-    satisfy the gate.
+    declared ``class McpServer { ... }`` without an MCP import does NOT
+    satisfy the gate. Deeper-than-one chains
+    (``new McpServer(...).x.registerTool(...)``,
+    ``new McpServer(...).registerTool(...).registerTool(...)``) are out of
+    v1.
     """
     mcp_imports = collect_mcp_imports(document)
     if mcp_imports.empty:
         return set()
 
     identifiers: set[str] = set()
+    has_chained_register = False
     for node in iter_nodes(document.tree):
         if node.type == "variable_declarator":
             name_node = node.child_by_field_name("name")
@@ -230,22 +263,70 @@ def collect_mcp_server_identifiers(document: JsAstDocument) -> set[str]:
             ):
                 continue
             identifiers.add(node_text(left, document.source))
+        elif node.type == "call_expression" and _is_chained_register_tool_call(
+            node, document.source, mcp_imports
+        ):
+            has_chained_register = True
+
+    if has_chained_register:
+        identifiers.add(_CHAINED_MCP_SENTINEL)
     return identifiers
+
+
+def _is_chained_register_tool_call(
+    node, source: bytes, mcp_imports: McpImports
+) -> bool:
+    """Return True if ``node`` is the direct chained shape
+    ``new <McpServer>(...).registerTool(...)``.
+
+    Walks one level: the call's function field must be a member_expression
+    whose property is ``registerTool`` and whose object is a
+    ``new_expression`` whose constructor resolves to the official MCP
+    server through ``mcp_imports``. Deeper indirections (parenthesised
+    expressions, intermediate property access, second-level chained
+    ``registerTool`` calls) are intentionally not v1.
+    """
+    fn = node.child_by_field_name("function")
+    if fn is None or fn.type != "member_expression":
+        return False
+    prop = fn.child_by_field_name("property")
+    if prop is None or prop.type != "property_identifier":
+        return False
+    if node_text(prop, source) != "registerTool":
+        return False
+    obj = fn.child_by_field_name("object")
+    if obj is None or obj.type != "new_expression":
+        return False
+    return is_mcp_server_new_expression(obj, source, mcp_imports)
 
 
 def collect_registered_tools_js(
     document: JsAstDocument,
     server_identifiers: set[str],
 ) -> list[JsRegisteredTool]:
-    """Collect static-named `<server_id>.registerTool('name', ...)` calls.
+    """Collect static-named ``<receiver>.registerTool('name', ...)`` calls.
 
-    Only call sites where the receiver identifier is in `server_identifiers`
-    (the set of locally-bound McpServer instances) are accepted. Tool name
-    must be a static string literal; dynamic names are skipped silently.
-    Bounded static signal — does not resolve cross-file references.
+    Two receiver shapes are accepted:
+
+    1. Identifier receiver: ``<id>.registerTool(...)`` where ``<id>`` is in
+       ``server_identifiers`` (a locally-bound McpServer instance).
+    2. Chained construction receiver:
+       ``new McpServer(...).registerTool(...)`` (and the namespace import
+       equivalent), validated through
+       :func:`is_mcp_server_new_expression` against the file's
+       ``McpImports``. This branch is enabled when ``server_identifiers``
+       contains the internal :data:`_CHAINED_MCP_SENTINEL`, which is added
+       by :func:`collect_mcp_server_identifiers` whenever a chained site is
+       present in the file.
+
+    Tool name must be a static string literal; dynamic names are skipped
+    silently. Bounded static signal — does not resolve cross-file
+    references.
     """
     if not server_identifiers:
         return []
+    chained_enabled = _CHAINED_MCP_SENTINEL in server_identifiers
+    mcp_imports = collect_mcp_imports(document) if chained_enabled else None
     tools: list[JsRegisteredTool] = []
     seen: set[tuple[str, int]] = set()
     for node in iter_nodes(document.tree):
@@ -254,13 +335,25 @@ def collect_registered_tools_js(
         fn = node.child_by_field_name("function")
         if fn is None or fn.type != "member_expression":
             continue
-        obj = fn.child_by_field_name("object")
-        if obj is None or obj.type != "identifier":
-            continue
-        if node_text(obj, document.source) not in server_identifiers:
-            continue
         prop = fn.child_by_field_name("property")
         if prop is None or node_text(prop, document.source) != "registerTool":
+            continue
+        obj = fn.child_by_field_name("object")
+        if obj is None:
+            continue
+        if obj.type == "identifier":
+            if node_text(obj, document.source) not in server_identifiers:
+                continue
+        elif obj.type == "new_expression":
+            if (
+                not chained_enabled
+                or mcp_imports is None
+                or not is_mcp_server_new_expression(
+                    obj, document.source, mcp_imports
+                )
+            ):
+                continue
+        else:
             continue
         args = node.child_by_field_name("arguments")
         if args is None:

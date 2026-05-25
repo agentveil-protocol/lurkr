@@ -5,23 +5,30 @@ This module owns the bounded static analysis of:
 - Official `@modelcontextprotocol/*` import / require bindings in one file
 - Local `new McpServer(...)` constructor identifier collection
 - Canonical `<server>.registerTool("static_name", config, handler)` call
-  sites, in two registration shapes:
+  sites, in three registration shapes:
   - Identifier-bound:
     `const server = new McpServer(...); server.registerTool("name", ...)`
   - Direct chained construction:
     `new McpServer(...).registerTool("name", ...)` (and the namespace import
     equivalent ``new mcp.McpServer(...).registerTool("name", ...)``)
+  - Typed-parameter helper wrapper: a function or arrow whose TypeScript
+    type-annotated parameter resolves to the file's imported MCP server
+    (``server: McpServer`` or ``server: mcp.McpServer``). Within that
+    function body only, the typed parameter is treated as an MCP receiver
+    and ``<param>.registerTool("name", ...)`` calls are collected. Untyped
+    parameters in JavaScript files and wrapper-name heuristics are
+    intentionally not v1.
 
 Helpers exposed here are reused by `lurkr.rules` modules that need to reason
 about the same MCP context boundary (today: `lurkr.rules.declared_vs_imported`
-and `lurkr.rules.js_agent`). The chained-construction extension keeps the
-function signatures of `collect_mcp_server_identifiers` and
+and `lurkr.rules.js_agent`). Both registration extensions keep the function
+signatures of `collect_mcp_server_identifiers` and
 `collect_registered_tools_js` stable: an internal sentinel is added to the
-identifier set when chained sites exist, so callers that gate on
-``if not server_identifiers: skip`` continue to see a truthy set in
-chained-only files, and the receiver-matching branch in
-`collect_registered_tools_js` walks both identifier-bound and chained call
-sites.
+identifier set when chained sites OR typed-wrapper sites exist, so callers
+that gate on ``if not server_identifiers: skip`` continue to see a truthy
+set in chained-only or wrapper-only files, and the receiver-matching branch
+in `collect_registered_tools_js` walks identifier-bound, chained, AND
+typed-parameter wrapper call sites.
 """
 
 from __future__ import annotations
@@ -50,6 +57,36 @@ MCP_PACKAGE_PREFIX = "@modelcontextprotocol/"
 # :func:`collect_registered_tools_js`, which validates chained sites
 # directly through :func:`is_mcp_server_new_expression`.
 _CHAINED_MCP_SENTINEL = "<lurkr:chained-mcp-server>"
+
+# Internal sentinel added to the set returned by
+# :func:`collect_mcp_server_identifiers` whenever the file contains at least
+# one function or arrow whose TypeScript-typed parameter resolves to the
+# imported MCP server. The sentinel keeps callers that gate on MCP context
+# truthy in wrapper-only files. Receiver matching for the typed-parameter
+# shape is done inside :func:`collect_registered_tools_js`'s Pass B by
+# walking each typed wrapper's body with bounded scope discipline (nested
+# function / class scopes are skipped to avoid leaking the parameter name
+# across closures).
+_TYPED_WRAPPER_MCP_SENTINEL = "<lurkr:typed-wrapper-mcp-server>"
+
+# Function / class scope-barrier types used by the typed-wrapper Pass B
+# walk to avoid descending into nested closures where the wrapper's typed
+# parameter may be shadowed.
+_TYPED_WRAPPER_SCOPE_BARRIERS = frozenset(
+    {
+        "arrow_function",
+        "function_expression",
+        "function_declaration",
+        "generator_function_declaration",
+        "method_definition",
+        "class_declaration",
+        "class_body",
+    }
+)
+
+_TYPED_WRAPPER_FUNCTION_TYPES = frozenset(
+    {"arrow_function", "function_expression", "function_declaration"}
+)
 
 
 @dataclass(frozen=True)
@@ -205,12 +242,12 @@ def is_mcp_server_new_expression(
 
 def collect_mcp_server_identifiers(document: JsAstDocument) -> set[str]:
     """Return the set of local variable names bound to an official MCP server
-    instance in this file, plus an internal sentinel when chained MCP
-    construction is present.
+    instance in this file, plus internal sentinels when chained MCP
+    construction or a typed-parameter wrapper is present.
 
     The gate requires an import or ``require(...)`` of
     ``@modelcontextprotocol/*`` that binds a direct name or namespace alias
-    locally. Two registration shapes are then recognised:
+    locally. Three registration shapes are then recognised:
 
     1. Identifier-bound: ``<id> = new <symbol>(...)`` (or
        ``<id> = new <ns>.McpServer(...)``) where ``<symbol>`` / ``<ns>``
@@ -221,16 +258,23 @@ def collect_mcp_server_identifiers(document: JsAstDocument) -> set[str]:
        call site. When present, the internal :data:`_CHAINED_MCP_SENTINEL`
        string is added to the returned set so callers gating on
        ``if not server_identifiers: skip`` continue to see MCP context.
-       The sentinel itself is never compared against real receiver text in
-       :func:`collect_registered_tools_js`.
+    3. Typed-parameter helper wrapper: a function or arrow whose
+       TypeScript-typed parameter resolves to the file's imported
+       ``McpServer`` (``server: McpServer`` or
+       ``server: mcp.McpServer``). When at least one such wrapper exists,
+       :data:`_TYPED_WRAPPER_MCP_SENTINEL` is added. The typed parameter
+       name itself is NOT added to the returned set — it is only valid
+       within the wrapper's body, and matching is done in
+       :func:`collect_registered_tools_js`'s scope-aware Pass B.
+
+    Neither sentinel is ever compared against real receiver text in
+    :func:`collect_registered_tools_js`; both are gate markers only.
 
     Bounded static signal: cross-file references, factory functions, and
     dynamic constructor patterns are intentionally not resolved. A locally
     declared ``class McpServer { ... }`` without an MCP import does NOT
-    satisfy the gate. Deeper-than-one chains
-    (``new McpServer(...).x.registerTool(...)``,
-    ``new McpServer(...).registerTool(...).registerTool(...)``) are out of
-    v1.
+    satisfy the gate. Untyped JavaScript wrappers, wrapper-name heuristics,
+    and deeper-than-one chains are out of v1.
     """
     mcp_imports = collect_mcp_imports(document)
     if mcp_imports.empty:
@@ -238,6 +282,7 @@ def collect_mcp_server_identifiers(document: JsAstDocument) -> set[str]:
 
     identifiers: set[str] = set()
     has_chained_register = False
+    has_typed_wrapper = False
     for node in iter_nodes(document.tree):
         if node.type == "variable_declarator":
             name_node = node.child_by_field_name("name")
@@ -267,9 +312,15 @@ def collect_mcp_server_identifiers(document: JsAstDocument) -> set[str]:
             node, document.source, mcp_imports
         ):
             has_chained_register = True
+        elif node.type in _TYPED_WRAPPER_FUNCTION_TYPES and _mcp_typed_parameter_names(
+            node, document.source, mcp_imports
+        ):
+            has_typed_wrapper = True
 
     if has_chained_register:
         identifiers.add(_CHAINED_MCP_SENTINEL)
+    if has_typed_wrapper:
+        identifiers.add(_TYPED_WRAPPER_MCP_SENTINEL)
     return identifiers
 
 
@@ -300,6 +351,150 @@ def _is_chained_register_tool_call(
     return is_mcp_server_new_expression(obj, source, mcp_imports)
 
 
+def _mcp_typed_parameter_names(
+    fn_node, source: bytes, mcp_imports: McpImports
+) -> set[str]:
+    """Return the set of parameter names typed as the file's imported MCP
+    server in this function / arrow node.
+
+    Supports the TypeScript shapes ``(server: McpServer)`` (direct named
+    import) and ``(server: mcp.McpServer)`` (namespace import). Optional
+    parameters (``server?: McpServer``) use the same field structure and
+    are handled. Untyped JavaScript parameters return an empty set.
+    """
+    names: set[str] = set()
+    params = fn_node.child_by_field_name("parameters")
+    if params is None:
+        # Arrow with a single un-parenthesised identifier param has no type
+        # annotation, so it cannot resolve to an MCP server. Nothing to add.
+        return names
+    for child in params.children:
+        if child.type not in ("required_parameter", "optional_parameter"):
+            continue
+        pattern = child.child_by_field_name("pattern")
+        if pattern is None or pattern.type != "identifier":
+            continue
+        type_annotation = child.child_by_field_name("type")
+        if type_annotation is None:
+            continue
+        if not _type_annotation_is_mcp_server(
+            type_annotation, source, mcp_imports
+        ):
+            continue
+        names.add(node_text(pattern, source))
+    return names
+
+
+def _type_annotation_is_mcp_server(
+    type_annotation_node, source: bytes, mcp_imports: McpImports
+) -> bool:
+    """Return True if the type-annotation node resolves to the file's MCP
+    server import — either as the direct ``McpServer`` symbol or the
+    namespace-qualified ``<ns>.McpServer`` form.
+    """
+    for child in type_annotation_node.children:
+        if child.type in (":", "?"):
+            continue
+        if child.type == "type_identifier":
+            return node_text(child, source) in mcp_imports.direct_names
+        if child.type == "nested_type_identifier":
+            module_node = child.child_by_field_name("module")
+            name_node = child.child_by_field_name("name")
+            if module_node is None or name_node is None:
+                return False
+            if (
+                module_node.type != "identifier"
+                or name_node.type != "type_identifier"
+            ):
+                return False
+            return (
+                node_text(module_node, source) in mcp_imports.namespace_aliases
+                and node_text(name_node, source) == "McpServer"
+            )
+        return False
+    return False
+
+
+def _iter_typed_wrapper_scope(node):
+    """Iterate descendants of ``node`` without crossing nested function /
+    class scope barriers.
+
+    Bounded for the typed-wrapper Pass B walk: the wrapper's typed
+    parameter is only valid in its own body, so nested function /
+    arrow / class scopes (which may shadow the parameter or introduce
+    their own typed parameters) are excluded from this walk and handled
+    by their own iteration of the outer ``iter_nodes`` pass.
+    """
+    stack = list(reversed(node.children))
+    while stack:
+        current = stack.pop()
+        yield current
+        if current.type not in _TYPED_WRAPPER_SCOPE_BARRIERS:
+            stack.extend(reversed(current.children))
+
+
+def _collect_typed_wrapper_registered_tools(
+    document: JsAstDocument,
+    mcp_imports: McpImports,
+    seen: set[tuple[str, int]],
+) -> list[JsRegisteredTool]:
+    """Yield ``JsRegisteredTool`` for each ``<typed_param>.registerTool(...)``
+    inside a typed-wrapper function body.
+
+    Bounded scope discipline: only same-function-body call sites are
+    walked. Nested function / class scopes inside the wrapper are not
+    descended into here — each nested scope is independently visited by
+    the outer ``iter_nodes`` pass and matched against its own typed
+    parameters (if any). Calls whose (name, line) key is already in
+    ``seen`` are silently deduped.
+    """
+    tools: list[JsRegisteredTool] = []
+    for fn_node in iter_nodes(document.tree):
+        if fn_node.type not in _TYPED_WRAPPER_FUNCTION_TYPES:
+            continue
+        typed_param_names = _mcp_typed_parameter_names(
+            fn_node, document.source, mcp_imports
+        )
+        if not typed_param_names:
+            continue
+        body = fn_node.child_by_field_name("body")
+        if body is None:
+            continue
+        for call_node in _iter_typed_wrapper_scope(body):
+            if call_node.type != "call_expression":
+                continue
+            call_fn = call_node.child_by_field_name("function")
+            if call_fn is None or call_fn.type != "member_expression":
+                continue
+            obj = call_fn.child_by_field_name("object")
+            if obj is None or obj.type != "identifier":
+                continue
+            if node_text(obj, document.source) not in typed_param_names:
+                continue
+            prop = call_fn.child_by_field_name("property")
+            if prop is None or node_text(prop, document.source) != "registerTool":
+                continue
+            args = call_node.child_by_field_name("arguments")
+            if args is None:
+                continue
+            arg_nodes = _argument_nodes(args)
+            if not arg_nodes:
+                continue
+            name = static_string_value(arg_nodes[0], document.source)
+            if name is None:
+                continue
+            line = call_node.start_point[0] + 1
+            key = (name, line)
+            if key in seen:
+                continue
+            seen.add(key)
+            handler_node = arg_nodes[2] if len(arg_nodes) >= 3 else None
+            tools.append(
+                JsRegisteredTool(name=name, line=line, handler=handler_node)
+            )
+    return tools
+
+
 def collect_registered_tools_js(
     document: JsAstDocument,
     server_identifiers: set[str],
@@ -326,9 +521,15 @@ def collect_registered_tools_js(
     if not server_identifiers:
         return []
     chained_enabled = _CHAINED_MCP_SENTINEL in server_identifiers
-    mcp_imports = collect_mcp_imports(document) if chained_enabled else None
+    typed_wrapper_enabled = _TYPED_WRAPPER_MCP_SENTINEL in server_identifiers
+    mcp_imports = (
+        collect_mcp_imports(document)
+        if chained_enabled or typed_wrapper_enabled
+        else None
+    )
     tools: list[JsRegisteredTool] = []
     seen: set[tuple[str, int]] = set()
+    # Pass A: identifier-bound + chained construction (global walk).
     for node in iter_nodes(document.tree):
         if node.type != "call_expression":
             continue
@@ -371,6 +572,13 @@ def collect_registered_tools_js(
         seen.add(key)
         handler_node = arg_nodes[2] if len(arg_nodes) >= 3 else None
         tools.append(JsRegisteredTool(name=name, line=line, handler=handler_node))
+    # Pass B: typed-parameter helper wrappers. Bounded to each wrapper's own
+    # body; the typed parameter name is not added to the global identifier
+    # set so identifier-bound matching above never picks it up out of scope.
+    if typed_wrapper_enabled and mcp_imports is not None:
+        tools.extend(
+            _collect_typed_wrapper_registered_tools(document, mcp_imports, seen)
+        )
     return tools
 
 

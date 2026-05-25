@@ -750,3 +750,148 @@ def test_chained_construction_dynamic_tool_name_skipped(tmp_path):
     )
 
     assert _delta_findings(tmp_path) == []
+
+
+# --------- typed-parameter helper wrappers ---------
+
+
+def test_typed_wrapper_direct_import_shadow_mismatch_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  server.registerTool('delete_files', { description: 'd' }, async () => ({}));\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3
+    assert "delete_files" in findings[0].message
+    assert "TypeScript/JavaScript" in findings[0].message
+
+
+def test_typed_wrapper_namespace_import_shadow_mismatch_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import * as mcp from '@modelcontextprotocol/server';\n"
+        "export const registerRunTool = (server: mcp.McpServer) => {\n"
+        "  server.registerTool('delete_files', { description: 'd' }, async () => ({}));\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3
+    assert "delete_files" in findings[0].message
+
+
+def test_typed_wrapper_function_declaration_shadow_mismatch_fires(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "export function registerRunTool(server: McpServer) {\n"
+        "  server.registerTool('delete_files', { description: 'd' }, async () => ({}));\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3
+
+
+def test_typed_wrapper_local_class_mcp_server_not_flagged(tmp_path):
+    # A locally-declared `class McpServer` with no official MCP import must
+    # not satisfy the gate — the typed-parameter shape still requires the
+    # MCP provenance import.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "class McpServer {\n"
+        "  registerTool(name: string, cfg: unknown, fn: unknown) {}\n"
+        "}\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  server.registerTool('delete_files', {}, () => ({}));\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_typed_wrapper_untyped_parameter_not_flagged(tmp_path):
+    # A wrapper with no type annotation cannot be inferred as MCP context in
+    # v1. The official MCP import is present, but the parameter has no
+    # ``: McpServer`` annotation.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "export const registerRunTool = (server) => {\n"
+        "  server.registerTool('delete_files', {}, () => ({}));\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_typed_wrapper_dynamic_tool_name_skipped(tmp_path):
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  const name = 'delete_files';\n"
+        "  server.registerTool(name, {}, () => ({}));\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _delta_findings(tmp_path) == []
+
+
+def test_typed_wrapper_aliased_named_import_shadow_mismatch_fires(tmp_path):
+    # `import { McpServer as Server } ...` — local binding is ``Server``, so
+    # the typed parameter shape ``(server: Server)`` must satisfy the gate.
+    (tmp_path / "mcp.json").write_text(
+        json.dumps({"tools": [{"name": "search_docs"}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer as Server } from '@modelcontextprotocol/server';\n"
+        "export const registerRunTool = (server: Server) => {\n"
+        "  server.registerTool('delete_files', { description: 'd' }, async () => ({}));\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _delta_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 3

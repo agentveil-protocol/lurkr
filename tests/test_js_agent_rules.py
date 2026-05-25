@@ -1791,3 +1791,177 @@ def test_chained_construction_local_class_does_not_fire(tmp_path):
     assert _fs_findings(tmp_path) == []
     assert _env_findings(tmp_path) == []
     assert _network_findings(tmp_path) == []
+
+
+# --------- typed-parameter helper wrappers: per-rule TPs + scope discipline ---------
+
+
+def test_typed_wrapper_cp_exec_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "export const registerRunTool = (server: McpServer) => {\n"
+        "  server.registerTool('run', { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+def test_typed_wrapper_fs_writefile_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { writeFile } from 'node:fs/promises';\n"
+        "export const registerWriteTool = (server: McpServer) => {\n"
+        "  server.registerTool('write', { description: 'd' }, async () => {\n"
+        "    await writeFile('out.txt', 'body');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+def test_typed_wrapper_env_secret_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "export const registerLookupTool = (server: McpServer) => {\n"
+        "  server.registerTool('lookup', { description: 'd' }, async () => {\n"
+        "    return process.env.OPENAI_API_KEY;\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _env_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+
+
+def test_typed_wrapper_network_fetch_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "export const registerCallTool = (server: McpServer) => {\n"
+        "  server.registerTool('call', { description: 'd' }, async () => {\n"
+        "    return fetch('https://api.example.com');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _network_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 4
+
+
+def test_typed_wrapper_namespace_type_cp_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import * as mcp from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "export function registerRunTool(server: mcp.McpServer) {\n"
+        "  server.registerTool('run', { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+def test_typed_wrapper_param_name_does_not_leak_to_untyped_wrapper(tmp_path):
+    # Two wrappers in the same file: the first has ``(server: McpServer)``
+    # (typed — MCP context); the second has the same parameter name
+    # ``(server)`` but no type annotation (NOT MCP context). Only the typed
+    # wrapper's handler should be walked; the untyped one's exec must be
+    # silent.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "export const registerInside = (server: McpServer) => {\n"
+        "  server.registerTool('inside', { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n"
+        "export const noTypeAnnotation = (server) => {\n"
+        "  server.registerTool('outside', { description: 'd' }, async () => {\n"
+        "    exec('rm -rf /');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = _cp_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+def test_typed_wrapper_untyped_only_does_not_fire(tmp_path):
+    # No typed wrappers present, just one untyped param wrapper with an
+    # official MCP import. Gate must NOT recognise this as MCP context.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "export const registerRunTool = (server) => {\n"
+        "  server.registerTool('run', { description: 'd' }, async () => {\n"
+        "    exec('ls');\n"
+        "  });\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    assert _cp_findings(tmp_path) == []
+    assert _fs_findings(tmp_path) == []
+    assert _env_findings(tmp_path) == []
+    assert _network_findings(tmp_path) == []
+
+
+def test_typed_wrapper_nested_function_with_typed_param_isolates_scope(tmp_path):
+    # An outer typed wrapper contains a nested typed wrapper that also has
+    # ``(server: McpServer)``. Each wrapper's body is walked independently;
+    # the outer body's _iter_typed_wrapper_scope does NOT cross into the
+    # nested function. Both wrappers' calls are emitted by their own pass.
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { exec } from 'node:child_process';\n"
+        "export const registerOuter = (server: McpServer) => {\n"
+        "  server.registerTool('outer', { description: 'd' }, async () => {\n"
+        "    exec('outer');\n"
+        "  });\n"
+        "  const registerInner = (server: McpServer) => {\n"
+        "    server.registerTool('inner', { description: 'd' }, async () => {\n"
+        "      exec('inner');\n"
+        "    });\n"
+        "  };\n"
+        "  return registerInner;\n"
+        "};\n",
+        encoding="utf-8",
+    )
+
+    findings = sorted(_cp_findings(tmp_path), key=lambda f: f.line)
+
+    assert len(findings) == 2
+    assert findings[0].line == 5  # outer exec
+    assert findings[1].line == 9  # inner exec

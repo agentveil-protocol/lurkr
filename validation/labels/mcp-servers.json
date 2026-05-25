@@ -93,6 +93,16 @@
       "rule_id": "agent.python_tool_without_approval",
       "file": "time/src/mcp_server_time/server.py",
       "line": 152
+    },
+    {
+      "rule_id": "agent.javascript_file_mutation_in_tool",
+      "file": "filesystem/index.ts",
+      "line": 411
+    },
+    {
+      "rule_id": "agent.javascript_file_mutation_in_tool",
+      "file": "filesystem/index.ts",
+      "line": 616
     }
   ],
   "rules_that_should_not_fire_in_this_repo": [

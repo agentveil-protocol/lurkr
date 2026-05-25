@@ -1,7 +1,11 @@
 """Tests for the TypeScript/JavaScript agent posture rules.
 
-Covers ``agent.javascript_child_process_in_tool`` — Node.js ``child_process``
-shell execution inside canonical MCP ``registerTool`` handlers.
+Covers:
+
+- ``agent.javascript_child_process_in_tool`` — Node.js ``child_process`` shell
+  execution inside canonical MCP ``registerTool`` handlers.
+- ``agent.javascript_file_mutation_in_tool`` — Node.js ``fs`` / ``fs/promises``
+  file mutation inside canonical MCP ``registerTool`` handlers.
 """
 
 from __future__ import annotations
@@ -12,11 +16,17 @@ from lurkr.scanner import scan_path
 
 
 RULE_ID = "agent.javascript_child_process_in_tool"
+FS_RULE_ID = "agent.javascript_file_mutation_in_tool"
 
 
 def _cp_findings(path: Path):
     report = scan_path(path)
     return [finding for finding in report.findings if finding.rule_id == RULE_ID]
+
+
+def _fs_findings(path: Path):
+    report = scan_path(path)
+    return [finding for finding in report.findings if finding.rule_id == FS_RULE_ID]
 
 
 # --------- positive cases: handler resolution × child_process import form ---------
@@ -753,3 +763,221 @@ def test_oversized_imported_target_does_not_crash(tmp_path):
     (tmp_path / "tools.ts").write_text("// pad\n" * 200_000, encoding="utf-8")
 
     assert _cp_findings(tmp_path) == []
+
+
+# --------- file mutation rule: fs imports inside MCP handlers ---------
+
+
+def test_inline_arrow_named_import_writefile_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { writeFile } from 'node:fs/promises';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('write', { description: 'd' }, async () => {\n"
+        "  await writeFile('out.txt', 'body');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.rule_id == FS_RULE_ID
+    assert finding.severity == "high"
+    assert finding.file == "server.ts"
+    assert finding.line == 5
+    assert "write or delete files" in finding.message
+    assert "Restrict file-write/delete access" in finding.remediation
+
+
+def test_inline_arrow_namespace_import_rmsync_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as fs from 'node:fs';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('delete', { description: 'd' }, async () => {\n"
+        "  fs.rmSync('out.txt');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+def test_inline_arrow_fs_promises_namespace_appendfile_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as fsp from 'fs/promises';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('append', { description: 'd' }, async () => {\n"
+        "  await fsp.appendFile('out.txt', 'body');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+def test_inline_arrow_fs_promises_member_chain_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import fs from 'node:fs';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('write', { description: 'd' }, async () => {\n"
+        "  await fs.promises.writeFile('out.txt', 'body');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.ts"
+    assert findings[0].line == 5
+
+
+def test_same_file_const_arrow_destructured_require_unlink_alias_fires(tmp_path):
+    (tmp_path / "server.cjs").write_text(
+        "const { McpServer } = require('@modelcontextprotocol/server');\n"
+        "const { unlink: remove } = require('fs');\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "const runTool = async () => {\n"
+        "  remove('out.txt');\n"
+        "};\n"
+        "server.registerTool('delete', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "server.cjs"
+    assert findings[0].line == 5
+
+
+def test_imported_function_handler_with_fs_mkdir_fires(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { runTool } from './tools';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('mkdir', { description: 'd' }, runTool);\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "tools.ts").write_text(
+        "import { mkdir } from 'node:fs/promises';\n"
+        "export async function runTool() {\n"
+        "  await mkdir('out');\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    findings = _fs_findings(tmp_path)
+
+    assert len(findings) == 1
+    assert findings[0].file == "tools.ts"
+    assert findings[0].line == 3
+
+
+def test_file_read_inside_handler_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { readFile } from 'node:fs/promises';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('read', { description: 'd' }, async () => {\n"
+        "  await readFile('out.txt');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _fs_findings(tmp_path) == []
+
+
+def test_file_write_outside_handler_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { writeFile } from 'node:fs/promises';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('status', { description: 'd' }, async () => ({}));\n"
+        "writeFile('out.txt', 'body');\n",
+        encoding="utf-8",
+    )
+
+    assert _fs_findings(tmp_path) == []
+
+
+def test_non_mcp_register_tool_file_write_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { writeFile } from 'node:fs/promises';\n"
+        "const router = { registerTool(name: string, cfg: unknown, fn: unknown) {} };\n"
+        "router.registerTool('write', {}, async () => {\n"
+        "  await writeFile('out.txt', 'body');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _fs_findings(tmp_path) == []
+
+
+def test_handler_parameter_shadows_file_direct_name_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { writeFile } from 'node:fs/promises';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('write', { description: 'd' }, async (writeFile) => {\n"
+        "  await writeFile('safe local');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _fs_findings(tmp_path) == []
+
+
+def test_handler_parameter_shadows_file_namespace_alias_does_not_fire(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import * as fs from 'node:fs';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('write', { description: 'd' }, async (fs) => {\n"
+        "  await fs.promises.writeFile('safe local');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    assert _fs_findings(tmp_path) == []
+
+
+def test_sarif_includes_js_file_mutation_finding(tmp_path):
+    (tmp_path / "server.ts").write_text(
+        "import { McpServer } from '@modelcontextprotocol/server';\n"
+        "import { writeFile } from 'node:fs/promises';\n"
+        "const server = new McpServer({ name: 'demo', version: '1.0.0' });\n"
+        "server.registerTool('write', { description: 'd' }, async () => {\n"
+        "  await writeFile('out.txt', 'body');\n"
+        "});\n",
+        encoding="utf-8",
+    )
+
+    report = scan_path(tmp_path)
+    findings = [f for f in report.findings if f.rule_id == FS_RULE_ID]
+    assert len(findings) == 1
+
+    sarif = report.to_sarif()
+    rule_ids = {rule["id"] for rule in sarif["runs"][0]["tool"]["driver"]["rules"]}
+    assert FS_RULE_ID in rule_ids
+
+    results = [r for r in sarif["runs"][0]["results"] if r["ruleId"] == FS_RULE_ID]
+    assert len(results) == 1
+    result = results[0]
+    assert result["level"] == "error"
+    physical_location = result["locations"][0]["physicalLocation"]
+    assert physical_location["artifactLocation"]["uri"] == "server.ts"
+    assert physical_location["region"]["startLine"] == 5

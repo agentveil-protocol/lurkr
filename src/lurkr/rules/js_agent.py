@@ -1,9 +1,12 @@
 """TypeScript/JavaScript agent posture rules.
 
-v1 rule:
+Rules:
 
 - ``agent.javascript_child_process_in_tool`` — flag Node.js ``child_process``
   command execution inside a canonical MCP ``registerTool`` handler.
+- ``agent.javascript_file_mutation_in_tool`` — flag Node.js ``fs`` /
+  ``fs/promises`` file write/delete-style APIs inside a canonical MCP
+  ``registerTool`` handler.
 
 Detection is bounded static analysis over either the scanned file or a
 relative-imported same-repo file:
@@ -25,16 +28,17 @@ relative-imported same-repo file:
   (``export { x } from './y'``), and default exports are intentionally not
   resolved.
 - For cross-file resolution the rule analyses the handler in the TARGET
-  file's context: the call-site walk uses the target file's
-  ``child_process`` imports, the handler's parameter / same-scope bindings
-  in the target file, and the target file's source for line numbers. The
-  emitted finding points at the target file relative to the scan root.
-- Shell APIs from ``child_process`` or ``node:child_process`` are recognised
+  file's context: the call-site walk uses the target file's risky imports,
+  the handler's parameter / same-scope bindings in the target file, and the
+  target file's source for line numbers. The emitted finding points at the
+  target file relative to the scan root.
+- Risky APIs from ``child_process``, ``node:child_process``, ``fs``,
+  ``node:fs``, ``fs/promises``, or ``node:fs/promises`` are recognised
   through named imports (with optional alias), namespace imports, default
   imports, destructured requires (with optional alias), and namespace-bound
   ``require`` calls.
 - Same-handler shadow handling: when the handler's own scope binds an
-  identifier whose name collides with a ``child_process`` import binding
+  identifier whose name collides with a risky module import binding
   (handler parameters, top-level ``const`` / ``let`` / ``var``, or a
   same-scope ``function`` declaration), calls through that name within the
   handler are not flagged. Shadowing introduced inside nested function or
@@ -77,6 +81,26 @@ CHILD_PROCESS_APIS = frozenset(
         "fork",
     }
 )
+FILE_SYSTEM_PACKAGES = frozenset(
+    {"fs", "node:fs", "fs/promises", "node:fs/promises"}
+)
+FILE_MUTATION_APIS = frozenset(
+    {
+        "writeFile",
+        "writeFileSync",
+        "appendFile",
+        "appendFileSync",
+        "rm",
+        "rmSync",
+        "unlink",
+        "unlinkSync",
+        "rename",
+        "renameSync",
+        "mkdir",
+        "mkdirSync",
+        "createWriteStream",
+    }
+)
 
 _HANDLER_INLINE_TYPES = frozenset({"arrow_function", "function_expression"})
 
@@ -117,16 +141,17 @@ class _ImportBinding:
 class _HandlerLocation:
     """Resolved handler body plus the analysis context it should be walked in.
 
-    For same-file handlers, ``source`` / ``file_path`` / ``cp_imports`` match
-    the scanning file. For cross-file handlers, they reflect the target file
-    so that call-site resolution and line numbers come from the file where
-    the body actually lives.
+    For same-file handlers, ``source`` / ``file_path`` / risky import sets
+    match the scanning file. For cross-file handlers, they reflect the target
+    file so that call-site resolution and line numbers come from the file
+    where the body actually lives.
     """
 
     body: Any
     source: bytes
     file_path: Path
     cp_imports: "ChildProcessImports"
+    fs_imports: "FileSystemImports"
 
 
 @dataclass(frozen=True)
@@ -143,6 +168,30 @@ class ChildProcessImports:
     ``child_process`` module via namespace import, default import, or
     whole-module require. Calls on these identifiers reach the rule through
     member-expression form (e.g. ``cp.exec(...)``).
+    """
+
+    direct_names: frozenset[str]
+    namespace_aliases: frozenset[str]
+
+    @property
+    def empty(self) -> bool:
+        return not self.direct_names and not self.namespace_aliases
+
+
+@dataclass(frozen=True)
+class FileSystemImports:
+    """Local symbols in one file bound to Node.js ``fs`` mutation APIs.
+
+    ``direct_names`` — local identifiers whose original imported symbol is one
+    of :data:`FILE_MUTATION_APIS`. Examples include ``writeFile`` after
+    ``import { writeFile } from "node:fs/promises"`` and ``write`` after
+    ``import { writeFile as write } from "fs"``.
+
+    ``namespace_aliases`` — local identifiers bound to the entire ``fs`` or
+    ``fs/promises`` module via namespace import, default import, or
+    whole-module require. Calls on these identifiers reach the rule through
+    member-expression form (e.g. ``fs.writeFile(...)`` or
+    ``fs.promises.writeFile(...)``).
     """
 
     direct_names: frozenset[str]
@@ -173,18 +222,20 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
         return []
 
     scan_cp_imports = _collect_child_process_imports(document)
+    scan_fs_imports = _collect_file_system_imports(document)
     import_bindings = _collect_relative_import_bindings(document, path, root)
 
-    if scan_cp_imports.empty and not import_bindings:
+    if scan_cp_imports.empty and scan_fs_imports.empty and not import_bindings:
         return []
 
     declarations, lex_handlers = _collect_handler_bindings(document)
 
     parsed_cache: dict[Path, JsAstDocument | None] = {path: document}
     cp_imports_cache: dict[Path, ChildProcessImports] = {path: scan_cp_imports}
+    fs_imports_cache: dict[Path, FileSystemImports] = {path: scan_fs_imports}
 
     findings: list[Finding] = []
-    seen_locations: set[tuple[str, int]] = set()
+    seen_locations: set[tuple[str, str, int]] = set()
 
     for tool in collect_registered_tools_js(document, server_identifiers):
         location = _resolve_handler_location(
@@ -192,15 +243,15 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
             scan_document=document,
             scan_path=path,
             scan_cp_imports=scan_cp_imports,
+            scan_fs_imports=scan_fs_imports,
             same_file_declarations=declarations,
             same_file_lex_handlers=lex_handlers,
             import_bindings=import_bindings,
             parsed_cache=parsed_cache,
             cp_imports_cache=cp_imports_cache,
+            fs_imports_cache=fs_imports_cache,
         )
         if location is None:
-            continue
-        if location.cp_imports.empty:
             continue
 
         try:
@@ -209,36 +260,69 @@ def scan_js_agent_rules(root: Path, path: Path) -> list[Finding]:
             continue
 
         handler_locals = _handler_local_names(location.body, location.source)
-        effective_imports = ChildProcessImports(
-            direct_names=location.cp_imports.direct_names - handler_locals,
-            namespace_aliases=location.cp_imports.namespace_aliases - handler_locals,
-        )
-        if effective_imports.empty:
-            continue
 
-        for line in _child_process_call_lines(
-            location.body, effective_imports, location.source
-        ):
-            key = (file_rel, line)
-            if key in seen_locations:
-                continue
-            seen_locations.add(key)
-            findings.append(
-                Finding(
-                    rule_id="agent.javascript_child_process_in_tool",
-                    severity="high",
-                    file=file_rel,
-                    line=line,
-                    message=(
-                        "TypeScript/JavaScript MCP tool handler appears to run "
-                        "child_process commands."
-                    ),
-                    remediation=(
-                        "Require approval and a narrow allowlist before MCP tool "
-                        "handlers run child_process commands."
-                    ),
-                )
+        if not location.cp_imports.empty:
+            effective_cp_imports = ChildProcessImports(
+                direct_names=location.cp_imports.direct_names - handler_locals,
+                namespace_aliases=(
+                    location.cp_imports.namespace_aliases - handler_locals
+                ),
             )
+            for line in _child_process_call_lines(
+                location.body, effective_cp_imports, location.source
+            ):
+                key = ("agent.javascript_child_process_in_tool", file_rel, line)
+                if key in seen_locations:
+                    continue
+                seen_locations.add(key)
+                findings.append(
+                    Finding(
+                        rule_id="agent.javascript_child_process_in_tool",
+                        severity="high",
+                        file=file_rel,
+                        line=line,
+                        message=(
+                            "TypeScript/JavaScript MCP tool handler appears to run "
+                            "child_process commands."
+                        ),
+                        remediation=(
+                            "Require approval and a narrow allowlist before MCP tool "
+                            "handlers run child_process commands."
+                        ),
+                    )
+                )
+
+        if not location.fs_imports.empty:
+            effective_fs_imports = FileSystemImports(
+                direct_names=location.fs_imports.direct_names - handler_locals,
+                namespace_aliases=(
+                    location.fs_imports.namespace_aliases - handler_locals
+                ),
+            )
+            for line in _file_mutation_call_lines(
+                location.body, effective_fs_imports, location.source
+            ):
+                key = ("agent.javascript_file_mutation_in_tool", file_rel, line)
+                if key in seen_locations:
+                    continue
+                seen_locations.add(key)
+                findings.append(
+                    Finding(
+                        rule_id="agent.javascript_file_mutation_in_tool",
+                        severity="high",
+                        file=file_rel,
+                        line=line,
+                        message=(
+                            "TypeScript/JavaScript MCP tool handler appears to "
+                            "write or delete files."
+                        ),
+                        remediation=(
+                            "Restrict file-write/delete access to explicit safe "
+                            "paths and require approval for destructive file "
+                            "operations."
+                        ),
+                    )
+                )
     return findings
 
 
@@ -332,6 +416,96 @@ def _collect_child_process_imports(document: JsAstDocument) -> ChildProcessImpor
     )
 
 
+def _collect_file_system_imports(document: JsAstDocument) -> FileSystemImports:
+    direct: set[str] = set()
+    namespaces: set[str] = set()
+
+    for node in iter_nodes(document.tree):
+        if node.type == "import_statement":
+            source_node = node.child_by_field_name("source")
+            if source_node is None:
+                continue
+            pkg = static_string_value(source_node, document.source)
+            if pkg not in FILE_SYSTEM_PACKAGES:
+                continue
+            for child in node.children:
+                if child.type != "import_clause":
+                    continue
+                for sub in child.children:
+                    if sub.type == "identifier":
+                        # Default import: `import fs from "node:fs"`.
+                        namespaces.add(node_text(sub, document.source))
+                    elif sub.type == "named_imports":
+                        for spec in sub.children:
+                            if spec.type != "import_specifier":
+                                continue
+                            name_node = spec.child_by_field_name("name")
+                            if name_node is None:
+                                continue
+                            original = node_text(name_node, document.source)
+                            if original not in FILE_MUTATION_APIS:
+                                continue
+                            alias_node = spec.child_by_field_name("alias")
+                            local_node = (
+                                alias_node if alias_node is not None else name_node
+                            )
+                            if local_node.type == "identifier":
+                                direct.add(node_text(local_node, document.source))
+                    elif sub.type == "namespace_import":
+                        for ns_child in sub.children:
+                            if ns_child.type == "identifier":
+                                namespaces.add(
+                                    node_text(ns_child, document.source)
+                                )
+        elif node.type == "variable_declarator":
+            value_node = node.child_by_field_name("value")
+            if value_node is None or value_node.type != "call_expression":
+                continue
+            call_fn = value_node.child_by_field_name("function")
+            if call_fn is None or node_text(call_fn, document.source) != "require":
+                continue
+            call_args = value_node.child_by_field_name("arguments")
+            if call_args is None:
+                continue
+            arg_children = [
+                c
+                for c in call_args.children
+                if c.type not in ("(", ")", ",", "comment")
+            ]
+            if not arg_children:
+                continue
+            pkg = static_string_value(arg_children[0], document.source)
+            if pkg not in FILE_SYSTEM_PACKAGES:
+                continue
+            name_node = node.child_by_field_name("name")
+            if name_node is None:
+                continue
+            if name_node.type == "identifier":
+                namespaces.add(node_text(name_node, document.source))
+            elif name_node.type == "object_pattern":
+                for prop in name_node.children:
+                    if prop.type == "shorthand_property_identifier_pattern":
+                        name = node_text(prop, document.source)
+                        if name in FILE_MUTATION_APIS:
+                            direct.add(name)
+                    elif prop.type == "pair_pattern":
+                        key_field = prop.child_by_field_name("key")
+                        value_field = prop.child_by_field_name("value")
+                        if (
+                            key_field is not None
+                            and value_field is not None
+                            and value_field.type == "identifier"
+                            and node_text(key_field, document.source)
+                            in FILE_MUTATION_APIS
+                        ):
+                            direct.add(node_text(value_field, document.source))
+
+    return FileSystemImports(
+        direct_names=frozenset(direct),
+        namespace_aliases=frozenset(namespaces),
+    )
+
+
 def _collect_handler_bindings(
     document: JsAstDocument,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -369,11 +543,13 @@ def _resolve_handler_location(
     scan_document: JsAstDocument,
     scan_path: Path,
     scan_cp_imports: ChildProcessImports,
+    scan_fs_imports: FileSystemImports,
     same_file_declarations: dict[str, Any],
     same_file_lex_handlers: dict[str, Any],
     import_bindings: dict[str, _ImportBinding],
     parsed_cache: dict[Path, JsAstDocument | None],
     cp_imports_cache: dict[Path, ChildProcessImports],
+    fs_imports_cache: dict[Path, FileSystemImports],
 ) -> _HandlerLocation | None:
     """Resolve a registerTool ``handler`` argument to the function/arrow node
     plus the analysis context for the file the body lives in.
@@ -398,6 +574,7 @@ def _resolve_handler_location(
             source=scan_document.source,
             file_path=scan_path,
             cp_imports=scan_cp_imports,
+            fs_imports=scan_fs_imports,
         )
     if handler_node.type != "identifier":
         return None
@@ -412,6 +589,7 @@ def _resolve_handler_location(
             source=scan_document.source,
             file_path=scan_path,
             cp_imports=scan_cp_imports,
+            fs_imports=scan_fs_imports,
         )
 
     binding = import_bindings.get(name)
@@ -430,12 +608,17 @@ def _resolve_handler_location(
     if target_cp_imports is None:
         target_cp_imports = _collect_child_process_imports(target_document)
         cp_imports_cache[binding.source] = target_cp_imports
+    target_fs_imports = fs_imports_cache.get(binding.source)
+    if target_fs_imports is None:
+        target_fs_imports = _collect_file_system_imports(target_document)
+        fs_imports_cache[binding.source] = target_fs_imports
 
     return _HandlerLocation(
         body=target_body,
         source=target_document.source,
         file_path=binding.source,
         cp_imports=target_cp_imports,
+        fs_imports=target_fs_imports,
     )
 
 
@@ -468,6 +651,59 @@ def _child_process_call_lines(
                 continue
             if node_text(prop, source) in CHILD_PROCESS_APIS:
                 yield node.start_point[0] + 1
+
+
+def _file_mutation_call_lines(
+    handler_body: Any,
+    fs_imports: FileSystemImports,
+    source: bytes,
+) -> Iterator[int]:
+    for node in _iter_subtree(handler_body):
+        if node.type != "call_expression":
+            continue
+        fn = node.child_by_field_name("function")
+        if fn is None:
+            continue
+        if fn.type == "identifier":
+            local = node_text(fn, source)
+            if local in fs_imports.direct_names:
+                yield node.start_point[0] + 1
+        elif fn.type == "member_expression":
+            member = _member_expression_parts(fn, source)
+            if member is None:
+                continue
+            base, props = member
+            if base not in fs_imports.namespace_aliases:
+                continue
+            if len(props) == 1 and props[0] in FILE_MUTATION_APIS:
+                yield node.start_point[0] + 1
+            elif (
+                len(props) == 2
+                and props[0] == "promises"
+                and props[1] in FILE_MUTATION_APIS
+            ):
+                yield node.start_point[0] + 1
+
+
+def _member_expression_parts(node: Any, source: bytes) -> tuple[str, tuple[str, ...]] | None:
+    """Return ``(base_identifier, property_chain)`` for dotted member access.
+
+    Supports bounded static chains such as ``fs.writeFile`` and
+    ``fs.promises.writeFile``. Computed access (``fs[method]``) and chains
+    rooted in non-identifiers are skipped.
+    """
+    props: list[str] = []
+    current = node
+    while current.type == "member_expression":
+        prop = current.child_by_field_name("property")
+        obj = current.child_by_field_name("object")
+        if prop is None or obj is None or prop.type != "property_identifier":
+            return None
+        props.append(node_text(prop, source))
+        if obj.type == "identifier":
+            return node_text(obj, source), tuple(reversed(props))
+        current = obj
+    return None
 
 
 def _iter_subtree(node: Any) -> Iterator[Any]:

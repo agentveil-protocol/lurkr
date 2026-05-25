@@ -127,6 +127,7 @@ def test_sarif_schema_version_and_rules_are_defined(tmp_path):
         "agent.python_unrestricted_file_access",
         "agent.python_api_key_hardcoded",
         "agent.javascript_child_process_in_tool",
+        "agent.javascript_file_mutation_in_tool",
     }
     for rule in rules:
         assert rule["defaultConfiguration"]["level"] == "error"

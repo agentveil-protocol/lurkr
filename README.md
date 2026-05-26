@@ -431,6 +431,7 @@ For teams that want to attach Lurkr coverage to existing security and compliance
 - [Baseline mode](docs/BASELINE.md) — adopt Lurkr in CI while grandfathering current findings.
 - [Benchmark](docs/LURKR_BENCHMARK.md) — empirical coverage on curated public AI-agent template corpus.
 - [Static analysis limits](docs/LURKR_LIMITATIONS.md) — Rice's theorem and the sound-by-design framing.
+- [Hermes MCP visibility guide](docs/integrations/hermes-mcp-visibility.md) — inspect MCP capability surfaces before enabling servers in Hermes.
 
 Most users can start with the Local CLI section above.
 

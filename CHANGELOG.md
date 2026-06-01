@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+- New rule `agent.python_fastapi_path_auth_no_host_validation` (high
+  severity). Flags FastAPI / Starlette middleware that reads
+  `request.url.path` for path-based security decisions when the same file
+  shows no `TrustedHostMiddleware` configuration. This is the deployment
+  surface for [GHSA-86qp-5c8j-p5mr / CVE-2026-48710](https://github.com/Kludex/starlette/security/advisories/GHSA-86qp-5c8j-p5mr)
+  ("Missing Host header validation poisons `request.url.path`, bypassing
+  path-based security checks", Starlette `<= 1.0.0`, fixed in `1.0.1`,
+  published 2026-05-21). Detection covers `BaseHTTPMiddleware` subclasses
+  (including aliased and module-qualified imports) and `@app.middleware(...)`
+  decorated functions. The rule is single-file: project-wide
+  `TrustedHostMiddleware` configuration in a separate module is treated as
+  unverified and the file is still flagged.
+
 ## v0.3.0 — 2026-05-25
 
 **Bounded TypeScript / JavaScript MCP coverage.** Lurkr now flags risky

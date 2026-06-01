@@ -42,7 +42,7 @@ lurkr scan --path . --baseline .lurkr-baseline.json --fail-on high
 Use the GitHub Action when you want the same check in CI:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.3.0
+- uses: agentveil-protocol/lurkr@v0.4.0
   with:
     path: "."
     output: lurkr-report.json
@@ -165,14 +165,14 @@ The goal: find high-severity capabilities worth controlling before they become p
 - AI-specific static checks for credential flow into LLM context, direct prompt interpolation, and external MCP endpoints
 - Baseline mode for CI adoption: save current findings, then fail only on new findings
 
-### v0.4.0 — broader framework coverage
+### v0.5.0 — broader framework coverage
 
 Candidates for broader framework coverage:
 - AutoGen / AG2 (re-validation against current Microsoft direction)
 - PydanticAI
 - Semantic Kernel
 
-### v0.5.0+ — quality and ergonomics
+### v0.6.0+ — quality and ergonomics
 
 Roadmap items being considered:
 - Auto-fix patches via SARIF `fixes` field
@@ -196,7 +196,7 @@ pip install lurkr
 **From GitHub release:**
 
 ```bash
-pip install git+https://github.com/agentveil-protocol/lurkr@v0.3.0
+pip install git+https://github.com/agentveil-protocol/lurkr@v0.4.0
 ```
 
 **From source (development):**
@@ -229,7 +229,7 @@ present.
 Use the action from the same repository:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.3.0
+- uses: agentveil-protocol/lurkr@v0.4.0
   with:
     path: "."
     output: lurkr-report.json
@@ -243,7 +243,7 @@ path to the `report` output and does not upload data to AgentVeil. Omit
 For existing repositories, commit a baseline and only fail on new findings:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.3.0
+- uses: agentveil-protocol/lurkr@v0.4.0
   with:
     path: "."
     output: lurkr-report.json
@@ -254,7 +254,7 @@ For existing repositories, commit a baseline and only fail on new findings:
 For GitHub Code Scanning, write SARIF and upload it with CodeQL:
 
 ```yaml
-- uses: agentveil-protocol/lurkr@v0.3.0
+- uses: agentveil-protocol/lurkr@v0.4.0
   with:
     path: "."
     output: lurkr.sarif
@@ -275,7 +275,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/agentveil-protocol/lurkr
-    rev: v0.3.0
+    rev: v0.4.0
     hooks:
       - id: lurkr
         args: ["--fail-on", "high"]

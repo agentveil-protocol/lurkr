@@ -18,6 +18,9 @@ That is the whole flow. The scanner is read-only: it does not modify your
 files, run your code, or send data over the network.
 
 Python agent detection is enabled for bounded `.py` source analysis.
+FastAPI / Starlette middleware detection is enabled for BadHost-style
+path-auth risk: Lurkr flags security middleware that reads
+`request.url.path` without same-file `TrustedHostMiddleware` evidence.
 Bounded TypeScript / JavaScript MCP analysis is enabled for canonical
 Model Context Protocol `registerTool` handler shapes; see
 [Detection scope](#detection-scope) for the exact patterns covered.
@@ -106,6 +109,7 @@ All current rules are reported as `high` severity.
 | [`agent.python_subprocess_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_subprocess_in_tool.md) | Subprocess or shell calls inside supported Python tool functions | Supported Python tool functions |
 | [`agent.python_tool_without_approval`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_tool_without_approval.md) | Python agent tool declarations without an approval marker | LangChain, LangGraph, CrewAI, MCP, OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini |
 | [`agent.python_unrestricted_file_access`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_unrestricted_file_access.md) | File write or delete calls inside Python tool functions | Supported Python tool functions |
+| [`agent.python_fastapi_path_auth_no_host_validation`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_fastapi_path_auth_no_host_validation.md) | FastAPI / Starlette middleware reading `request.url.path` without same-file `TrustedHostMiddleware` evidence | FastAPI / Starlette HTTP middleware |
 | [`agent.unverified_mcp_endpoint`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.unverified_mcp_endpoint.md) | MCP server URLs pointing to non-allowlisted external hosts | MCP manifests |
 | [`agent.javascript_child_process_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.javascript_child_process_in_tool.md) | Node.js `child_process` commands inside canonical MCP `registerTool` handlers (TS/JS) | Canonical MCP `registerTool` handlers in TS/JS |
 | [`agent.javascript_file_mutation_in_tool`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.javascript_file_mutation_in_tool.md) | Node.js `fs` / `fs/promises` write/delete calls inside canonical MCP `registerTool` handlers (TS/JS) | Canonical MCP `registerTool` handlers in TS/JS |
@@ -152,9 +156,10 @@ The goal: find high-severity capabilities worth controlling before they become p
 
 ### Available now
 
-18 high-severity rules across:
+19 high-severity rules across:
 - GitHub workflows + agent manifests + identity files
 - Python agent code: LangChain / LangGraph, CrewAI, MCP (FastMCP and Server-style), OpenAI tool calling, Anthropic tool use, LlamaIndex, Gemini
+- FastAPI / Starlette middleware that can make path-based auth decisions from host-poisoned `request.url.path`
 - Bounded TypeScript / JavaScript MCP tool handlers: `child_process`, `fs` / `fs/promises` mutation, secret-like `process.env`, and outbound network calls (`fetch` / `axios` / `got` / `undici` / `http(s)`). Coverage is limited to canonical Model Context Protocol `registerTool` registration shapes and bounded same-file + relative-import handler resolution
 - Declared-vs-imported capability delta across MCP/CrewAI/AutoGen/LangChain manifests, Python tool registrations, AND bounded TS/JS MCP `registerTool` extraction (identifier-bound, chained, typed helper-wrapper parameters, namespace-qualified, parenthesized, with same-file top-level `const` name resolution)
 - AI-specific static checks for credential flow into LLM context, direct prompt interpolation, and external MCP endpoints

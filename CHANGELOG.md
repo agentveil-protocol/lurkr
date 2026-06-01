@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## v0.4.0 — 2026-06-01
+
 - New rule `agent.python_fastapi_path_auth_no_host_validation` (high
   severity). Flags FastAPI / Starlette middleware that reads
   `request.url.path` for path-based security decisions when the same file

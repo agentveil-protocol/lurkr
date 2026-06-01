@@ -10,6 +10,15 @@ Lurkr is a static, local-only scanner for risky AI-agent and GitHub-workflow
 capability surfaces. It runs before deployment, does not execute project code,
 does not make network calls during scan, and redacts sensitive output.
 
+## New in v0.4.0
+
+Lurkr now includes a high-severity FastAPI / Starlette BadHost detector:
+
+- Rule: [`agent.python_fastapi_path_auth_no_host_validation`](https://github.com/agentveil-protocol/lurkr/blob/main/docs/rules/agent.python_fastapi_path_auth_no_host_validation.md)
+- Flags middleware that reads `request.url.path` for path-based security decisions without same-file `TrustedHostMiddleware` evidence.
+- Covers Starlette BadHost risk [GHSA-86qp-5c8j-p5mr / CVE-2026-48710](https://github.com/Kludex/starlette/security/advisories/GHSA-86qp-5c8j-p5mr), fixed upstream in Starlette `1.0.1`.
+- See [Detection Scope](#detection-scope) and [Triaging Findings](#triaging-findings).
+
 ## GitHub Actions
 
 ```yaml

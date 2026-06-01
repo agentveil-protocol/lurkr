@@ -17,6 +17,7 @@ from lurkr.rules import (
     scan_js_agent_rules,
     scan_manifest_rules,
     scan_python_agent_rules,
+    scan_python_fastapi_path_auth_no_host_validation,
     scan_unverified_mcp_endpoint,
     scan_workflow_rules,
 )
@@ -51,6 +52,9 @@ def scan_path(path: Path) -> PostureReport:
             findings.extend(scan_python_agent_rules(root, candidate))
             findings.extend(scan_credential_to_llm_context(root, candidate))
             findings.extend(scan_dynamic_prompt_from_user_input(root, candidate))
+            findings.extend(
+                scan_python_fastapi_path_auth_no_host_validation(root, candidate)
+            )
         if is_js_or_ts_source(candidate):
             js_files.append(candidate)
             findings.extend(scan_js_agent_rules(root, candidate))

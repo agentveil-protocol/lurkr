@@ -127,6 +127,11 @@ RULE_DESCRIPTORS = {
         "full": "Flags API-key-shaped string literals in Python source.",
         "help": _rule_doc_url("agent.python_api_key_hardcoded"),
     },
+    "agent.python_fastapi_path_auth_no_host_validation": {
+        "short": "FastAPI/Starlette path-based middleware without Host header validation",
+        "full": "Flags FastAPI/Starlette middleware that reads request.url.path for security decisions when the file shows no TrustedHostMiddleware configuration.",
+        "help": _rule_doc_url("agent.python_fastapi_path_auth_no_host_validation"),
+    },
 }
 
 
